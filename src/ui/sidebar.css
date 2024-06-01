@@ -138,6 +138,7 @@
                     margin: 0;
                     border: none;
                     text-align: inherit;
+                    min-width: 0;
                 }
 
                 > .i-actions-button {
