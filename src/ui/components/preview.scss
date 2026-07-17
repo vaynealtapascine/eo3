@@ -2,29 +2,32 @@
     display: flex;
     flex-direction: column;
     box-sizing: border-box;
+    overflow: auto;
 
-    & > .i-contents {
+    &>.i-contents {
         flex: 1;
         height: 0;
         display: grid;
         grid-template-columns: 100%;
         grid-template-rows: 100%;
 
+
         /* show site theme in background color */
         &:has(> .i-preview-area > .i-post-preview) {
-            background: linear-gradient(to bottom, var(--P-cohost-bg), rgb(var(--P-color-bg)));
+            background: white;
         }
+
         &:has(> .i-preview-area > .i-post-preview > .is-site-dark-theme) {
             background: var(--P-cohost-dark-bg);
         }
 
-        & > .i-preview-area {
+        &>.i-preview-area {
             grid-area: 1 / 1;
             overflow: auto;
             isolation: isolate;
         }
 
-        & > .i-error-area {
+        &>.i-error-area {
             grid-area: 1 / 1;
             position: relative;
             overflow: auto;
@@ -35,7 +38,7 @@
         }
     }
 
-    & > .preview-header {
+    &>.preview-header {
         padding: 0.5em 1em;
         display: flex;
         justify-content: space-between;
@@ -84,10 +87,12 @@
 
                 &::before {
                     animation: P-data-preview-render-indicator-spin 1s infinite linear;
+
                     @keyframes P-data-preview-render-indicator-spin {
                         0% {
                             transform: none;
                         }
+
                         100% {
                             transform: rotate(360deg);
                         }
@@ -97,7 +102,7 @@
         }
     }
 
-    & > .i-contents > .i-preview-area > .preview-error-placeholder {
+    &>.i-contents>.i-preview-area>.preview-error-placeholder {
         background: rgb(var(--P-card-bg));
         border-radius: 0.5em;
         padding: 0.5em 1em;
@@ -106,7 +111,7 @@
         box-sizing: border-box;
     }
 
-    & > .i-contents > .i-error-area > .preview-error {
+    &>.i-contents>.i-error-area>.preview-error {
         background: rgb(var(--P-card-bg));
         border: 2px solid var(--P-error);
         margin: 1em;
@@ -137,11 +142,11 @@
         }
     }
 
-    & > .i-contents > .i-preview-area > .i-post-preview {
-        padding: 1em;
+    &>.i-contents>.i-preview-area>.i-post-preview {
+        padding: 0;
     }
 
-    & > .i-contents > .i-preview-area > .i-data-preview {
+    &>.i-contents>.i-preview-area>.i-data-preview {
         margin: 1em;
         border-radius: 0.5em;
         background: rgb(var(--P-card-bg));
@@ -149,7 +154,7 @@
         contain: layout;
     }
 
-    & > .i-contents > .i-preview-area > .i-preview-click-to-render {
+    &>.i-contents>.i-preview-area>.i-preview-click-to-render {
         display: flex;
         flex-direction: column;
         gap: 0.5em;

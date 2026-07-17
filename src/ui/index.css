@@ -2,26 +2,31 @@
     font-family: 'Atkinson Hyperlegible';
     src: url('../../assets/AtkinsonHyperlegible-Regular.woff2') format('woff2');
 }
+
 @font-face {
     font-family: 'Atkinson Hyperlegible';
     font-style: italic;
     src: url('../../assets/AtkinsonHyperlegible-Italic.woff2') format('woff2');
 }
+
 @font-face {
     font-family: 'Atkinson Hyperlegible';
     font-weight: bold;
     src: url('../../assets/AtkinsonHyperlegible-Bold.woff2') format('woff2');
 }
+
 @font-face {
     font-family: 'Atkinson Hyperlegible';
     font-weight: bold;
     font-style: italic;
     src: url('../../assets/AtkinsonHyperlegible-BoldItalic.woff2') format('woff2');
 }
+
 @font-face {
     font-family: 'Source Code Pro';
     src: url('../../assets/SourceCodePro.woff2') format('woff2');
 }
+
 @font-face {
     font-family: 'League Mono';
     /* I don't know what version of League Mono this is, so this is stolen from cohost */
@@ -46,7 +51,7 @@ html {
     --P-color-bg: 221 221 221;
     --P-color-fg: 0 0 0;
 
-    --P-color-accent: 121 96 223;
+    --P-color-accent: 135 0 0;
     --P-color-accent-fg: 255 255 255;
     --P-color-warning: 240 126 0;
     --P-color-danger: 255 68 51;
@@ -130,6 +135,7 @@ html {
     0% {
         opacity: 0;
     }
+
     100% {
         opacity: 1;
     }
@@ -145,7 +151,7 @@ html {
     }
 }
 
-#prechoster-root {
+#eo3-root {
     position: fixed;
     inset: 0;
 }
@@ -162,14 +168,15 @@ html {
         justify-content: center;
         overflow: auto;
     }
-    &.is-error > .i-error {
+
+    &.is-error>.i-error {
         background: rgb(var(--P-card-bg));
         border-radius: 0.5em;
         margin: 1em;
         padding: 1em;
     }
 
-    > .i-toolbar {
+    >.i-toolbar {
         display: flex;
         background: rgb(var(--P-toolbar-bg));
         color: rgb(var(--P-toolbar-fg));
@@ -179,14 +186,15 @@ html {
         height: 2.2em;
         padding: 0 0.5em;
 
-        > .i-buttons {
+        >.i-buttons {
             display: flex;
             flex-shrink: 0;
 
-            > .i-spacer {
+            >.i-spacer {
                 width: 0.5em;
             }
-            > .i-section {
+
+            >.i-section {
                 margin-left: 0.5em;
                 border-left: 1px solid var(--P-separator);
                 padding: 0 0.5em;
@@ -197,7 +205,7 @@ html {
             }
         }
 
-        > .i-memory-storage-warning {
+        >.i-memory-storage-warning {
             align-self: center;
             background: rgb(var(--P-color-danger));
             color: rgb(var(--P-color-danger-fg));
@@ -225,6 +233,7 @@ html {
                 margin-top: 1em;
                 margin-bottom: 0.5em;
             }
+
             .i-error {
                 margin: 0;
                 padding: 0.5em;
@@ -239,6 +248,7 @@ html {
             text-align: center;
             font-size: 1.2em;
         }
+
         .i-save-formats {
             display: flex;
             padding: 0;
@@ -260,33 +270,33 @@ html {
                     }
                 }
 
-                & + li {
+                &+li {
                     border-left: 1px solid var(--P-separator);
                 }
             }
         }
     }
 
-    > .i-content-split {
+    >.i-content-split {
         display: flex;
         height: 0;
         flex: 1;
 
-        > .i-sidebar {
+        >.i-sidebar {
             display: none;
 
             &.is-open {
                 display: flex;
                 flex-direction: column;
 
-                & > * {
+                &>* {
                     height: 0;
                     flex: 1;
                 }
             }
         }
 
-        > .i-contents {
+        >.i-contents {
             display: grid;
             width: 0;
             flex: 1;
@@ -300,7 +310,7 @@ html {
     }
 }
 
-.application-frame > .i-toolbar > .i-buttons > .i-toolbar-button {
+.application-frame>.i-toolbar>.i-buttons>.i-toolbar-button {
     font: inherit;
     color: inherit;
     background: none;
@@ -342,10 +352,12 @@ html {
 }
 
 @keyframes P-toolbar-button-drop-highlight {
+
     0%,
     100% {
         border-color: currentColor;
     }
+
     50% {
         border-color: color-mix(in lab, currentColor, #7774);
     }
@@ -357,13 +369,13 @@ html {
     grid-template-columns: 100%;
     grid-template-rows: 100%;
 
-    > .i-contents {
+    >.i-contents {
         display: grid;
         grid-area: 1 / 1;
         grid-template-columns: 100%;
         grid-template-rows: 100%;
 
-        > * {
+        >* {
             grid-area: 1 / 1;
         }
 
@@ -376,11 +388,11 @@ html {
                 font-size: 0.8em;
                 line-height: 1.5;
 
-                > .i-line {
+                >.i-line {
                     display: flex;
                     gap: 0.5em;
 
-                    > .i-gutter {
+                    >.i-gutter {
                         text-align: right;
                         width: 4em;
                         opacity: 0.5;
@@ -389,14 +401,14 @@ html {
             }
         }
 
-        > .i-loading {
+        >.i-loading {
             grid-area: 1 / 1;
             display: flex;
             align-items: center;
             justify-content: center;
             z-index: 1;
 
-            > .i-loading-contents {
+            >.i-loading-contents {
                 background: var(--P-dialog-bg);
                 padding: 1em;
                 border-radius: 0.5em;
@@ -405,7 +417,7 @@ html {
                 gap: 0.5em;
                 align-items: center;
 
-                > .i-loading-icon {
+                >.i-loading-icon {
                     width: 2em;
                     height: 2em;
                     border: 4px solid rgb(var(--P-color-accent));
@@ -420,11 +432,13 @@ html {
     &.is-background {
         opacity: 0;
     }
+
     &.is-background,
     &.is-background * {
         visibility: hidden;
     }
 }
+
 @keyframes P-application-tab-loading-icon-spin {
     100% {
         transform: rotate(1turn);
@@ -435,7 +449,7 @@ html {
     display: flex;
     flex: 1;
 
-    > .i-tab {
+    >.i-tab {
         display: flex;
         flex-direction: row-reverse;
         width: 0;
@@ -461,15 +475,17 @@ html {
             box-shadow: inset 0 -3px rgb(var(--P-color-accent));
             background: var(--P-toolbar-tab-selected);
         }
+
         &:not(.is-active):hover {
             background: var(--P-toolbar-fade-button-hover);
         }
+
         &:not(.is-active):active {
             background: var(--P-toolbar-fade-button-active);
             transition: background 0.05s;
         }
 
-        > .i-close {
+        >.i-close {
             background: none;
             border: none;
             color: inherit;
@@ -496,6 +512,7 @@ html {
                 height: 1px;
                 transform: rotate(45deg);
             }
+
             &::after {
                 transform: rotate(-45deg);
             }
@@ -504,6 +521,7 @@ html {
                 background: var(--P-toolbar-fade-button-hover);
                 opacity: 0.7;
             }
+
             &:active {
                 background: var(--P-toolbar-fade-button-active);
                 opacity: 1;
@@ -511,19 +529,19 @@ html {
             }
         }
 
-        > .i-tab-interactable {
+        >.i-tab-interactable {
             flex: 1;
             width: 0;
             display: flex;
 
-            > .i-title {
+            >.i-title {
                 flex: 1;
                 text-align: center;
                 white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;
 
-                > .i-virtual-title {
+                >.i-virtual-title {
                     font-style: italic;
                 }
             }
@@ -537,7 +555,7 @@ html {
     justify-content: center;
     cursor: default;
 
-    > .i-contents {
+    >.i-contents {
         display: grid;
         grid-template-rows: 1fr;
         place-items: center;
@@ -556,7 +574,7 @@ html {
             max-width: 100%;
         }
 
-        > .i-nothing {
+        >.i-nothing {
             left: 50%;
             top: 64px;
             font-size: 1.5em;
@@ -584,12 +602,12 @@ html {
         max-width: 64ch;
         padding: 0.75em;
 
-        > .i-title {
+        >.i-title {
             margin: 0;
             font-size: 1.2em;
         }
 
-        > .i-url {
+        >.i-url {
             border: 1px solid var(--P-separator);
             border-radius: 0.5em;
             padding: 0.5em;
@@ -599,7 +617,7 @@ html {
             user-select: text;
         }
 
-        > .i-actions {
+        >.i-actions {
             display: flex;
             justify-content: flex-end;
             gap: 1em;

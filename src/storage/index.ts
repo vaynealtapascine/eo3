@@ -5,7 +5,7 @@ import { Document } from '../document';
 export async function initStorage(): Promise<Storage> {
     let oldVersion = null;
     const newVersion = 1;
-    const db = await openDB<Schema>('prechoster_data', newVersion, {
+    const db = await openDB<Schema>('eo3_data', newVersion, {
         async upgrade(database: IDBPDatabase<any>, old, _, transaction) {
             console.log(`upgrade database ${old} → ${newVersion}`);
             oldVersion = old;

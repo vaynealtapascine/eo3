@@ -155,11 +155,12 @@ export function Preview({
             </div>
             <div className="i-contents">
                 <div className="i-preview-area">{contents}</div>
+
                 <div className="i-error-area" ref={postErrorPortal}>
                     {errorContents}
                 </div>
             </div>
-        </div>
+        </div >
     );
 }
 
@@ -179,7 +180,7 @@ class SourceJavascript extends PureComponent<{ source: string; line?: number }> 
     editor = createRef<CodeEditor>();
     wasUnmounted = false;
 
-    onChange = () => {};
+    onChange = () => { };
 
     highlightErrorLine() {
         if (this.wasUnmounted) return;

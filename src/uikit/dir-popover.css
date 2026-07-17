@@ -13,15 +13,16 @@
 
     &::backdrop {
         opacity: 0;
+        pointer-events: none;
     }
 
-    > .inner-backdrop {
+    >.inner-backdrop {
         position: absolute;
         inset: 0;
         background: rgba(0, 0, 0, 0.2);
     }
 
-    > .i-arrow {
+    >.i-arrow {
         position: absolute;
         top: 0;
         left: 0;
@@ -47,17 +48,20 @@
             border-right-color: var(--arrow-color);
             left: calc(var(--arrow-size) * -1);
         }
+
         &[data-type='right']::before,
         &[data-type='right']::after {
             border-left-color: var(--arrow-color);
             left: auto;
             right: calc(var(--arrow-size) * -1);
         }
+
         &[data-type='top']::before,
         &[data-type='top']::after {
             border-bottom-color: var(--arrow-color);
             top: calc(var(--arrow-size) * -1);
         }
+
         &[data-type='bottom']::before,
         &[data-type='bottom']::after {
             border-top-color: var(--arrow-color);
@@ -65,14 +69,14 @@
         }
     }
 
-    > .inner-popover {
+    >.inner-popover {
         position: absolute;
         background: var(--P-dialog-bg);
         box-shadow: 0 0.5em 1em rgba(0, 0, 0, 0.3), 0 0 0 1px var(--P-dialog-outline);
         border-radius: 0.5rem;
         overflow: hidden;
 
-        > .i-content {
+        >.i-content {
             position: absolute;
             top: 0;
             left: 0;

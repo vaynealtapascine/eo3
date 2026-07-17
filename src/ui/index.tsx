@@ -1,4 +1,4 @@
-import { Prechoster } from './prechoster';
+import { Eo3 } from './eo3';
 import { Document } from '../document';
 import { StorageContext } from '../storage-context';
 import React, {
@@ -27,11 +27,11 @@ import { shouldReduceMotion } from '../uikit/animation';
 import { DirPopover } from '../uikit/dir-popover';
 import { Button } from '../uikit/button';
 
-let lastPrechosterInit = 0;
+let lastEo3Init = 0;
 try {
-    lastPrechosterInit = +window.sessionStorage.lastPrechosterInit || 0;
-    window.sessionStorage.lastPrechosterInit = Date.now();
-} catch {}
+    lastEo3Init = +window.sessionStorage.lastEo3Init || 0;
+    window.sessionStorage.lastEo3Init = Date.now();
+} catch { }
 
 interface TabState {
     canUndo: boolean;
@@ -67,7 +67,7 @@ export default function ApplicationFrame({
 
     // don't render if the page was loaded twice in quick succession; possibly due to a bad render
     const shouldStartWithoutRender = useMemo(() => {
-        return Date.now() - lastPrechosterInit < 5000;
+        return Date.now() - lastEo3Init < 5000;
     }, [openDocs, virtualOpenDoc, currentTab]);
 
     // --------------------------
@@ -259,7 +259,7 @@ export default function ApplicationFrame({
                             onClick={() => {
                                 if (!confirm('you sure?')) return;
                                 storage.close();
-                                const req = window.indexedDB.deleteDatabase('prechoster_data');
+                                const req = window.indexedDB.deleteDatabase('eo3_data');
                                 req.addEventListener('blocked', () => {
                                     alert(
                                         'oh… we’re waiting on another tab to stop using the data'
@@ -483,7 +483,7 @@ function OpenFromUrl({
                 anchor={[window.innerWidth / 2, 0]}
                 anchorBias="above"
                 open
-                onClose={() => {}}
+                onClose={() => { }}
             >
                 {contents}
             </DirPopover>
@@ -912,7 +912,7 @@ function ApplicationTab({
         contents = (
             <div className="i-contents">
                 {document ? (
-                    <Prechoster
+                    <Eo3
                         document={document}
                         initWithoutRender={initWithoutRender}
                         graphOpen={graphOpen}

@@ -1,7 +1,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 // @ts-ignore
-import { staticUrlPrefix } from 'prechoster:config';
+import { staticUrlPrefix } from 'eo3:config';
 
 export const COHOST_RENDERER_VERSION = '2023-11-30';
 const CONFIG = {
@@ -61,7 +61,7 @@ const extraModules = {
                 // iframely embed
                 return {
                     data: {
-                        error: 'prechoster doesn’t support embeds, sorry!',
+                        error: 'eo3 doesn’t support embeds, sorry!',
                     },
                     status: null,
                 };

@@ -1,10 +1,10 @@
-import { Document, SerValue, Module, UnloadedPlugin } from '../../document';
+import { Document, JsonValue, Module, UnloadedPlugin } from '../../document';
 
-export function deserializeV0(_data: SerValue) {
+export function deserializeV0(_data: JsonValue) {
     const data = _data as any; // just assume it's fine
 
     const doc = new Document();
-    const modules = data.modules.map((module: SerValue) => deserializeModule(doc, module));
+    const modules = data.modules.map((module: JsonValue) => deserializeModule(doc, module));
     doc.init({
         title: '',
         titleInPost: false,
@@ -12,7 +12,7 @@ export function deserializeV0(_data: SerValue) {
     });
     return doc;
 }
-function deserializeModule(document: Document, _data: SerValue) {
+function deserializeModule(document: Document, _data: JsonValue) {
     // just assume it's fine
     const data = _data as any;
 

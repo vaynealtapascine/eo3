@@ -7,7 +7,7 @@ import { ExamplesMenu } from './examples';
 // @ts-ignore
 import { homepage as sourceLink } from '../../package.json';
 // @ts-ignore
-import { gitCommitHash } from 'prechoster:config';
+import { gitCommitHash } from 'eo3:config';
 import { useOptHeld } from './opt-held';
 import { Button } from '../uikit/button';
 import { DirPopover } from '../uikit/dir-popover';
@@ -26,9 +26,9 @@ export function ApplicationSidebar({
 }) {
     return (
         <div className="application-sidebar">
-            <div className="i-header" role="group" aria-label="prechoster title">
+            <div className="i-header" role="group" aria-label="eo3 title">
                 <div className="i-title-line">
-                    <h1 className="i-title">prechoster</h1>
+                    <h1 className="i-title">eo3</h1>
                     <div className="i-version">rev. {gitCommitHash}</div>
                     <a
                         className="i-source"
@@ -59,12 +59,12 @@ export function ApplicationSidebar({
 }
 
 const NAMES_FOR_POSTS = [
-    'chost',
-    'copost',
-    'bugpost',
-    'cohost post',
-    'cohost.org website post',
-    'cohost.org online website copost',
+    'ao3 fanfic',
+    'ao3 fanfiction',
+    'ao3 fic',
+    'archive o3 fanfic',
+    'archive of our own fan fiction',
+    'archive of our own fic',
 ];
 
 function PostName() {
@@ -521,7 +521,7 @@ function CreateShareUrl() {
                     <p>Result:</p>
                     <TextField
                         value={shareUrl.toString()}
-                        onChange={() => {}}
+                        onChange={() => { }}
                         readOnly
                         onFocus={(e) => {
                             e.target.select();

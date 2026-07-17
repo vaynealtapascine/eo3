@@ -7,15 +7,15 @@ import { Document, ModuleId, RenderOutput, RenderState } from '../document';
 import { RenderContext } from './render-context';
 // @ts-ignore
 import { homepage as sourceLink } from '../../package.json';
-import './prechoster.scss';
+import './eo3.scss';
 
-interface PrechosterState {
+interface Eo3State {
     render: RenderState;
     clickToRender: boolean;
     selected: ModuleId | EdgeId | null;
 }
 
-export class Prechoster extends PureComponent<Prechoster.Props, PrechosterState> {
+export class Eo3 extends PureComponent<Eo3.Props, Eo3State> {
     state = {
         render: {
             id: '',
@@ -71,7 +71,7 @@ export class Prechoster extends PureComponent<Prechoster.Props, PrechosterState>
             this.renderPreview();
         }
     }
-    componentDidUpdate(prevProps: Prechoster.Props) {
+    componentDidUpdate(prevProps: Eo3.Props) {
         if (this.props.document !== prevProps.document) {
             prevProps.document.removeEventListener('change', this.onDocumentChange);
             this.props.document.addEventListener('change', this.onDocumentChange);
@@ -165,11 +165,11 @@ export class Prechoster extends PureComponent<Prechoster.Props, PrechosterState>
 
         return (
             <RenderContext.Provider value={this.renderContext}>
-                <div className="prechoster">
+                <div className="eo3">
                     <SplitPanel
                         initialPos={Math.min(0.7, Math.max(500 / innerWidth, 1 - 700 / innerWidth))}
                     >
-                        <div className="prechoster-left-panel">
+                        <div className="eo3-left-panel">
                             <DocumentSettings doc={doc} />
                             <ModuleList
                                 document={doc}
@@ -185,10 +185,10 @@ export class Prechoster extends PureComponent<Prechoster.Props, PrechosterState>
                                 clickToRender={
                                     this.state.clickToRender
                                         ? () => {
-                                              this.setState({ clickToRender: false }, () => {
-                                                  this.renderPreview();
-                                              });
-                                          }
+                                            this.setState({ clickToRender: false }, () => {
+                                                this.renderPreview();
+                                            });
+                                        }
                                         : null
                                 }
                                 onLiveChange={(live) => {
@@ -224,7 +224,7 @@ export class Prechoster extends PureComponent<Prechoster.Props, PrechosterState>
         );
     }
 }
-namespace Prechoster {
+namespace Eo3 {
     export interface Props {
         document: Document;
         initWithoutRender: boolean;
@@ -234,7 +234,7 @@ namespace Prechoster {
 
 function DocumentSettings({ doc }: { doc: Document }) {
     return (
-        <div className="prechoster-document-settings">
+        <div className="eo3-document-settings">
             <div className="i-doc-title">
                 <div
                     className="i-sizer"

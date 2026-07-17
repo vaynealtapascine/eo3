@@ -1,5 +1,6 @@
-# prechoster
-A graph-based HTML generator to make fancy chosting easier.
+# eo3
+A graph-based HTML generator to make fancy AO3 fics easier.
+Built upon the work of cpsdqs on [prechoster](https://github.com/cpsdqs/prechoster). Eggbug forever!
 
 ## Overview
 Documents are a directed graph of modules.

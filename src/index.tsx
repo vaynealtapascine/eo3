@@ -12,7 +12,7 @@ if (canInit) {
     document.querySelector('#script-not-executed')?.remove();
 
     const container = document.createElement('div');
-    container.id = 'prechoster-root';
+    container.id = 'eo3-root';
     document.body.appendChild(container);
     const reactRoot = createRoot(container);
 
