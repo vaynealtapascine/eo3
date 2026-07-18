@@ -1,4 +1,4 @@
-import { createRef, PureComponent } from 'react';
+import { PureComponent } from 'react';
 import {
     ModulePlugin,
     ModulePluginProps,
@@ -8,6 +8,7 @@ import {
     PlainTextData,
 } from '../../document';
 import { CodeEditor } from '../../ui/components/code-editor';
+import { RichEditor } from '../../ui/components/rich-editor';
 import { EditorView } from '@codemirror/view';
 import { html } from '@codemirror/lang-html';
 import { css } from '@codemirror/lang-css';
@@ -97,13 +98,11 @@ class TextEditor extends PureComponent<ModulePluginProps<TextPluginData>> {
         let editor;
         if (data.language === HTML_CONTENTEDITABLE && this.state.editingRichText) {
             editor = (
-                <div>
-                    <RichTextEditor
-                        html={data.contents}
-                        onHtmlChange={(contents) => onChange({ ...data, contents })}
-                    />
-                    {footer}
-                </div>
+                <RichEditor
+                    value={data.contents}
+                    onChange={(contents) => onChange({ ...data, contents })}
+                    footer={footer}
+                />
             );
         } else {
             editor = (
@@ -117,60 +116,6 @@ class TextEditor extends PureComponent<ModulePluginProps<TextPluginData>> {
         }
 
         return <div className="plugin-plain-text-editor">{editor}</div>;
-    }
-}
-
-function sanitizeHtmlALittleBit(html: string) {
-    const doc = new DOMParser().parseFromString(
-        `<!doctype html><html><head><meta charset="utf-8" /></head><body>` + html,
-        'text/html'
-    );
-    for (const s of doc.querySelectorAll('script, style')) s.remove();
-    return doc.body.innerHTML;
-}
-
-class RichTextEditor extends PureComponent<RichTextEditor.Props> {
-    node = createRef<HTMLDivElement>();
-    currentHtmlValue = '';
-
-    componentDidMount() {
-        this.currentHtmlValue = this.props.html;
-        this.node.current!.innerHTML = sanitizeHtmlALittleBit(this.props.html);
-        this.node.current!.addEventListener('input', this.contentsDidChange);
-    }
-
-    componentDidUpdate(prevProps: RichTextEditor.Props) {
-        if (prevProps.html !== this.props.html) {
-            if (this.props.html !== this.currentHtmlValue) {
-                this.setHtml(this.props.html);
-            }
-        }
-    }
-
-    contentsDidChange = () => {
-        this.currentHtmlValue = this.node.current!.innerHTML;
-        this.props.onHtmlChange(this.currentHtmlValue);
-    };
-
-    setHtml(html: string) {
-        this.node.current!.innerHTML = sanitizeHtmlALittleBit(html);
-        this.currentHtmlValue = html;
-    }
-
-    render() {
-        return (
-            <div
-                className="plugin-text-rich-text-editor"
-                contentEditable={true}
-                ref={this.node}
-            ></div>
-        );
-    }
-}
-namespace RichTextEditor {
-    export interface Props {
-        html: string;
-        onHtmlChange: (s: string) => void;
     }
 }
 

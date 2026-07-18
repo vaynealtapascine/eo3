@@ -7,5 +7,10 @@
         "jsx": "react-jsx",
         "esModuleInterop": true
     },
-    "include": ["src/**/*.tsx", "src/**/*.ts", "src/globals.d.ts"]
+    "include": [
+        "src/**/*.tsx",
+        "src/**/*.ts",
+        "src/globals.d.ts",
+        "src/ui/components/tiny-plugins/ruby-characters.js"
+    ]
 }

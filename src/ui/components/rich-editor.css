@@ -1,0 +1,31 @@
+.rich-editor {
+    border: 1px solid var(--P-separator);
+    border-radius: 0.5em;
+    overflow: hidden;
+    min-height: 150px;
+    height: 380px;
+    display: flex;
+    flex-direction: column;
+
+    .editor-footer {
+        flex-shrink: 0;
+        min-height: 1em;
+        padding: 0.2em 0.5em;
+    }
+
+    .tmce-theme {
+        height: 0;
+        flex: 1;
+    }
+
+    .tmce-editor {
+        min-height: 100%;
+        font-size: var(--P-font-size-code);
+    }
+}
+
+@media (max-height: 600px) {
+    .rich-editor {
+        height: 50vh;
+    }
+}
