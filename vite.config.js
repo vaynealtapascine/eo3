@@ -30,7 +30,7 @@ if (CONFIG.staticUrlPrefix.includes('//archiveofourown.org')) {
 
 export default defineConfig({
     base: './',
-    plugins: [react(), string(), stringNodeModules(), config(), hackToFixSvelteWebWorker()],
+    plugins: [react(), stringNodeModules(), config(), hackToFixSvelteWebWorker()],
     build: {
         rollupOptions: {
             // i dont know why but some of these need to be repeated here for some reason
@@ -49,29 +49,6 @@ function readFileAsModule(id) {
             }
         });
     });
-}
-
-/** The `string:` loader can be used to load files as strings */
-function string() {
-    const scheme = 'string:';
-
-    return {
-        name: 'string',
-        resolveId(id, importer) {
-            if (id.startsWith(scheme)) {
-                const importerDir = path.dirname(importer) + '/';
-                const resolved = path.resolve(importerDir, id.substring(scheme.length));
-                return '\0' + scheme + resolved;
-            }
-            return null;
-        },
-        load(id) {
-            if (id.startsWith('\0' + scheme)) {
-                return readFileAsModule(id.substring(scheme.length + 1));
-            }
-            return null;
-        },
-    };
 }
 
 function stringNodeModules() {
