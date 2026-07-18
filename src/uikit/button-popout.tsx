@@ -301,6 +301,7 @@ class InnerPopout extends PureComponent<
                         <div className="popout-contents">
                             <button className="popout-close" onClick={this.props.onClose}>
                                 <span className="popout-close-icon" />
+                                <span className="popout-close-text">Close</span>
                             </button>
                             <div className="popout-text">
                                 <MessageRenderer message={this.props.message} />

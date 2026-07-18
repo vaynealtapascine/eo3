@@ -1,8 +1,8 @@
 import { createRef, useLayoutEffect, useMemo } from 'react';
-import EventEmitter from 'events';
+import { EventEmitter } from 'events';
 
 export function getNow(): number {
-    return (document.timeline?.currentTime || Date.now()) / 1000;
+    return ((document.timeline?.currentTime as number) ?? Date.now()) / 1000;
 }
 
 export function shouldReduceMotion(): boolean {

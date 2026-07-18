@@ -20,6 +20,7 @@
     "@rollup/plugin-typescript": "^9.0.2",
     "@surma/rollup-plugin-off-main-thread": "^2.2.3",
     "@types/css-tree": "^1.0.7",
+    "@types/events": "^3.0.3",
     "@types/react": "^18.0.25",
     "@types/react-dom": "^18.0.9",
     "autoprefixer": "^10.4.14",

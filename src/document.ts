@@ -668,7 +668,7 @@ export class BlobData extends ByteSliceData {
     objectUrl: string;
     blob: Blob;
 
-    constructor(contents: Uint8Array, type: string) {
+    constructor(contents: Uint8Array<ArrayBuffer>, type: string) {
         super(contents);
         this.blob = new Blob([contents], { type });
         this.objectUrl = URL.createObjectURL(this.blob);
