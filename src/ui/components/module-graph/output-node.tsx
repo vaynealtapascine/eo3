@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Position, Handle } from 'reactflow';
 // @ts-ignore
-import eggbug from 'string:eggbug.svg';
+import eggbug from './ao3.svg?raw';
 // @ts-ignore
-import eggbugSleep from 'string:eggbug-sleep.svg';
+import eggbugSleep from './ao3.svg?raw';
 import { AnimationController, Spring } from '../../../uikit/frame-animation';
 
 export function OutputNode({ data }: { data: any }) {
@@ -76,7 +76,11 @@ export function OutputNode({ data }: { data: any }) {
             <Handle id="in" type="target" position={Position.Left} />
             <div
                 className="eggbug-containment-zone"
-                style={{ transform: bounceTransform }}
+                style={{
+                    transform: bounceTransform,
+                    width: '128px',
+                    height: '128px',
+                }}
                 dangerouslySetInnerHTML={{
                     __html: data.hasOutput && !isPointerDown ? eggbug : eggbugSleep,
                 }}

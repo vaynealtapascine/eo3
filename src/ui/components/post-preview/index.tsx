@@ -1,17 +1,17 @@
 import React, { Fragment, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { DirPopover } from '../../../uikit/dir-popover';
 import {
-    COHOST_RENDERER_VERSION,
+    AO3_RENDERER_VERSION,
     loadRenderer,
     RenderFn,
     RenderConfig,
     RenderResult,
-} from './cohost-renderer';
+} from './ao3-renderer';
 import { RenderContext } from '../../render-context';
-import { CohostPlusIcon, CohostRegularIcon, PreviewRenderIcon } from '../icons';
+import { Ao3PlusIcon, Ao3RegularIcon, PreviewRenderIcon } from '../icons';
 import './index.scss';
 import {
-    COHOST_APPROX_MAX_PAYLOAD_SIZE,
+    AO3_APPROX_MAX_PAYLOAD_SIZE,
     ErrorMessage,
     ERRORS,
     getExportWarnings,
@@ -21,6 +21,7 @@ import {
 import { Button } from '../../../uikit/button';
 import { createPortal } from 'react-dom';
 import { DarkThemeButton } from './dark-theme-button';
+import parse from 'html-react-parser';
 
 const RESET_ON_RENDER = true;
 
@@ -41,13 +42,13 @@ function BasicRenderer({
                 dangerouslySetInnerHTML={{ __html: html }}
             />
             {error && errorPortal
-                ? createPortal(<div className="inner-cohost-error">{error}</div>, errorPortal)
+                ? createPortal(<div className="inner-ao3-error">{error}</div>, errorPortal)
                 : null}
         </>
     );
 }
 
-function CohostRenderer({
+function Ao3Renderer({
     renderId,
     rendered,
     readMore,
@@ -61,7 +62,7 @@ function CohostRenderer({
     return (
         <Fragment>
             <div
-                className="inner-prose prose p-prose co-prose cohost-renderer"
+                className="inner-prose prose p-prose co-prose ao3-renderer"
                 role="article"
                 key={RESET_ON_RENDER && renderId}
             >
@@ -77,7 +78,7 @@ function CohostRenderer({
     );
 }
 
-function useCohostRenderer(): RenderFn | null {
+function useAo3Renderer(): RenderFn | null {
     const rendererPromise = useMemo(() => loadRenderer(), undefined);
     const [renderer, setRenderer] = useState<{ current: RenderFn | null }>({ current: null });
 
@@ -90,7 +91,7 @@ function useCohostRenderer(): RenderFn | null {
     return renderer.current;
 }
 
-function getCohostErrorMessage(rendered: any): React.ReactNode | null {
+function getAo3ErrorMessage(rendered: any): React.ReactNode | null {
     if (rendered?.props?.className === 'not-prose' && rendered?.props?.children?.type === 'p') {
         return rendered;
     }
@@ -99,7 +100,7 @@ function getCohostErrorMessage(rendered: any): React.ReactNode | null {
 
 function MarkdownRenderer({
     renderId,
-    cohostRenderer,
+    ao3Renderer,
     config,
     markdown,
     fallbackHtml,
@@ -109,7 +110,7 @@ function MarkdownRenderer({
     onRender,
 }: {
     renderId: string;
-    cohostRenderer: RenderFn | null;
+    ao3Renderer: RenderFn | null;
     config: RenderConfig;
     markdown: string;
     fallbackHtml: string;
@@ -124,16 +125,15 @@ function MarkdownRenderer({
     const [triggerOnRender, setTriggerOnRender] = useState(0);
 
     useEffect(() => {
-        if (cohostRenderer) {
+        if (ao3Renderer) {
             const thisRenderId = renderId;
 
-            cohostRenderer(markdown, config)
+            ao3Renderer(markdown, config)
                 .then((result) => {
                     if (renderId !== thisRenderId) return;
 
                     const error =
-                        getCohostErrorMessage(result.initial) ||
-                        getCohostErrorMessage(result.expanded);
+                        getAo3ErrorMessage(result.initial) || getAo3ErrorMessage(result.expanded);
                     setError(error);
 
                     if (error) {
@@ -145,9 +145,9 @@ function MarkdownRenderer({
                 .catch((error) => {
                     if (renderId !== thisRenderId) return;
                     // oh well
-                    console.error('cohost renderer error', error);
+                    console.error('ao3 renderer error', error);
                     setRendered(null);
-                    setError(<div className="cohost-message-box">{error.toString()}</div>);
+                    setError(<div className="ao3-message-box">{error.toString()}</div>);
                 })
                 .finally(() => {
                     setTriggerOnRender(triggerOnRender + 1);
@@ -155,15 +155,15 @@ function MarkdownRenderer({
         } else {
             setTriggerOnRender(triggerOnRender + 1);
         }
-    }, [cohostRenderer, config, markdown]);
+    }, [ao3Renderer, config, markdown]);
 
     useEffect(() => {
         onRender();
     }, [triggerOnRender]);
 
-    if (cohostRenderer && rendered) {
+    if (ao3Renderer && rendered) {
         return (
-            <CohostRenderer
+            <Ao3Renderer
                 renderId={renderId}
                 rendered={rendered}
                 readMore={readMore}
@@ -177,7 +177,7 @@ function MarkdownRenderer({
 
 export interface PreviewConfig {
     render: RenderConfig;
-    cohostRenderer: boolean;
+    ao3Renderer: boolean;
     prefersReducedMotion: boolean;
     darkTheme: boolean;
     siteDarkTheme: boolean;
@@ -186,13 +186,13 @@ export interface PreviewConfig {
 const DEFAULT_RENDER_CONFIG: RenderConfig = {
     disableEmbeds: false,
     externalLinksInNewTab: true,
-    hasCohostPlus: true,
+    hasAo3Plus: true,
 };
 
 export const DEFAULT_PREVIEW_CONFIG: PreviewConfig = {
     render: DEFAULT_RENDER_CONFIG,
 
-    cohostRenderer: true,
+    ao3Renderer: true,
     prefersReducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
     darkTheme: window.matchMedia('(prefers-color-scheme: dark)').matches,
     siteDarkTheme: window.matchMedia('(prefers-color-scheme: dark)').matches,
@@ -217,7 +217,7 @@ export function PostPreview({
         error = err as Error;
     }
 
-    const cohostRenderer = useCohostRenderer();
+    const ao3Renderer = useAo3Renderer();
 
     const proseContainer = useRef<HTMLDivElement>(null);
     const errorBtn = useRef<HTMLButtonElement>(null);
@@ -260,263 +260,441 @@ export function PostPreview({
             }
         >
             <div className="prose-container ao3-main">
-                <div id="outer" className="wrapper inner-prose prose p-prose co-prose cohost-renderer">
-                    <ul id="skiplinks"><li><a href="#main">Main Content</a></li></ul>
+                <div id="outer" className="wrapper inner-prose prose p-prose co-prose ao3-renderer">
+                    <ul id="skiplinks">
+                        <li>
+                            <a href="#main">Main Content</a>
+                        </li>
+                    </ul>
                     <header id="header" className="region">
-
                         <h1 className="heading">
-                            <a href="/"><span>Archive of Our Own</span></a>
+                            <a href="/">
+                                <span>Archive of Our Own</span>
+                            </a>
                         </h1>
 
                         <nav id="greeting" aria-label="User">
                             <ul className="user navigation actions">
                                 <li className="dropdown">
-                                    <a className="dropdown-toggle" data-toggle="dropdown" data-target="#">Hi, User!</a>
+                                    <a
+                                        className="dropdown-toggle"
+                                        data-toggle="dropdown"
+                                        data-target="#"
+                                    >
+                                        Hi, User!
+                                    </a>
                                     <ul className="menu dropdown-menu">
-                                        <li><a>My Dashboard</a></li>
-                                        <li><a>My Subscriptions</a></li>
-                                        <li><a>My Works</a></li>
-                                        <li><a>My Bookmarks</a></li>
-                                        <li><a>My History</a></li>
-                                        <li><a>My Preferences</a></li>
+                                        <li>
+                                            <a>My Dashboard</a>
+                                        </li>
+                                        <li>
+                                            <a>My Subscriptions</a>
+                                        </li>
+                                        <li>
+                                            <a>My Works</a>
+                                        </li>
+                                        <li>
+                                            <a>My Bookmarks</a>
+                                        </li>
+                                        <li>
+                                            <a>My History</a>
+                                        </li>
+                                        <li>
+                                            <a>My Preferences</a>
+                                        </li>
                                     </ul>
                                 </li>
                                 <li className="dropdown" aria-haspopup="true">
-                                    <a className="dropdown-toggle" data-toggle="dropdown" data-target="#">Post</a>
+                                    <a
+                                        className="dropdown-toggle"
+                                        data-toggle="dropdown"
+                                        data-target="#"
+                                    >
+                                        Post
+                                    </a>
                                     <ul className="menu dropdown-menu">
-                                        <li><a>New Work</a></li>
-                                        <li><a>Import Work</a></li>
+                                        <li>
+                                            <a>New Work</a>
+                                        </li>
+                                        <li>
+                                            <a>Import Work</a>
+                                        </li>
                                     </ul>
                                 </li>
-                                <li><a>Log Out</a></li>
+                                <li>
+                                    <a>Log Out</a>
+                                </li>
                             </ul>
 
-                            <p className="icon"><a><img alt="" className="icon" /></a></p>
+                            <p className="icon">
+                                <a>
+                                    <img alt="" className="icon" />
+                                </a>
+                            </p>
                         </nav>
-
 
                         <nav aria-label="Site">
                             <ul className="primary navigation actions">
                                 <li className="dropdown" aria-haspopup="true">
-                                    <a className="dropdown-toggle" data-toggle="dropdown" data-target="#">Fandoms</a>
+                                    <a
+                                        className="dropdown-toggle"
+                                        data-toggle="dropdown"
+                                        data-target="#"
+                                    >
+                                        Fandoms
+                                    </a>
                                     <ul className="menu dropdown-menu">
-                                        <li><a>All Fandoms</a></li>
-                                        <li id="medium_5"><a>Anime &amp; Manga</a></li>
-                                        <li id="medium_3"><a>Books &amp; Literature</a></li>
-                                        <li id="medium_4"><a>Cartoons &amp; Comics &amp; Graphic Novels</a></li>
-                                        <li id="medium_7"><a>Celebrities &amp; Real People</a></li>
-                                        <li id="medium_2"><a>Movies</a></li>
-                                        <li id="medium_6"><a>Music &amp; Bands</a></li>
-                                        <li id="medium_8"><a>Other Media</a></li>
-                                        <li id="medium_30198"><a>Theater</a></li>
-                                        <li id="medium_1"><a>TV Shows</a></li>
-                                        <li id="medium_476"><a>Video Games</a></li>
-                                        <li id="medium_9971"><a>Uncategorized Fandoms</a></li>
+                                        <li>
+                                            <a>All Fandoms</a>
+                                        </li>
+                                        <li id="medium_5">
+                                            <a>Anime &amp; Manga</a>
+                                        </li>
+                                        <li id="medium_3">
+                                            <a>Books &amp; Literature</a>
+                                        </li>
+                                        <li id="medium_4">
+                                            <a>Cartoons &amp; Comics &amp; Graphic Novels</a>
+                                        </li>
+                                        <li id="medium_7">
+                                            <a>Celebrities &amp; Real People</a>
+                                        </li>
+                                        <li id="medium_2">
+                                            <a>Movies</a>
+                                        </li>
+                                        <li id="medium_6">
+                                            <a>Music &amp; Bands</a>
+                                        </li>
+                                        <li id="medium_8">
+                                            <a>Other Media</a>
+                                        </li>
+                                        <li id="medium_30198">
+                                            <a>Theater</a>
+                                        </li>
+                                        <li id="medium_1">
+                                            <a>TV Shows</a>
+                                        </li>
+                                        <li id="medium_476">
+                                            <a>Video Games</a>
+                                        </li>
+                                        <li id="medium_9971">
+                                            <a>Uncategorized Fandoms</a>
+                                        </li>
                                     </ul>
-
                                 </li>
                                 <li className="dropdown" aria-haspopup="true">
-                                    <a className="dropdown-toggle" data-toggle="dropdown" data-target="#">Browse</a>
+                                    <a
+                                        className="dropdown-toggle"
+                                        data-toggle="dropdown"
+                                        data-target="#"
+                                    >
+                                        Browse
+                                    </a>
                                     <ul className="menu dropdown-menu">
-                                        <li><a>Works</a></li>
-                                        <li><a>Bookmarks</a></li>
-                                        <li><a>Tags</a></li>
-                                        <li><a>Collections</a></li>
+                                        <li>
+                                            <a>Works</a>
+                                        </li>
+                                        <li>
+                                            <a>Bookmarks</a>
+                                        </li>
+                                        <li>
+                                            <a>Tags</a>
+                                        </li>
+                                        <li>
+                                            <a>Collections</a>
+                                        </li>
                                     </ul>
-
                                 </li>
                                 <li className="dropdown" aria-haspopup="true">
-                                    <a className="dropdown-toggle" data-toggle="dropdown" data-target="#">Search</a>
+                                    <a
+                                        className="dropdown-toggle"
+                                        data-toggle="dropdown"
+                                        data-target="#"
+                                    >
+                                        Search
+                                    </a>
                                     <ul className="menu dropdown-menu">
-                                        <li><a>Works</a></li>
-                                        <li><a>Bookmarks</a></li>
-                                        <li><a>Tags</a></li>
-                                        <li><a>People</a></li>
+                                        <li>
+                                            <a>Works</a>
+                                        </li>
+                                        <li>
+                                            <a>Bookmarks</a>
+                                        </li>
+                                        <li>
+                                            <a>Tags</a>
+                                        </li>
+                                        <li>
+                                            <a>People</a>
+                                        </li>
                                     </ul>
-
                                 </li>
                                 <li className="dropdown" aria-haspopup="true">
-                                    <a className="dropdown-toggle" data-toggle="dropdown" data-target="#">About</a>
+                                    <a
+                                        className="dropdown-toggle"
+                                        data-toggle="dropdown"
+                                        data-target="#"
+                                    >
+                                        About
+                                    </a>
                                     <ul className="menu dropdown-menu">
-                                        <li><a>About Us</a></li>
-                                        <li><a>News</a></li>
-                                        <li><a>FAQ</a></li>
-                                        <li><a>Wrangling Guidelines</a></li>
-                                        <li><a href="https://archiveofourown.org/donate" target="_blank">Donate or Volunteer</a></li>
+                                        <li>
+                                            <a>About Us</a>
+                                        </li>
+                                        <li>
+                                            <a>News</a>
+                                        </li>
+                                        <li>
+                                            <a>FAQ</a>
+                                        </li>
+                                        <li>
+                                            <a>Wrangling Guidelines</a>
+                                        </li>
+                                        <li>
+                                            <a
+                                                href="https://archiveofourown.org/donate"
+                                                target="_blank"
+                                            >
+                                                Donate or Volunteer
+                                            </a>
+                                        </li>
                                     </ul>
-
                                 </li>
-                                <li className="search"><form className="search" id="search">
-                                    <fieldset>
-                                        <p>
-                                            <label className="landmark" htmlFor="site_search">Work Search</label>
-                                            <input disabled className="text" id="site_search" aria-describedby="site_search_tooltip" type="text" name="work_search[query]"></input>
-                                            <span className="tip" role="tooltip" id="site_search_tooltip">tip: arthur merlin words&gt;1000 sort:hits</span>
-                                            <span className="submit actions"><button disabled className="button">Search</button></span>
-                                        </p>
-                                    </fieldset>
-                                </form></li>
+                                <li className="search">
+                                    <form className="search" id="search">
+                                        <fieldset>
+                                            <p>
+                                                <label className="landmark" htmlFor="site_search">
+                                                    Work Search
+                                                </label>
+                                                <input
+                                                    disabled
+                                                    className="text"
+                                                    id="site_search"
+                                                    aria-describedby="site_search_tooltip"
+                                                    type="text"
+                                                    name="work_search[query]"
+                                                ></input>
+                                                <span
+                                                    className="tip"
+                                                    role="tooltip"
+                                                    id="site_search_tooltip"
+                                                >
+                                                    tip: arthur merlin words&gt;1000 sort:hits
+                                                </span>
+                                                <span className="submit actions">
+                                                    <button disabled className="button">
+                                                        Search
+                                                    </button>
+                                                </span>
+                                            </p>
+                                        </fieldset>
+                                    </form>
+                                </li>
                             </ul>
                         </nav>
 
-
-
                         <div className="clear"></div>
-
                     </header>
 
                     <div id="inner" className="wrapper">
                         <div id="main" className="chapters-show region" role="main">
                             <div className="flash"></div>
                             <div className="work">
-                                <p className="landmark"><a>&nbsp;</a></p>
+                                <p className="landmark">
+                                    <a>&nbsp;</a>
+                                </p>
                                 <h3 className="landmark heading">Actions</h3>
                                 <ul className="work navigation actions">
+                                    <li className="add">
+                                        <a>Add Chapter</a>
+                                    </li>
+                                    <li className="edit">
+                                        <a>Edit</a>
+                                    </li>
+                                    <li className="edit tag">
+                                        <a>Edit Tags</a>
+                                    </li>
 
-                                    <li className="add"><a>Add Chapter</a></li>
-                                    <li className="edit"><a>Edit</a></li>
-                                    <li className="edit tag"><a>Edit Tags</a></li>
+                                    <li className="chapter entire">
+                                        <a>Entire Work</a>
+                                    </li>
 
+                                    <li className="chapter previous">
+                                        <a>← Previous Chapter</a>
+                                    </li>
 
-                                    <li className="chapter entire"><a>Entire Work</a></li>
+                                    <li className="chapter next">
+                                        <a>Next Chapter →</a>
+                                    </li>
 
-                                    <li className="chapter previous"><a>← Previous Chapter</a></li>
-
-                                    <li className="chapter next"><a>Next Chapter →</a></li>
-
-                                    <li className="chapter"><noscript><a>Chapter Index</a></noscript><button className="collapsed">Chapter Index</button>
-                                        <ul id="chapter_index" className="expandable secondary hidden">
+                                    <li className="chapter">
+                                        <noscript>
+                                            <a>Chapter Index</a>
+                                        </noscript>
+                                        <button className="collapsed">Chapter Index</button>
+                                        <ul
+                                            id="chapter_index"
+                                            className="expandable secondary hidden"
+                                        >
                                             <li>
                                                 <form accept-charset="UTF-8" method="get">
                                                     <p>
-                                                        <select name="selected_id" id="selected_id"><option value="1">Chapter 1</option>
-                                                            <option selected value="2">Chapter 2</option>
-                                                            <option value="3">Chapter 3</option></select>
-                                                        <span className="submit actions"><input type="submit" name="commit" value="Go" /></span>
+                                                        <select name="selected_id" id="selected_id">
+                                                            <option value="1">Chapter 1</option>
+                                                            <option selected value="2">
+                                                                Chapter 2
+                                                            </option>
+                                                            <option value="3">Chapter 3</option>
+                                                        </select>
+                                                        <span className="submit actions">
+                                                            <input
+                                                                type="submit"
+                                                                name="commit"
+                                                                value="Go"
+                                                            />
+                                                        </span>
                                                     </p>
                                                 </form>
                                             </li>
-                                            <li><a>Full-Page Index</a></li>
+                                            <li>
+                                                <a>Full-Page Index</a>
+                                            </li>
                                         </ul>
                                     </li>
-
 
                                     <li className="bookmark">
                                         <a className="bookmark_form_placement_open">Bookmark</a>
                                     </li>
 
-
                                     <li className="comments" id="show_comments_link_top">
                                         <a>Comments</a>
                                     </li>
-
 
                                     <li className="style">
                                         <a>Hide Creator's Style</a>
                                     </li>
 
                                     <li className="share">
-                                        <a className="modal modal-attached" title="Share Work">Share</a>
+                                        <a className="modal modal-attached" title="Share Work">
+                                            Share
+                                        </a>
                                     </li>
 
                                     <li className="subscribe">
-                                        <form className="ajax-create-destroy" accept-charset="UTF-8" method="post">
-                                            <input type="submit" disabled name="commit" value="Subscribe" />
+                                        <form
+                                            className="ajax-create-destroy"
+                                            accept-charset="UTF-8"
+                                            method="post"
+                                        >
+                                            <input
+                                                type="submit"
+                                                disabled
+                                                name="commit"
+                                                value="Subscribe"
+                                            />
                                         </form>
                                     </li>
 
-                                    <li className="share"><button className="collapsed">Download</button>
+                                    <li className="share">
+                                        <button className="collapsed">Download</button>
                                     </li>
                                 </ul>
                                 <div>
                                     <details style={{ display: 'table', margin: '0 auto' }}>
                                         <summary className="action">Fic Details</summary>
                                         <div className="wrapper">
-
                                             <dl className="work meta group">
-                                                <dt className="rating tags">
-
-                                                    Rating:
-                                                </dt>
+                                                <dt className="rating tags">Rating:</dt>
 
                                                 <dd className="rating tags">
                                                     <ul className="commas">
-                                                        <li><a className="tag">Explicit</a></li>
+                                                        <li>
+                                                            <a className="tag">Explicit</a>
+                                                        </li>
                                                     </ul>
                                                 </dd>
                                                 <dt className="warning tags">
-
                                                     <a>Archive Warning</a>:
                                                 </dt>
 
                                                 <dd className="warning tags">
                                                     <ul className="commas">
-                                                        <li><a className="tag">Creator Chose Not To Use Archive Warnings</a></li>
+                                                        <li>
+                                                            <a className="tag">
+                                                                Creator Chose Not To Use Archive
+                                                                Warnings
+                                                            </a>
+                                                        </li>
                                                     </ul>
                                                 </dd>
-                                                <dt className="category tags">
-
-                                                    Categories:
-                                                </dt>
+                                                <dt className="category tags">Categories:</dt>
 
                                                 <dd className="category tags">
                                                     <ul className="commas">
-                                                        <li><a className="tag">F/F</a></li>
-                                                        <li><a className="tag">Multi</a></li>
-                                                        <li><a className="tag">Other</a></li>
+                                                        <li>
+                                                            <a className="tag">F/F</a>
+                                                        </li>
+                                                        <li>
+                                                            <a className="tag">Multi</a>
+                                                        </li>
+                                                        <li>
+                                                            <a className="tag">Other</a>
+                                                        </li>
                                                     </ul>
                                                 </dd>
-                                                <dt className="fandom tags">
-
-                                                    Fandom:
-                                                </dt>
+                                                <dt className="fandom tags">Fandom:</dt>
 
                                                 <dd className="fandom tags">
                                                     <ul className="commas">
-                                                        <li><a className="tag">Generic Fandom</a></li>
+                                                        <li>
+                                                            <a className="tag">Generic Fandom</a>
+                                                        </li>
                                                     </ul>
                                                 </dd>
                                                 <dt className="relationship tags">
-
                                                     Relationships:
                                                 </dt>
 
                                                 <dd className="relationship tags">
                                                     <ul className="commas">
-                                                        <li><a className="tag">Character A/Character B</a></li>
+                                                        <li>
+                                                            <a className="tag">
+                                                                Character A/Character B
+                                                            </a>
+                                                        </li>
                                                     </ul>
                                                 </dd>
-                                                <dt className="character tags">
-
-                                                    Characters:
-                                                </dt>
+                                                <dt className="character tags">Characters:</dt>
 
                                                 <dd className="character tags">
                                                     <ul className="commas">
-                                                        <li><a className="tag">Character A</a></li>
-                                                        <li><a className="tag">Character B</a></li>
+                                                        <li>
+                                                            <a className="tag">Character A</a>
+                                                        </li>
+                                                        <li>
+                                                            <a className="tag">Character B</a>
+                                                        </li>
                                                     </ul>
                                                 </dd>
-                                                <dt className="freeform tags">
-
-                                                    Additional Tags:
-                                                </dt>
+                                                <dt className="freeform tags">Additional Tags:</dt>
 
                                                 <dd className="freeform tags">
                                                     <ul className="commas">
-                                                        <li><a className="tag">Slice of Life</a></li>
-                                                        <li><a className="tag">Alternate Universe</a></li>
+                                                        <li>
+                                                            <a className="tag">Slice of Life</a>
+                                                        </li>
+                                                        <li>
+                                                            <a className="tag">
+                                                                Alternate Universe
+                                                            </a>
+                                                        </li>
                                                     </ul>
                                                 </dd>
 
-                                                <dt className="language">
-                                                    Language:
-                                                </dt>
+                                                <dt className="language">Language:</dt>
                                                 <dd className="language" lang="en">
                                                     English
                                                 </dd>
-
-
 
                                                 <dt className="stats">Stats:</dt>
                                                 <dd className="stats">
@@ -544,51 +722,65 @@ export function PostPreview({
                                     </details>
                                 </div>
 
-
                                 <h3 className="landmark heading">Work Header</h3>
-
-
-
 
                                 <div id="work-skin" className="wrapper">
                                     <div id="workskin">
                                         <div className="preface group">
-                                            <h2 className="title heading">
-                                                Fic Title
-                                            </h2>
+                                            <h2 className="title heading">Fic Title</h2>
                                             <h3 className="byline heading">
                                                 <a rel="author">Author Name</a>
                                             </h3>
-
                                         </div>
 
                                         <div id="chapters">
                                             <div className="chapter" id="chapter-2">
-                                                <h3 className="landmark heading">Chapter Management</h3>
-                                                <div className='post-header' style={{ float: 'right', clear: 'left' }}>
+                                                <h3 className="landmark heading">
+                                                    Chapter Management
+                                                </h3>
+                                                <div
+                                                    className="post-header"
+                                                    style={{ float: 'right', clear: 'left' }}
+                                                >
                                                     <span className="i-errors-container">
                                                         <button
                                                             ref={errorBtn}
-                                                            className={'i-errors-button action' + (errorCount ? ' has-errors' : '')}
+                                                            className={
+                                                                'i-errors-button action' +
+                                                                (errorCount ? ' has-errors' : '')
+                                                            }
                                                             disabled={!errorCount}
                                                             onClick={() => setErrorsOpen(true)}
-                                                            aria-label={errorCount === 1 ? '1 error' : `${errorCount} errors`}
+                                                            aria-label={
+                                                                errorCount === 1
+                                                                    ? '1 error'
+                                                                    : `${errorCount} errors`
+                                                            }
                                                         >
                                                             <span className="i-errors-icon">!</span>
-                                                            <span className="i-errors-count">{errorCount}</span>
+                                                            <span className="i-errors-count">
+                                                                {errorCount}
+                                                            </span>
                                                         </button>
                                                         <DirPopover
                                                             anchor={errorBtn.current}
                                                             open={errorsOpen}
                                                             onClose={() => setErrorsOpen(false)}
                                                         >
-                                                            <ErrorList errors={renderErrors.concat(asyncErrors)} />
+                                                            <ErrorList
+                                                                errors={renderErrors.concat(
+                                                                    asyncErrors
+                                                                )}
+                                                            />
                                                         </DirPopover>
                                                     </span>
                                                 </div>
-                                                <button className='action' style={{ float: 'right', marginRight: '8px' }}>Edit Chapter</button>
-
-
+                                                <button
+                                                    className="action"
+                                                    style={{ float: 'right', marginRight: '8px' }}
+                                                >
+                                                    Edit Chapter
+                                                </button>
 
                                                 <div className="chapter preface group">
                                                     <h3 className="title">
@@ -597,8 +789,10 @@ export function PostPreview({
                                                 </div>
 
                                                 <div className="userstuff module" role="article">
-                                                    <h3 className="landmark heading" id="work">Chapter Text</h3>
-                                                    <div dangerouslySetInnerHTML={{ __html: html }} />
+                                                    <h3 className="landmark heading" id="work">
+                                                        Chapter Text
+                                                    </h3>
+                                                    {parse(html)}
                                                 </div>
                                             </div>
                                         </div>
@@ -606,103 +800,171 @@ export function PostPreview({
                                 </div>
                             </div>
                             <div id="feedback" className="feedback">
-
                                 <h3 className="landmark heading">Actions</h3>
                                 <div className="post-footer-simulate" style={{ float: 'right' }}>
                                     <PostSize size={markdown.length} />
-                                    <CopyToClipboard disabled={!!error} data={markdown} label="Copy to clipboard" />
+                                    <CopyHtmlToClipboard
+                                        disabled={!!error}
+                                        data={markdown}
+                                        label="Copy HTML"
+                                    />
+                                    <CopyWorkskinToClipboard
+                                        disabled={!!error}
+                                        data={markdown}
+                                        label="Copy Workskin CSS"
+                                    />
                                 </div>
 
-
                                 <div id="kudos_message"></div>
-
 
                                 <h3 className="landmark heading">Kudos</h3>
                                 <div id="kudos">
                                     <p className="kudos">
-                                        <a href="https://archiveofourown.org/users/vaynegarden">vaynegarden</a> and 39 guests
-                                        left kudos on this work!
+                                        <a href="https://archiveofourown.org/users/vaynegarden">
+                                            vaynegarden
+                                        </a>{' '}
+                                        and 39 guests left kudos on this work!
                                     </p>
                                 </div>
 
-                                <h3 className="landmark heading"><a id="comments">Comments</a></h3>
+                                <h3 className="landmark heading">
+                                    <a id="comments">Comments</a>
+                                </h3>
                                 <div id="add_comment_placeholder" title="top level comment">
                                     <div id="add_comment">
                                         <div className="post comment">
-                                            <form className="new_comment" accept-charset="UTF-8" method="post">
+                                            <form
+                                                className="new_comment"
+                                                accept-charset="UTF-8"
+                                                method="post"
+                                            >
                                                 <input type="hidden" name="authenticity_token" />
                                                 <fieldset>
                                                     <legend>Post Comment</legend>
 
-                                                    <h4 className="heading">Comment as <select style={{
-                                                        pointerEvents: "none"
-                                                    }} title="Choose Name" name="comment[pseud_id]">
-                                                        <option selected>User</option></select>
+                                                    <h4 className="heading">
+                                                        Comment as{' '}
+                                                        <select
+                                                            style={{
+                                                                pointerEvents: 'none',
+                                                            }}
+                                                            title="Choose Name"
+                                                            name="comment[pseud_id]"
+                                                        >
+                                                            <option selected>User</option>
+                                                        </select>
                                                     </h4>
 
-                                                    <p className="footnote">Plain text with limited HTML  <a className="help symbol question modal modal-attached" aria-label="Html help"><span className="symbol question"><span>?</span></span></a></p>
+                                                    <p className="footnote">
+                                                        Plain text with limited HTML{' '}
+                                                        <a
+                                                            className="help symbol question modal modal-attached"
+                                                            aria-label="Html help"
+                                                        >
+                                                            <span className="symbol question">
+                                                                <span>?</span>
+                                                            </span>
+                                                        </a>
+                                                    </p>
 
                                                     <p>
                                                         <label className="landmark">Comment</label>
-                                                        <textarea style={{
-                                                            pointerEvents: "none"
-                                                        }} className="comment_form observe_textlength" title="Enter Comment" name="comment[comment_content]"></textarea><span role="alert" className=" LV_validation_message LV_valid"></span>
-                                                        <input type="hidden" name="controller_name" value="chapters" />
+                                                        <textarea
+                                                            style={{
+                                                                pointerEvents: 'none',
+                                                            }}
+                                                            className="comment_form observe_textlength"
+                                                            title="Enter Comment"
+                                                            name="comment[comment_content]"
+                                                        ></textarea>
+                                                        <span
+                                                            role="alert"
+                                                            className=" LV_validation_message LV_valid"
+                                                        ></span>
+                                                        <input
+                                                            type="hidden"
+                                                            name="controller_name"
+                                                            value="chapters"
+                                                        />
                                                     </p>
-                                                    <p className="character_counter"><span className="value" data-maxlength="10000">1000</span> characters left</p>
+                                                    <p className="character_counter">
+                                                        <span
+                                                            className="value"
+                                                            data-maxlength="10000"
+                                                        >
+                                                            1000
+                                                        </span>{' '}
+                                                        characters left
+                                                    </p>
                                                     <p className="submit actions">
-                                                        <input disabled type="submit" name="commit" value="Comment" data-disable-with="Please wait..." />
+                                                        <input
+                                                            disabled
+                                                            type="submit"
+                                                            name="commit"
+                                                            value="Comment"
+                                                            data-disable-with="Please wait..."
+                                                        />
                                                     </p>
                                                 </fieldset>
-                                            </form></div>
+                                            </form>
+                                        </div>
                                         <div className="clear"></div>
-
                                     </div>
                                 </div>
-                                <div id="modal-bg" className="modal-closer"><div className="loading"></div></div><div id="modal-wrap" className="modal-closer"><div id="modal"><div className="content userstuff"></div><div className="footer"><span className="title"></span><a className="action modal-closer" href="#">Close</a></div></div></div>
+                                <div id="modal-bg" className="modal-closer">
+                                    <div className="loading"></div>
+                                </div>
+                                <div id="modal-wrap" className="modal-closer">
+                                    <div id="modal">
+                                        <div className="content userstuff"></div>
+                                        <div className="footer">
+                                            <span className="title"></span>
+                                            <a className="action modal-closer" href="#">
+                                                Close
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-            {
-                error ? (
-                    <div className="prose-container p-prose-outer">
-                        <div className="inner-prose prose p-prose co-prose is-error">
-                            {error
-                                .toString()
-                                .split('\n')
-                                .map((line, i) => (
-                                    <div key={i}>{line}</div>
-                                ))}
-                        </div>
+            {error ? (
+                <div className="prose-container p-prose-outer">
+                    <div className="inner-prose prose p-prose co-prose is-error">
+                        {error
+                            .toString()
+                            .split('\n')
+                            .map((line, i) => (
+                                <div key={i}>{line}</div>
+                            ))}
                     </div>
-                ) : (
-                    <div
-                        className="prose-container p-prose-outer co-themed-box"
-                        ref={proseContainer}
-                        data-theme={config.darkTheme ? 'dark' : 'light'}
-                        data-media-color-scheme={config.siteDarkTheme ? 'dark' : 'light'}
-                        style={{ pointerEvents: 'none' }}
-                    >
-                        <DynamicStyles config={config} />
-                        <MarkdownRenderer
-                            renderId={renderId}
-                            cohostRenderer={config.cohostRenderer ? cohostRenderer : null}
-                            config={config.render}
-                            markdown={markdown}
-                            fallbackHtml={html}
-                            readMore={readMore}
-                            onReadMoreChange={onReadMoreChange}
-                            errorPortal={errorPortal}
-                            onRender={onRender}
-                        />
-                    </div>
-                )
-            }
+                </div>
+            ) : (
+                <div
+                    className="prose-container p-prose-outer co-themed-box"
+                    ref={proseContainer}
+                    data-theme={config.darkTheme ? 'dark' : 'light'}
+                    data-media-color-scheme={config.siteDarkTheme ? 'dark' : 'light'}
+                    style={{ pointerEvents: 'none' }}
+                >
+                    <DynamicStyles config={config} />
+                    <MarkdownRenderer
+                        renderId={renderId}
+                        ao3Renderer={config.ao3Renderer ? ao3Renderer : null}
+                        config={config.render}
+                        markdown={markdown}
+                        fallbackHtml={html}
+                        readMore={readMore}
+                        onReadMoreChange={onReadMoreChange}
+                        errorPortal={errorPortal}
+                        onRender={onRender}
+                    />
+                </div>
+            )}
             <hr />
-
-        </div >
+        </div>
     );
 }
 
@@ -745,52 +1007,52 @@ interface RenderConfigItem {
     description: string;
     inRender?: boolean;
     renderOnChange?: boolean;
-    requiresCohostRenderer?: boolean;
+    requiresAo3Renderer?: boolean;
 }
 
 const RENDER_CONFIG_ITEMS: { [k: string]: RenderConfigItem } = {
-    cohostRenderer: {
+    ao3Renderer: {
         short: null,
-        label: 'Cohost Renderer',
-        description: `Uses the cohost markdown renderer (from ${COHOST_RENDERER_VERSION}). Turn this off to test with an approximate renderer that is less strict.`,
-        requiresCohostRenderer: true,
+        label: 'AO3 Renderer',
+        description: `Uses the AO3 markdown renderer (from ${AO3_RENDERER_VERSION}). Turn this off to test with an approximate renderer that is less strict.`,
+        requiresAo3Renderer: true,
     },
     prefersReducedMotion: {
         short: ['motion ✓', 'reduced motion'],
         label: 'Reduced Motion',
         description:
-            'Disables the `spin` animation and enables the `pulse` animation. This simulates the effect of @media (prefers-reduced-motion: reduce) on cohost.',
+            'Disables the `spin` animation and enables the `pulse` animation. This simulates the effect of @media (prefers-reduced-motion: reduce) on AO3.',
         renderOnChange: true,
     },
-    hasCohostPlus: {
+    hasAo3Plus: {
         short: null,
-        label: 'Cohost Plus!',
-        description: 'Enables Cohost Plus! features (emoji). Use this if you have Cohost Plus!',
+        label: 'AO3 Plus!',
+        description: 'Enables AO3 Plus! features (emoji). Use this if you have AO3 Plus!',
         inRender: true,
-        requiresCohostRenderer: true,
+        requiresAo3Renderer: true,
     },
     siteDarkTheme: {
         short: null,
         label: 'Dark Site Theme',
         description:
-            'Sets the site theme to the dark theme. Controlled by the OS theme on Cohost. Affects variables like `--color-text`.',
+            'Sets the site theme to the dark theme. Controlled by the OS theme on AO3. Affects variables like `--color-text`.',
     },
     disableEmbeds: {
         short: [null, 'no embeds'],
         label: 'Disable Embeds',
         description:
-            'Disables Iframely embeds in the post. This is a feature in Cohost settings. Though, quite frankly, it’s not very useful here.',
+            'Disables Iframely embeds in the post. This is a feature in AO3 settings. Though, quite frankly, it’s not very useful here.',
         inRender: true,
-        requiresCohostRenderer: true,
+        requiresAo3Renderer: true,
     },
 };
 
 function RenderConfigEditor({
-    hasCohostRenderer,
+    hasAo3Renderer,
     config,
     onConfigChange,
 }: {
-    hasCohostRenderer: boolean;
+    hasAo3Renderer: boolean;
     config: PreviewConfig;
     onConfigChange: (c: PreviewConfig) => void;
 }) {
@@ -799,19 +1061,19 @@ function RenderConfigEditor({
 
     const items = [];
 
-    if (!hasCohostRenderer || !config.cohostRenderer) {
+    if (!hasAo3Renderer || !config.ao3Renderer) {
         items.push(<PreviewRenderIcon key="preview" />);
-    } else if (config.render.hasCohostPlus) {
-        items.push(<CohostPlusIcon key="preview" />);
+    } else if (config.render.hasAo3Plus) {
+        items.push(<Ao3PlusIcon key="preview" />);
     } else {
-        items.push(<CohostRegularIcon key="preview" />);
+        items.push(<Ao3RegularIcon key="preview" />);
     }
 
     for (const k in RENDER_CONFIG_ITEMS) {
         const v = RENDER_CONFIG_ITEMS[k];
 
         if (!v.short) continue;
-        if (v.requiresCohostRenderer && (!hasCohostRenderer || !config.cohostRenderer)) continue;
+        if (v.requiresAo3Renderer && (!hasAo3Renderer || !config.ao3Renderer)) continue;
         const enabled = v.inRender
             ? config.render[k as unknown as keyof RenderConfig]
             : config[k as unknown as keyof PreviewConfig];
@@ -847,7 +1109,7 @@ function RenderConfigEditor({
                 onClose={() => setConfigOpen(false)}
             >
                 <RenderConfigPopover
-                    hasCohostRenderer={hasCohostRenderer}
+                    hasAo3Renderer={hasAo3Renderer}
                     config={config}
                     onConfigChange={onConfigChange}
                 />
@@ -857,11 +1119,11 @@ function RenderConfigEditor({
 }
 
 function RenderConfigPopover({
-    hasCohostRenderer,
+    hasAo3Renderer,
     config,
     onConfigChange,
 }: {
-    hasCohostRenderer: boolean;
+    hasAo3Renderer: boolean;
     config: PreviewConfig;
     onConfigChange: (c: PreviewConfig) => void;
 }) {
@@ -870,17 +1132,17 @@ function RenderConfigPopover({
     return (
         <div className="i-config-contents">
             <div className="i-config-title">Post Preview Settings</div>
-            {!hasCohostRenderer && (
-                <div className="i-cohost-unavailable">
+            {!hasAo3Renderer && (
+                <div className="i-ao3-unavailable">
                     <div className="i-icon">
                         <PreviewRenderIcon />
                     </div>
-                    <div>cohost renderer unavailable</div>
+                    <div>AO3 renderer unavailable</div>
                 </div>
             )}
             {Object.entries(RENDER_CONFIG_ITEMS).map(([k, v]) => {
-                if (v.requiresCohostRenderer && !hasCohostRenderer) return null;
-                if (k !== 'cohostRenderer' && v.requiresCohostRenderer && !config.cohostRenderer)
+                if (v.requiresAo3Renderer && !hasAo3Renderer) return null;
+                if (k !== 'ao3Renderer' && v.requiresAo3Renderer && !config.ao3Renderer)
                     return null;
                 const checkboxId = Math.random().toString(36);
                 return (
@@ -975,7 +1237,7 @@ function PostSize({ size }: { size: number }) {
         }
     }
 
-    let sizeOfMax = byteSize / COHOST_APPROX_MAX_PAYLOAD_SIZE;
+    let sizeOfMax = byteSize / AO3_APPROX_MAX_PAYLOAD_SIZE;
 
     return (
         <span
@@ -996,7 +1258,7 @@ function PostSize({ size }: { size: number }) {
     );
 }
 
-function CopyToClipboard({ data, label, disabled }: CopyToClipboard.Props) {
+function CopyHtmlToClipboard({ data, label, disabled }: CopyHtmlToClipboard.Props) {
     const [copied, setCopied] = useState(false);
     const [warnings, setWarnings] = useState<string[]>([]);
     const [warningsOpen, setWarningsOpen] = useState(false);
@@ -1070,7 +1332,89 @@ function CopyToClipboard({ data, label, disabled }: CopyToClipboard.Props) {
     );
 }
 
-namespace CopyToClipboard {
+namespace CopyHtmlToClipboard {
+    export interface Props {
+        data: string;
+        label: string;
+        disabled?: boolean;
+    }
+}
+
+function CopyWorkskinToClipboard({ data, label, disabled }: CopyWorkskinToClipboard.Props) {
+    const [copied, setCopied] = useState(false);
+    const [warnings, setWarnings] = useState<string[]>([]);
+    const [warningsOpen, setWarningsOpen] = useState(false);
+
+    const copy = () => {
+        try {
+            navigator.clipboard.writeText(data);
+            setCopied(true);
+            setTimeout(() => {
+                setCopied(false);
+            }, 1000);
+        } catch (err) {
+            alert('Could not copy to clipboard\n\n' + err);
+        }
+    };
+
+    const tryCopy = () => {
+        const warnings = getExportWarnings(data);
+        setWarnings(warnings);
+        if (warnings.length) {
+            setWarningsOpen(true);
+        } else {
+            copy();
+        }
+    };
+
+    const button = useRef<HTMLButtonElement>(null);
+
+    return (
+        <>
+            <button
+                ref={button}
+                disabled={disabled}
+                className={'button-appearance copy-to-clipboard' + (copied ? ' did-copy' : '')}
+                onClick={tryCopy}
+            >
+                {label}
+            </button>
+            <DirPopover
+                anchor={button.current}
+                open={warningsOpen}
+                onClose={() => setWarningsOpen(false)}
+            >
+                <div className="copy-to-clipboard-warnings">
+                    <ul className="i-warnings">
+                        {warnings.map((warning, i) => (
+                            <li key={i}>{warning}</li>
+                        ))}
+                    </ul>
+                    <div className="i-buttons">
+                        <Button
+                            primary
+                            run={() => {
+                                setWarningsOpen(false);
+                            }}
+                        >
+                            cancel
+                        </Button>
+                        <Button
+                            run={() => {
+                                copy();
+                                setWarningsOpen(false);
+                            }}
+                        >
+                            copy anyway
+                        </Button>
+                    </div>
+                </div>
+            </DirPopover>
+        </>
+    );
+}
+
+namespace CopyWorkskinToClipboard {
     export interface Props {
         data: string;
         label: string;

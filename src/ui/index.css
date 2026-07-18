@@ -29,8 +29,8 @@
 
 @font-face {
     font-family: 'League Mono';
-    /* I don't know what version of League Mono this is, so this is stolen from cohost */
-    src: url('../../assets/cohost-leaguemono.woff') format('woff');
+    /* I don't know what version of League Mono this is, so this is stolen from ao3 */
+    src: url('../../assets/ao3-leaguemono.woff') format('woff');
     font-weight: 100 900;
     font-stretch: 50% 200%;
 }
@@ -38,7 +38,7 @@
 html {
     font-family: 'Atkinson Hyperlegible', system-ui, sans-serif;
 
-    /* --P- variable prefix to avoid confusion with variables inherited from cohost */
+    /* --P- variable prefix to avoid confusion with variables inherited from ao3 */
 
     --P-monospace: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, liberation mono, courier new,
         monospace;
@@ -64,8 +64,8 @@ html {
     --P-color-form-item-bg: var(--P-color-fg);
     --P-color-form-item-bg-opacity: 0.1;
 
-    --P-cohost-bg: rgb(255 249 242);
-    --P-cohost-dark-bg: rgb(25 25 25);
+    --P-ao3-bg: rgb(255 249 242);
+    --P-ao3-dark-bg: rgb(25 25 25);
     --P-card-bg: 255 255 255;
     --P-danger: #f43;
     --P-danger-content-fg: white;

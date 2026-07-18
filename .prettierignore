@@ -2,4 +2,4 @@ package.json
 package-lock.json
 static
 README.md
-src/cohost-inherited.scss
+src/ao3-inherited.scss

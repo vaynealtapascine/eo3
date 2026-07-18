@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 // @ts-ignore
 import { staticUrlPrefix } from 'eo3:config';
 
-export const COHOST_RENDERER_VERSION = '2023-11-30';
+export const AO3_RENDERER_VERSION = '2023-11-30';
 const CONFIG = {
     chunks: [staticUrlPrefix + 'client.f2154449135515dd1a2a.js'],
     modules: {
@@ -35,7 +35,7 @@ const extraModules = {
             IFRAMELY_KEY: '',
             UNLEASH_APP_NAME: '',
             UNLEASH_CLIENT_KEY: '',
-            limits: { attachmentSize: { normal: 5242880, cohostPlus: 10485760 } },
+            limits: { attachmentSize: { normal: 5242880, ao3Plus: 10485760 } },
         });
         e.exports = {
             F: ctx,
@@ -47,7 +47,7 @@ const extraModules = {
                 public: {
                     project: {
                         mainAppProfile: ({ projectHandle }: any) => {
-                            return `https://cohost.org/${projectHandle}`;
+                            return `https://archiveofourown.org/user/${projectHandle}`;
                         },
                     },
                     static: { staticAsset: ({ path }: any) => `${staticUrlPrefix}${path}` },
@@ -90,7 +90,7 @@ const extraModules = {
                 return React.createElement(
                     'div',
                     {
-                        className: 'cohost-message-box ' + className,
+                        className: 'ao3-message-box ' + className,
                         'data-level': level,
                     },
                     children
@@ -213,7 +213,7 @@ export type RenderFn = (markdown: string, config: RenderConfig) => Promise<Rende
 export interface RenderConfig {
     disableEmbeds: boolean;
     externalLinksInNewTab: boolean;
-    hasCohostPlus: boolean;
+    hasAo3Plus: boolean;
 }
 export interface RenderResult {
     initial: any;
@@ -228,7 +228,7 @@ function innerLoad(): Promise<RenderFn> {
         scriptPromises.push(
             new Promise((resolve, reject) => {
                 const script = document.createElement('script');
-                script.className = 'cohost-preview-chunk';
+                script.className = 'ao3-preview-chunk';
                 script.src = src;
                 script.addEventListener('load', resolve);
                 script.addEventListener('error', reject);
@@ -241,7 +241,7 @@ function innerLoad(): Promise<RenderFn> {
         .then(() => {
             const require = chunkRuntime();
             const markdown = require(CONFIG.modules.markdown);
-            console.log('cohost renderer loaded!');
+            console.log('ao3 renderer loaded!');
 
             return async (source: string, config: RenderConfig) => {
                 const data = await markdown[CONFIG.symbols.renderToData](
@@ -256,7 +256,7 @@ function innerLoad(): Promise<RenderFn> {
             };
         })
         .catch((err) => {
-            console.error('failed to load cohost renderer', err);
+            console.error('failed to load ao3 renderer', err);
             throw err;
         });
 }

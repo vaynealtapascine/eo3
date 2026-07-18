@@ -1,4 +1,5 @@
-@import '../../../ao3-inherited.scss';
+@use '../../../ao3-inherited.scss' as ao3;
+@use './reset.scss' as v;
 
 .post-preview {
     background: white;
@@ -9,11 +10,12 @@
 
     &.dark-theme {
         margin: 0;
-        box-shadow: rgba(0, 0, 0, 0.14) 0 4px 5px 0, rgba(0, 0, 0, 0.12) 0 1px 10px 0, rgba(0, 0, 0, 0.2) 0 2px 4px 0;
+        box-shadow: rgba(0, 0, 0, 0.14) 0 4px 5px 0, rgba(0, 0, 0, 0.12) 0 1px 10px 0,
+            rgba(0, 0, 0, 0.2) 0 2px 4px 0;
         border: 1px solid rgb(74, 72, 71);
     }
 
-    &>hr {
+    & > hr {
         height: 0;
         margin: 0;
         border: none;
@@ -21,7 +23,7 @@
         transition: border-color 1s;
     }
 
-    &.dark-theme>hr {
+    &.dark-theme > hr {
         height: 0;
         border: none;
         border-top: 1px solid rgb(74, 72, 71);
@@ -51,13 +53,13 @@
         opacity: 0.5;
     }
 
-    >.post-header,
-    >.post-footer {
+    > .post-header,
+    > .post-footer {
         display: flex;
         justify-content: space-between;
         align-items: center;
         padding: 0.5em 0.75em;
-        background: var(--P-cohost-bg);
+        background: var(--P-ao3-bg);
         transition: background 1s;
     }
 
@@ -199,7 +201,7 @@
                 font-size: 1.1em;
             }
 
-            .i-cohost-unavailable {
+            .i-ao3-unavailable {
                 display: flex;
                 align-items: center;
                 gap: 0.5em;
@@ -241,7 +243,7 @@
             .i-error {
                 padding: 0.5em 0.75em;
 
-                &+.i-error {
+                & + .i-error {
                     border-top: 1px solid var(--P-separator);
                 }
 
@@ -256,9 +258,16 @@
         }
     }
 
-    >.ao3-main {
-        @include ao3-content;
-        @include ao3-general;
+    > .ao3-main {
+        @include ao3.ao3-content;
+        @include ao3.ao3-general;
+    }
+
+    .post-footer-simulate {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.5em;
     }
 
     .post-footer,
@@ -269,10 +278,13 @@
         --size-meter-fg: 0 0 0;
 
         .post-size-meter {
+            padding-top: 2px;
             --size-of-max: 0;
-            color: color-mix(in oklab,
-                    rgb(var(--size-meter-fg)),
-                    rgb(var(--P-color-warning)) calc(var(--size-of-max) * 100%));
+            color: color-mix(
+                in oklab,
+                rgb(var(--size-meter-fg)),
+                rgb(var(--P-color-warning)) calc(var(--size-of-max) * 100%)
+            );
 
             .i-warning {
                 border: 1px solid;
@@ -282,45 +294,90 @@
         }
 
         .copy-to-clipboard {
+            @property --color-stop-1 {
+                syntax: '<color>';
+                inherits: true;
+                initial-value: rgb(var(--P-color-accent));
+            }
+            @property --color-stop-2 {
+                syntax: '<color>';
+                inherits: true;
+                initial-value: rgb(var(--P-color-accent));
+            }
+            @property --color-stop-3 {
+                syntax: '<color>';
+                inherits: true;
+                initial-value: rgb(var(--P-color-accent));
+            }
+            --color-stop-1: rgb(255 255 255);
+            --color-stop-2: rgb(221 221 221);
+            --color-stop-3: rgb(187 187 187);
+
+            background-image: linear-gradient(
+                var(--color-stop-1) 2%,
+                var(--color-stop-2) 95%,
+                var(--color-stop-3) 100%
+            );
+
             position: relative;
             font: inherit;
-            background: none;
-            border-radius: 0.5em;
+            border-radius: 0.25em;
+            background-origin: border-box;
+            background-clip: padding-box, border-box;
             padding: 0.2em 0.3em;
             color: inherit;
-            transition: background 0.2s, color 0.2s;
+            transition: --color-stop-1 0.2s, --color-stop-2 0.2s, --color-stop-3 0.2s, color 0.2s;
 
             &:disabled {
                 opacity: 0.5;
             }
 
             &:active {
-                background: rgb(var(--P-color-accent));
-                color: rgb(var(--P-color-accent));
+                --color-stop-1: rgb(var(--P-color-accent));
+                --color-stop-2: rgb(var(--P-color-accent) / 0.9);
+                --color-stop-3: rgb(var(--P-color-accent) / 0.8);
+                color: white;
             }
 
             &.did-copy {
-                animation: P-post-preview-copy-to-clipboard-did-copy 1s;
+                --color-stop-1: rgb(var(--P-color-accent));
+                --color-stop-2: rgb(var(--P-color-accent) / 0.9);
+                --color-stop-3: rgb(var(--P-color-accent) / 0.5);
+
+                animation: P-post-preview-copy-to-clipboard-did-copy 1.5s;
 
                 @keyframes P-post-preview-copy-to-clipboard-did-copy {
                     0% {
-                        background: rgb(var(--P-color-accent));
+                        --color-stop-1: rgb(var(--P-color-accent));
+                        --color-stop-2: rgb(var(--P-color-accent) / 0.9);
+                        --color-stop-3: rgb(var(--P-color-accent) / 0.5);
                         color: transparent;
                     }
 
                     90% {
-                        background: rgb(var(--P-color-accent));
+                        --color-stop-1: rgb(var(--P-color-accent));
+                        --color-stop-2: rgb(var(--P-color-accent) / 0.9);
+                        --color-stop-3: rgb(var(--P-color-accent) / 0.5);
+                        color: transparent;
+                    }
+
+                    100% {
+                        --color-stop-1: rgb(255 255 255);
+                        --color-stop-2: rgb(221 221 221);
+                        --color-stop-3: rgb(187 187 187);
                         color: transparent;
                     }
                 }
 
                 &::after {
-                    content: '✓';
+                    content: '✓ Copied!';
+                    letter-spacing: -0.1em;
+                    font-weight: bold;
                     position: absolute;
                     top: 50%;
                     left: 50%;
                     transform: translate(-50%, -50%);
-                    color: rgb(var(--P-color-accent));
+                    color: white;
 
                     animation: P-post-preview-copy-to-clipboard-did-copy-after 1s;
 
@@ -340,7 +397,7 @@
                         }
 
                         90% {
-                            color: rgb(var(--P-color-accent-fg));
+                            color: white;
                         }
 
                         100% {
@@ -395,25 +452,25 @@
         background: black;
         color: #fff;
 
-        >.post-header,
-        >.post-footer {
-            --P-cohost-bg: var(--P-cohost-dark-bg);
+        > .post-header,
+        > .post-footer {
+            --P-ao3-bg: var(--P-ao3-dark-bg);
             background: #191919;
         }
 
-        >.post-footer {
+        > .post-footer {
             background: #191919;
             --size-meter-fg: 191 186 181;
         }
 
-        >.post-header .config-preview-item {
+        > .post-header .config-preview-item {
             background: #fff2;
         }
 
-        >.prose-container {
+        > .prose-container {
             --tw-border-opacity: 1;
 
-            >.prose-read-more {
+            > .prose-read-more {
                 background: #000;
                 color: rgb(var(--color-accent));
             }
@@ -421,7 +478,7 @@
     }
 }
 
-.cohost-message-box {
+.ao3-message-box {
     position: relative;
     z-index: 5;
     margin: 1em;
@@ -445,8 +502,8 @@
 }
 
 .ao3-main {
-    @include ao3-content;
-    @include ao3-general;
+    @include ao3.ao3-content;
+    @include ao3.ao3-general;
 
     background-color: white;
 }
@@ -459,22 +516,26 @@ button:is(.button-appearance) {
     background: #eee;
     color: #444;
     width: auto;
-    font-weight: 400;
-    font-size: 100%;
-    line-height: 1.286;
-    height: 1.286em;
+    font-weight: 400 !important;
+    font-size: 110% !important;
+    line-height: 1.286 !important;
+    height: 1.286em !important;
     vertical-align: middle;
     display: inline-block;
-    padding: 0.25em 0.75em;
+    padding: 0.25em 0.75em !important;
     white-space: nowrap;
     text-decoration: none;
     border: 1px solid #bbb;
     border-bottom: 1px solid #aaa;
-    background-image: -moz-linear-gradient(#fff 2%, #ddd 95%, #bbb 100%) !important;
-    background-image: -webkit-linear-gradient(#fff 2%, #ddd 95%, #bbb 100%) !important;
-    background-image: -o-linear-gradient(#fff 2%, #ddd 95%, #bbb 100%) !important;
-    background-image: -ms-linear-gradient(#fff 2%, #ddd 95%, #bbb 100%) !important;
-    background-image: linear-gradient(#fff 2%, #ddd 95%, #bbb 100%) !important;
-    border-radius: 0.25em;
+    background-image: -moz-linear-gradient(#fff 2%, #ddd 95%, #bbb 100%);
+    background-image: -webkit-linear-gradient(#fff 2%, #ddd 95%, #bbb 100%);
+    background-image: -o-linear-gradient(#fff 2%, #ddd 95%, #bbb 100%);
+    background-image: -ms-linear-gradient(#fff 2%, #ddd 95%, #bbb 100%);
+    background-image: linear-gradient(#fff 2%, #ddd 95%, #bbb 100%);
+    border-radius: 0.25em !important;
     box-shadow: none;
+}
+
+#workskin {
+    @include v.variable-reset;
 }

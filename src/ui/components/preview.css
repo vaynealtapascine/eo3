@@ -1,0 +1,154 @@
+.data-preview {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  overflow: auto;
+}
+.data-preview > .i-contents {
+  flex: 1;
+  height: 0;
+  display: grid;
+  grid-template-columns: 100%;
+  grid-template-rows: 100%;
+  /* show site theme in background color */
+}
+.data-preview > .i-contents:has(> .i-preview-area > .i-post-preview) {
+  background: white;
+}
+.data-preview > .i-contents:has(> .i-preview-area > .i-post-preview > .is-site-dark-theme) {
+  background: var(--P-ao3-dark-bg);
+}
+.data-preview > .i-contents > .i-preview-area {
+  grid-area: 1/1;
+  overflow: auto;
+  isolation: isolate;
+}
+.data-preview > .i-contents > .i-error-area {
+  grid-area: 1/1;
+  position: relative;
+  overflow: auto;
+}
+.data-preview > .i-contents > .i-error-area:empty {
+  display: none;
+}
+.data-preview > .preview-header {
+  padding: 0.5em 1em;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5em;
+  position: relative;
+  border-bottom: 1px solid rgb(var(--P-color-accent));
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1333333333);
+  z-index: 1;
+}
+.data-preview > .preview-header .preview-config {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  flex: 1;
+}
+.data-preview > .preview-header .preview-config .output-select {
+  width: 100%;
+  max-width: 8em;
+}
+.data-preview > .preview-header .render-indicator {
+  position: relative;
+  width: 1.2em;
+  height: 1.2em;
+  line-height: 0;
+  visibility: hidden;
+  opacity: 0;
+}
+.data-preview > .preview-header .render-indicator::before {
+  content: "";
+  display: inline-block;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 2px solid rgb(var(--P-color-accent));
+  border-bottom-color: transparent;
+}
+.data-preview > .preview-header .render-indicator.is-rendering {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.1s;
+}
+.data-preview > .preview-header .render-indicator.is-rendering::before {
+  animation: P-data-preview-render-indicator-spin 1s infinite linear;
+}
+@keyframes P-data-preview-render-indicator-spin {
+  0% {
+    transform: none;
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+.data-preview > .i-contents > .i-preview-area > .preview-error-placeholder {
+  background: rgb(var(--P-card-bg));
+  border-radius: 0.5em;
+  padding: 0.5em 1em;
+  margin: 1em;
+  -webkit-user-select: text;
+     -moz-user-select: text;
+          user-select: text;
+  box-sizing: border-box;
+}
+.data-preview > .i-contents > .i-error-area > .preview-error {
+  background: rgb(var(--P-card-bg));
+  border: 2px solid var(--P-error);
+  margin: 1em;
+  padding: 0.5em 1em;
+  border-radius: 0.5em;
+}
+.data-preview > .i-contents > .i-error-area > .preview-error .error-title {
+  font-weight: bold;
+}
+.data-preview > .i-contents > .i-error-area > .preview-error .error-contents {
+  margin-top: 0.5em;
+  padding-top: 0.5em;
+  border-top: 1px solid var(--P-separator);
+  white-space: pre-wrap;
+  font-family: var(--P-monospace);
+  font-size: smaller;
+  overflow-wrap: break-word;
+}
+.data-preview > .i-contents > .i-error-area > .preview-error .error-source {
+  margin-top: 1em;
+}
+.data-preview > .i-contents > .i-error-area > .preview-error .error-source .inner-title {
+  font-weight: bold;
+  margin-bottom: 0.5em;
+}
+.data-preview > .i-contents > .i-preview-area > .i-post-preview {
+  padding: 0;
+}
+.data-preview > .i-contents > .i-preview-area > .i-data-preview {
+  margin: 1em;
+  border-radius: 0.5em;
+  background: rgb(var(--P-card-bg));
+  -webkit-user-select: text;
+     -moz-user-select: text;
+          user-select: text;
+  contain: layout;
+}
+.data-preview > .i-contents > .i-preview-area > .i-preview-click-to-render {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
+  align-items: center;
+}
+.data-preview > .i-contents > .i-preview-area > .i-preview-click-to-render button {
+  font: inherit;
+  background: rgb(var(--P-color-accent));
+  color: rgb(var(--P-color-accent-fg));
+  border: none;
+  padding: 0.5em 2em;
+  border-radius: 0.5em;
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.5333333333), inset 0 -1px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.6666666667);
+}
+.data-preview > .i-contents > .i-preview-area > .i-preview-click-to-render button:active {
+  opacity: 0.5;
+}/*# sourceMappingURL=preview.css.map */

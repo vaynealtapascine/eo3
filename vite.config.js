@@ -9,19 +9,21 @@ const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 const prod = process.env.NODE_ENV === 'production';
 
 const CONFIG = {
-    staticUrlPrefix: process.env.EO3_STATIC || 'https://cohost.org/static/',
-    gitCommitHash: process.env.EO3_GIT_COMMIT_HASH?.substring(0, 7) || childProcess
-        .execSync('git rev-parse --short HEAD', {
-            cwd: __dirname,
-            encoding: 'utf-8',
-        })
-        .trim(),
+    staticUrlPrefix: process.env.EO3_STATIC || 'https://ao3.org/static/',
+    gitCommitHash:
+        process.env.EO3_GIT_COMMIT_HASH?.substring(0, 7) ||
+        childProcess
+            .execSync('git rev-parse --short HEAD', {
+                cwd: __dirname,
+                encoding: 'utf-8',
+            })
+            .trim(),
 };
 
 console.error(`\x1b[32mUsing EO3_STATIC=${CONFIG.staticUrlPrefix}\x1b[m`);
-if (CONFIG.staticUrlPrefix.includes('//cohost.org')) {
+if (CONFIG.staticUrlPrefix.includes('//archiveofourown.org')) {
     console.error('\x1b[31m+------------------------------------------------+\x1b[m');
-    console.error('\x1b[31m| loading assets directly from cohost dot org!!! |\x1b[m');
+    console.error('\x1b[31m|   loading assets directly from ao3 dot org!!!  |\x1b[m');
     console.error('\x1b[31m|           links may be unreliable...           |\x1b[m');
     console.error('\x1b[31m+------------------------------------------------+\x1b[m');
 }

@@ -1,5 +1,5 @@
 {
-  description = "prechoster";
+  description = "eo3";
   inputs = {
     flake-utils.url = "github:numtide/flake-utils";
     nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
@@ -16,7 +16,7 @@
   {
 
     packages.default = pkgs.buildNpmPackage {
-      name = "prechoster";
+      name = "eo3";
       src = ./.;
       nativeBuildInputs = with pkgs; [ git ];
       npmDepsHash = "sha256-hw2QcOcKaTJ42TDoThHpvPRVQ8SgGPAQ6rz+UcQ9z8s=";
@@ -28,14 +28,14 @@
         runHook postInstall
       '';
 
-      PRECHOSTER_STATIC = staticUrl;
-      PRECHOSTER_GIT_COMMIT_HASH = if (self ? rev) then self.rev else "dirty";
+      EO3_STATIC = staticUrl;
+      EO3_GIT_COMMIT_HASH = if (self ? rev) then self.rev else "dirty";
     };
 
     devShells.default = pkgs.mkShell {
       buildInputs = with pkgs; [ nodejs ];
 
-      PRECHOSTER_STATIC = staticUrl;
+      EO3_STATIC = staticUrl;
     };
 
   });

@@ -1,0 +1,90 @@
+.split-panel {
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  height: 100%;
+}
+.split-panel > .inner-container {
+  overflow: hidden;
+}
+.split-panel > .inner-container > * {
+  width: 100%;
+  height: 100%;
+}
+.split-panel > .inner-resizer {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-basis: 1em;
+  flex-shrink: 0;
+  cursor: col-resize;
+  box-shadow: inset 1px 0 var(--P-resizer-rim), inset -1px 0 var(--P-resizer-rim);
+}
+.split-panel > .inner-resizer::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: scaleX(0);
+  background: var(--P-separator);
+  transition: transform 0.1s cubic-bezier(0.5, 0, 0.7, 0.5);
+}
+@media (hover: hover) {
+  .split-panel > .inner-resizer:hover::before {
+    transform: scaleX(0.5);
+    transition: transform 0.3s cubic-bezier(0.5, 2, 0.5, 1);
+  }
+}
+@media (hover: none) {
+  .split-panel > .inner-resizer:active::before {
+    transform: scaleX(0.5);
+    transition: transform 0.3s cubic-bezier(0.5, 2, 0.5, 1);
+  }
+}
+.split-panel > .inner-resizer > .inner-affordance {
+  position: relative;
+  width: 1em;
+  height: 1em;
+  --line-pos: 30%;
+  --line-weight: 2px;
+}
+.split-panel > .inner-resizer > .inner-affordance::before, .split-panel > .inner-resizer > .inner-affordance::after {
+  position: absolute;
+  content: "";
+  background: currentColor;
+}
+.split-panel.is-horizontal > .inner-resizer > .inner-affordance::before, .split-panel.is-horizontal > .inner-resizer > .inner-affordance::after {
+  height: 1em;
+  width: var(--line-weight);
+  top: 0;
+}
+.split-panel.is-horizontal > .inner-resizer > .inner-affordance::before {
+  left: var(--line-pos);
+}
+.split-panel.is-horizontal > .inner-resizer > .inner-affordance::after {
+  right: var(--line-pos);
+}
+.split-panel.is-vertical > .inner-resizer > .inner-affordance::before, .split-panel.is-vertical > .inner-resizer > .inner-affordance::after {
+  width: 1em;
+  height: var(--line-weight);
+  left: 0;
+}
+.split-panel.is-vertical > .inner-resizer > .inner-affordance::before {
+  top: var(--line-pos);
+}
+.split-panel.is-vertical > .inner-resizer > .inner-affordance::after {
+  bottom: var(--line-pos);
+}
+.split-panel.is-vertical {
+  flex-direction: column;
+}
+.split-panel.is-vertical > .inner-resizer {
+  cursor: row-resize;
+  box-shadow: inset 0 1px var(--P-resizer-rim), inset 0 -1px var(--P-resizer-rim);
+}
+.split-panel.is-vertical > .inner-resizer::before {
+  transform: scaleY(0);
+}
+.split-panel.is-vertical > .inner-resizer:hover::before {
+  transform: scaleY(0.5);
+}/*# sourceMappingURL=split-panel.css.map */

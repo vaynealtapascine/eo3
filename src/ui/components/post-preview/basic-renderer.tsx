@@ -85,7 +85,7 @@ export const ERRORS = {
             <div>
                 An input of type <code>{type}</code> will be converted to a checkbox.
                 {isFirstOfType && (
-                    <div className="quick-help">Cohost does this for some reason.</div>
+                    <div className="quick-help">AO3 does this for some reason.</div>
                 )}
             </div>
         );
@@ -150,7 +150,7 @@ export const ERRORS = {
                     <div className="quick-help">
                         Check your URL maybe…
                         <br />
-                        To include an image in a post, you can upload it to cohost in a draft post
+                        To include an image in a post, you can upload it to an image host
                         and copy the image address, or inline it as a data: URL if your image is
                         small (see examples).
                     </div>
@@ -195,7 +195,7 @@ export function renderMarkdown(
     const footnotes = doc.querySelector('section[data-footnotes]');
     const ignoreUserContentId = new Set();
     if (footnotes) {
-        // cohost does something weird with the footnotes that i cant be bothered
+        // AO3 does something weird with the footnotes that i cant be bothered
         // to replicate accurately here
         footnotes.remove();
         const innerFootnotes = footnotes.querySelector('ol')!;
@@ -264,7 +264,7 @@ export function renderMarkdown(
         }
     }
 
-    // cohost adds user-content- before ids in posts
+    // AO3 adds user-content- before ids in posts
     for (const node of doc.querySelectorAll('[id]')) {
         if (idReferences.has(node.id) && !ignoreUserContentId.has(node.id)) {
             pushError('user-content-id', { id: node.id });
@@ -297,7 +297,7 @@ export function renderMarkdown(
     return doc.body.innerHTML;
 }
 
-export const COHOST_APPROX_MAX_PAYLOAD_SIZE = 500000;
+export const AO3_APPROX_MAX_PAYLOAD_SIZE = 500000;
 export function getExportWarnings(input: string): string[] {
     const doc = new DOMParser().parseFromString(
         ['<!doctype html><html><head></head><body>', input, '</body></html>'].join(''),
@@ -306,7 +306,7 @@ export function getExportWarnings(input: string): string[] {
 
     const exportWarnings: string[] = [];
 
-    if (input.length >= COHOST_APPROX_MAX_PAYLOAD_SIZE) {
+    if (input.length >= AO3_APPROX_MAX_PAYLOAD_SIZE) {
         exportWarnings.push('this is probably too large to post');
     }
 
@@ -325,7 +325,7 @@ export function getExportWarnings(input: string): string[] {
             const parsedUrl = new URL(url);
             if (parsedUrl.protocol === 'blob:') {
                 exportWarnings.push(
-                    `a <${node.tagName.toLowerCase()}> src has a blob: URL source. it will stop working on cohost`
+                    `a <${node.tagName.toLowerCase()}> src has a blob: URL source. it will stop working on AO3`
                 );
             } else if (isUrlLoopback(parsedUrl)) {
                 exportWarnings.push(
@@ -342,7 +342,7 @@ export function getExportWarnings(input: string): string[] {
                     const parsedUrl = new URL(url);
                     if (parsedUrl.protocol === 'blob:') {
                         exportWarnings.push(
-                            `a <${node.tagName.toLowerCase()}> background-image has a blob: URL source. it will stop working on cohost`
+                            `a <${node.tagName.toLowerCase()}> background-image has a blob: URL source. it will stop working on AO3`
                         );
                     } else if (isUrlLoopback(parsedUrl)) {
                         exportWarnings.push(

@@ -86,7 +86,7 @@ export function RedoIcon() {
     );
 }
 
-export function CohostPlusIcon() {
+export function Ao3PlusIcon() {
     return (
         <svg width="26" height="24">
             <g fill="none" fillRule="evenodd">
@@ -118,7 +118,7 @@ export function CohostPlusIcon() {
     );
 }
 
-export function CohostRegularIcon() {
+export function Ao3RegularIcon() {
     return (
         <svg width="26" height="24">
             <g fill="none" fillRule="evenodd" transform="translate(-1.5, 0)">

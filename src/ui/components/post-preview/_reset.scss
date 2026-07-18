@@ -1,0 +1,55 @@
+@mixin variable-reset {
+    --P-monospace: unset;
+    --P-font-size-ui: unset;
+    --P-font-size-content: unset;
+    --P-font-size-code: unset;
+
+    --P-ease-default: unset;
+    --P-color-bg: unset;
+    --P-color-fg: unset;
+
+    --P-color-accent: unset;
+    --P-color-accent-fg: unset;
+    --P-color-warning: unset;
+    --P-color-danger: unset;
+    --P-color-danger-fg: unset;
+    --P-color-shade: unset;
+    --P-color-shade-opacity: unset;
+
+    --P-color-soft-outline: unset;
+    --P-color-soft-outline-opacity: unset;
+    --P-color-form-item-bg: unset;
+    --P-color-form-item-bg-opacity: unset;
+
+    --P-ao3-bg: unset;
+    --P-ao3-dark-bg: unset;
+    --P-card-bg: unset;
+    --P-danger: unset;
+    --P-danger-content-fg: unset;
+    --P-error: unset;
+    --P-error-text: unset;
+    --P-error-content-fg: unset;
+    --P-item-bg: unset;
+    --P-item-selected-bg: unset;
+    --P-separator: unset;
+    --P-dialog-bg: unset;
+    --P-dialog-outline: unset;
+    --P-info-box-bg: unset;
+    --P-graph-node-bg: unset;
+    --P-graph-node-selected-bg: unset;
+    --P-graph-connection: unset;
+    --P-graph-connection-highlighted: unset;
+    --P-resizer-rim: unset;
+
+    --P-toolbar-bg: unset;
+    --P-toolbar-fg: unset;
+    --P-toolbar-separator: unset;
+    --P-toolbar-fade-button-outline: unset;
+    --P-toolbar-fade-button-hover: unset;
+    --P-toolbar-fade-button-active: unset;
+    --P-toolbar-tab-selected: unset;
+
+    --P-sidebar-bg: unset;
+    --P-sidebar-item-hover: unset;
+    --P-sidebar-rim: unset;
+}
