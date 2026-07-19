@@ -142,7 +142,16 @@ const TinyRTE = forwardRef<RichTextEditorHandle, RichTextEditorProps>(
             toolbar = DEFAULT_TOOLBAR,
             disabled = false,
             placeholder,
-            init = { external_plugins: { rubycharacter: './tiny-plugins/ruby-characters.js' } },
+            init = {
+                mobile: {
+                    // TinyMCE defaults to a minimal editor for mobile.
+                    // This follows AO3's own practice of making use of
+                    // this line to force the regular editor for desktop.
+                    // Works as of v5.0.
+                    theme: 'silver',
+                },
+                external_plugins: { rubycharacter: './tiny-plugins/ruby-characters.js' },
+            },
             className,
         },
         ref
