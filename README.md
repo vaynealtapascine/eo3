@@ -13,6 +13,10 @@ Plugins are defined in `src/plugins` (indexed in `src/plugins/index.tsx`) and ar
 
 Do not change module data interfaces in a backwards-incompatible way because people are apparently using this software sometimes!!
 
+## Changes from prechoster
+-   Rich Text Editor has been replaced with TinyMCE.
+-   Svelte 3.55.1 is the default for now, but Svelte 4 and 5 have been added as options.
+
 ### Building
 in the repository:
 
@@ -28,9 +32,10 @@ Major feature gates:
 
 - script type module
 - dialog element
+- Web Workers
 
 According to caniuse, this means:
 
-- Firefox 98
+- Firefox 114
 - Safari 15.4
-- Chrome 63
+- Chrome 80

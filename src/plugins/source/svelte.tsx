@@ -17,10 +17,23 @@ import base64js from 'base64-js';
 
 type SvelteModules = Map<string, { contents: string }>;
 
+export type SvelteVersion = 'legacy' | 'v4' | 'v5';
+
+const SVELTE_VERSION_LABELS: Record<SvelteVersion, string> = {
+    legacy: 'Svelte 3.55.1 (Legacy)',
+    v4: 'Svelte 4',
+    v5: 'Svelte 5',
+};
+
 let worker: Worker | null = null;
 
 /** Bundles Svelte modules into one Javascript file. */
-function bundleModules(modules: SvelteModules, main: string, mainId: string): Promise<string> {
+function bundleModules(
+    modules: SvelteModules,
+    main: string,
+    mainId: string,
+    version: SvelteVersion
+): Promise<string> {
     return new Promise((resolve, reject) => {
         if (!worker) {
             worker = new Worker(new URL('./svelte-worker.js', import.meta.url), {
@@ -56,6 +69,7 @@ function bundleModules(modules: SvelteModules, main: string, mainId: string): Pr
             modules,
             main,
             mainId,
+            version,
         });
 
         setTimeout(() => {
@@ -69,17 +83,48 @@ function bundleModules(modules: SvelteModules, main: string, mainId: string): Pr
 
 export type SveltePluginData = {
     contents: string;
+    svelteVersion?: SvelteVersion;
 };
+
+function svelteVersionOf(data: SveltePluginData): SvelteVersion {
+    return data.svelteVersion ?? 'legacy';
+}
 
 type AvailableImports = Set<string>;
 
 class SvelteEditor extends PureComponent<ModulePluginProps<SveltePluginData>> {
     extensions = [html(), EditorView.lineWrapping];
+    versionSelectId = Math.random().toString(36);
 
     render() {
         const { data, onChange, userData } = this.props;
 
         const imports = userData.imports as AvailableImports | undefined;
+
+        const footer = (
+            <div className="i-footer">
+                <span>
+                    <label htmlFor={this.versionSelectId}>Svelte version: </label>
+                    <select
+                        id={this.versionSelectId}
+                        value={svelteVersionOf(data)}
+                        onChange={(e) =>
+                            onChange({
+                                ...data,
+                                svelteVersion: (e.target as HTMLSelectElement)
+                                    .value as SvelteVersion,
+                            })
+                        }
+                    >
+                        {(Object.keys(SVELTE_VERSION_LABELS) as SvelteVersion[]).map((v) => (
+                            <option key={v} value={v}>
+                                {SVELTE_VERSION_LABELS[v]}
+                            </option>
+                        ))}
+                    </select>
+                </span>
+            </div>
+        );
 
         return (
             <div className="plugin-svelte-editor">
@@ -87,6 +132,7 @@ class SvelteEditor extends PureComponent<ModulePluginProps<SveltePluginData>> {
                     value={data.contents}
                     onChange={(contents) => onChange({ ...data, contents })}
                     extensions={this.extensions}
+                    footer={footer}
                 />
 
                 <details>
@@ -125,7 +171,7 @@ export default {
     wantsDebounce: true,
     component: SvelteEditor as unknown, // typescript cant figure it out
     initialData(): SveltePluginData {
-        return { contents: '' };
+        return { contents: '', svelteVersion: 'legacy' };
     },
     description() {
         return 'Svelte';
@@ -173,7 +219,13 @@ export default {
         imports.delete(`${componentName}.svelte`);
         userData.imports = imports;
 
-        let script = await bundleModules(modules, componentName + '.svelte', componentName);
+        const version = svelteVersionOf(data);
+        let script = await bundleModules(
+            modules,
+            componentName + '.svelte',
+            componentName,
+            version
+        );
         script += `window.${componentName}_init(${componentName});`;
 
         const scriptBase64 = base64js.fromByteArray(new TextEncoder().encode(script));
@@ -274,10 +326,11 @@ window.process = { env: { NODE_ENV: "production" } };
 
     // called by the svelteScript (see above)
     window.${componentName}_init = function(component) {
-        new component.default({
-            target: document.body,
-            props: {},
-        });
+        ${
+            version === 'v5'
+                ? `component.mount(component.default, { target: document.body, props: {} });`
+                : `new component.default({ target: document.body, props: {} });`
+        }
 
         // send rendered HTML back to parent
         setTimeout(() => {
