@@ -1,9 +1,11 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 // @ts-ignore
-import { staticUrlPrefix } from 'eo3:config';
+import { cohostStaticUrlPrefix as staticUrlPrefix } from 'eo3:config';
+import { LiveRenderFn, RenderResult } from '../types';
+import { RenderConfig } from './config';
 
-export const AO3_RENDERER_VERSION = '2023-11-30';
+export const COHOST_RENDERER_VERSION = '2023-11-30';
 const CONFIG = {
     chunks: [staticUrlPrefix + 'client.f2154449135515dd1a2a.js'],
     modules: {
@@ -35,7 +37,7 @@ const extraModules = {
             IFRAMELY_KEY: '',
             UNLEASH_APP_NAME: '',
             UNLEASH_CLIENT_KEY: '',
-            limits: { attachmentSize: { normal: 5242880, ao3Plus: 10485760 } },
+            limits: { attachmentSize: { normal: 5242880, cohostPlus: 10485760 } },
         });
         e.exports = {
             F: ctx,
@@ -47,7 +49,7 @@ const extraModules = {
                 public: {
                     project: {
                         mainAppProfile: ({ projectHandle }: any) => {
-                            return `https://archiveofourown.org/user/${projectHandle}`;
+                            return `https://cohost.org/${projectHandle}`;
                         },
                     },
                     static: { staticAsset: ({ path }: any) => `${staticUrlPrefix}${path}` },
@@ -90,7 +92,7 @@ const extraModules = {
                 return React.createElement(
                     'div',
                     {
-                        className: 'ao3-message-box ' + className,
+                        className: 'cohost-message-box ' + className,
                         'data-level': level,
                     },
                     children
@@ -209,26 +211,13 @@ const chunkRuntime = function () {
     return rt;
 };
 
-export type RenderFn = (markdown: string, config: RenderConfig) => Promise<RenderResult>;
-export interface RenderConfig {
-    disableEmbeds: boolean;
-    externalLinksInNewTab: boolean;
-    hasAo3Plus: boolean;
-}
-export interface RenderResult {
-    initial: any;
-    expanded: any;
-    initialLength: number;
-    expandedLength: number;
-}
-
-function innerLoad(): Promise<RenderFn> {
+function innerLoad(): Promise<LiveRenderFn<RenderConfig>> {
     const scriptPromises = [];
     for (const src of CONFIG.chunks) {
         scriptPromises.push(
             new Promise((resolve, reject) => {
                 const script = document.createElement('script');
-                script.className = 'ao3-preview-chunk';
+                script.className = 'cohost-preview-chunk';
                 script.src = src;
                 script.addEventListener('load', resolve);
                 script.addEventListener('error', reject);
@@ -241,9 +230,9 @@ function innerLoad(): Promise<RenderFn> {
         .then(() => {
             const require = chunkRuntime();
             const markdown = require(CONFIG.modules.markdown);
-            console.log('ao3 renderer loaded!');
+            console.log('cohost renderer loaded!');
 
-            return async (source: string, config: RenderConfig) => {
+            return async (source: string, config: RenderConfig): Promise<RenderResult> => {
                 const data = await markdown[CONFIG.symbols.renderToData](
                     source.split('\n\n').map((content: string) => ({
                         type: 'markdown',
@@ -256,13 +245,13 @@ function innerLoad(): Promise<RenderFn> {
             };
         })
         .catch((err) => {
-            console.error('failed to load ao3 renderer', err);
+            console.error('failed to load cohost renderer', err);
             throw err;
         });
 }
 
-let rendererPromise: Promise<RenderFn> | null = null;
-export function loadRenderer(): Promise<RenderFn> {
+let rendererPromise: Promise<LiveRenderFn<RenderConfig>> | null = null;
+export function loadRenderer(): Promise<LiveRenderFn<RenderConfig>> {
     if (!rendererPromise) rendererPromise = innerLoad();
     return rendererPromise;
 }

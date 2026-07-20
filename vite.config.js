@@ -13,6 +13,7 @@ const prod = process.env.NODE_ENV === 'production';
 
 const CONFIG = {
     staticUrlPrefix: process.env.EO3_STATIC || 'https://ao3.org/static/',
+    cohostStaticUrlPrefix: process.env.EO3_COHOST_STATIC || 'https://cohost.org/static/',
     gitCommitHash:
         process.env.EO3_GIT_COMMIT_HASH?.substring(0, 7) ||
         childProcess
@@ -30,6 +31,14 @@ if (CONFIG.staticUrlPrefix.includes('//archiveofourown.org')) {
     console.error('\x1b[31m|           links may be unreliable...           |\x1b[m');
     console.error('\x1b[31m+------------------------------------------------+\x1b[m');
 }
+
+console.error(`\x1b[32mUsing EO3_COHOST_STATIC=${CONFIG.cohostStaticUrlPrefix}\x1b[m`);
+console.error(
+    '\x1b[33m| cohost shut down in Dec 2023 — the live cohost renderer will only work\x1b[m'
+);
+console.error(
+    '\x1b[33m| if EO3_COHOST_STATIC points at a preserved mirror of its static assets.\x1b[m'
+);
 
 export default defineConfig({
     base: './',

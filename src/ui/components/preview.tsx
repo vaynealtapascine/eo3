@@ -1,9 +1,11 @@
-import { createRef, useState, PureComponent, useRef, useInsertionEffect } from 'react';
+import { createRef, useState, useEffect, PureComponent, useRef, useInsertionEffect } from 'react';
 import { Document, RenderState, RenderTarget } from '../../document';
 import { CodeEditor } from './code-editor';
 import { javascript } from '@codemirror/lang-javascript';
-import { PostPreview, PreviewConfig, DEFAULT_PREVIEW_CONFIG } from './post-preview';
+import { PostPreview, PreviewConfig, makeDefaultPreviewConfig } from './post-preview';
 import { DataPreview } from './data-preview';
+import { SITE_TARGETS, DEFAULT_SITE_TARGET } from '../../targets';
+import { SiteTargetPlugin } from '../../targets/types';
 import './preview.scss';
 
 export function Preview({
@@ -15,10 +17,28 @@ export function Preview({
     onRender,
 }: Preview.Props) {
     let contents = null;
-    const [previewConfig, onPreviewConfigChange] = useState<PreviewConfig>(DEFAULT_PREVIEW_CONFIG);
+    const [siteTargetId, setSiteTargetId] = useState(DEFAULT_SITE_TARGET);
+    const [siteTargetPlugin, setSiteTargetPlugin] = useState<SiteTargetPlugin<any> | null>(null);
+    const [previewConfig, onPreviewConfigChange] = useState<PreviewConfig | null>(null);
     const [readMore, setReadMore] = useState(false);
     const lastPostPreviewHeight = useRef(0);
     const previewContainer = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        let cancelled = false;
+        SITE_TARGETS[siteTargetId].load().then((plugin) => {
+            if (!cancelled) setSiteTargetPlugin(plugin);
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, [siteTargetId]);
+
+    useEffect(() => {
+        if (siteTargetPlugin && (!previewConfig || previewConfig.target !== siteTargetPlugin.id)) {
+            onPreviewConfigChange(makeDefaultPreviewConfig(siteTargetPlugin));
+        }
+    }, [siteTargetPlugin]);
 
     useInsertionEffect(() => {
         const preview = previewContainer.current;
@@ -45,13 +65,14 @@ export function Preview({
                     <DataPreview data={data} />
                 </div>
             );
-        } else {
+        } else if (siteTargetPlugin && previewConfig && previewConfig.target === siteTargetPlugin.id) {
             contents = (
                 <div className="i-post-preview" ref={previewContainer}>
                     <PostPreview
                         renderId={render.id}
                         stale={render.rendering}
                         markdown={render.output.markdownOutput!}
+                        plugin={siteTargetPlugin}
                         config={previewConfig}
                         onConfigChange={onPreviewConfigChange}
                         readMore={readMore}
@@ -134,6 +155,21 @@ export function Preview({
                         {outputTargets}
                         <option value="output">output</option>
                     </select>
+                    {!render.target && (
+                        <select
+                            className="site-target-select"
+                            value={siteTargetId}
+                            onChange={(e) => {
+                                setSiteTargetId((e.target as HTMLSelectElement).value);
+                            }}
+                        >
+                            {Object.entries(SITE_TARGETS).map(([id, def]) => (
+                                <option value={id} key={id}>
+                                    {def.title}
+                                </option>
+                            ))}
+                        </select>
+                    )}
                     <span className="live-update">
                         <input
                             id={liveCheckbox}
