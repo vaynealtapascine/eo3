@@ -5,6 +5,7 @@ import { ModuleGraph, EdgeId } from './components/module-graph';
 import { Preview } from './components/preview';
 import { Document, ModuleId, RenderOutput, RenderState } from '../document';
 import { RenderContext } from './render-context';
+import { SiteTargetProvider } from '../targets/context';
 // @ts-ignore
 import { homepage as sourceLink } from '../../package.json';
 import './eo3.scss';
@@ -178,46 +179,48 @@ export class Eo3 extends PureComponent<Eo3.Props, Eo3State> {
                                 userData={this.state.render.output?.userData}
                             />
                         </div>
-                        <SplitPanel vertical initialPos={Math.max(0.6, 1 - 300 / innerHeight)}>
-                            <Preview
-                                document={doc}
-                                render={render}
-                                clickToRender={
-                                    this.state.clickToRender
-                                        ? () => {
-                                            this.setState({ clickToRender: false }, () => {
-                                                this.renderPreview();
-                                            });
-                                        }
-                                        : null
-                                }
-                                onLiveChange={(live) => {
-                                    this.setState(
-                                        { render: { ...this.state.render, live } },
-                                        () => {
-                                            if (live) this.renderPreview();
-                                        }
-                                    );
-                                }}
-                                onRender={() => this.renderPreview()}
-                                onTargetChange={(target) => {
-                                    this.setState(
-                                        { render: { ...this.state.render, target } },
-                                        () => {
-                                            this.renderPreview();
-                                        }
-                                    );
-                                }}
-                            />
-                            {this.props.graphOpen ? (
-                                <ModuleGraph
+                        <SiteTargetProvider>
+                            <SplitPanel vertical initialPos={Math.max(0.6, 1 - 300 / innerHeight)}>
+                                <Preview
                                     document={doc}
-                                    selected={this.state.selected}
                                     render={render}
-                                    onSelect={(selected) => this.setState({ selected })}
+                                    clickToRender={
+                                        this.state.clickToRender
+                                            ? () => {
+                                                this.setState({ clickToRender: false }, () => {
+                                                    this.renderPreview();
+                                                });
+                                            }
+                                            : null
+                                    }
+                                    onLiveChange={(live) => {
+                                        this.setState(
+                                            { render: { ...this.state.render, live } },
+                                            () => {
+                                                if (live) this.renderPreview();
+                                            }
+                                        );
+                                    }}
+                                    onRender={() => this.renderPreview()}
+                                    onTargetChange={(target) => {
+                                        this.setState(
+                                            { render: { ...this.state.render, target } },
+                                            () => {
+                                                this.renderPreview();
+                                            }
+                                        );
+                                    }}
                                 />
-                            ) : null}
-                        </SplitPanel>
+                                {this.props.graphOpen ? (
+                                    <ModuleGraph
+                                        document={doc}
+                                        selected={this.state.selected}
+                                        render={render}
+                                        onSelect={(selected) => this.setState({ selected })}
+                                    />
+                                ) : null}
+                            </SplitPanel>
+                        </SiteTargetProvider>
                     </SplitPanel>
                 </div>
             </RenderContext.Provider>

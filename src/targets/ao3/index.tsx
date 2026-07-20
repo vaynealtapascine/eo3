@@ -7,6 +7,8 @@ import { Ao3PreviewHeader } from './preview-chrome';
 import { EXPORT_ACTIONS } from './export-actions';
 import { Ao3PlusIcon, Ao3RegularIcon, PreviewRenderIcon } from '../../ui/components/icons';
 import './styles.scss';
+// @ts-ignore
+import mascot from './mascot.svg?raw';
 
 export { AO3_RENDERER_VERSION };
 
@@ -34,6 +36,9 @@ const plugin: SiteTargetPlugin<RenderConfig> = {
         if (!liveRendererActive) return <PreviewRenderIcon />;
         return config.hasAo3Plus ? <Ao3PlusIcon /> : <Ao3RegularIcon />;
     },
+
+    // AO3 doesn't have a separate mascot pose for each state, so reuse it for both.
+    outputMascot: { awake: mascot, asleep: mascot },
 };
 
 export default plugin;

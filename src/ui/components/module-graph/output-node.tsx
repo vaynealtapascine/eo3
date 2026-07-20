@@ -1,13 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Position, Handle } from 'reactflow';
-// @ts-ignore
-import eggbug from './ao3.svg?raw';
-// @ts-ignore
-import eggbugSleep from './ao3.svg?raw';
 import { AnimationController, Spring } from '../../../uikit/frame-animation';
+import { useSiteTarget } from '../../../targets/context';
 
 export function OutputNode({ data }: { data: any }) {
     const node = useRef<HTMLDivElement>(null);
+    const { plugin: siteTargetPlugin } = useSiteTarget();
 
     const [isPointerDown, setPointerDown] = useState(false);
     const bounceSpring = useMemo(() => new Spring({ stiffness: 158, damping: 18 }), []);
@@ -82,7 +80,11 @@ export function OutputNode({ data }: { data: any }) {
                     height: '128px',
                 }}
                 dangerouslySetInnerHTML={{
-                    __html: data.hasOutput && !isPointerDown ? eggbug : eggbugSleep,
+                    __html: siteTargetPlugin
+                        ? data.hasOutput && !isPointerDown
+                            ? siteTargetPlugin.outputMascot.awake
+                            : siteTargetPlugin.outputMascot.asleep
+                        : '',
                 }}
             ></div>
         </div>

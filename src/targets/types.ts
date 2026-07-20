@@ -113,6 +113,14 @@ export interface SiteTargetPlugin<Config extends JsonValue = JsonValue> {
     /** Config toggles shown in the preview settings popover. */
     configItems: { [k: string]: SiteTargetConfigItem<Config> };
 
+    /** Raw SVG markup for the module graph's output node while this target is selected. */
+    outputMascot: {
+        /** Shown once there's rendered output, while the node isn't being interacted with. */
+        awake: string;
+        /** Shown while there's no output yet, or while the node is being dragged/patted. */
+        asleep: string;
+    };
+
     /** Icon shown on the config button summarizing the current config; defaults to a generic icon if omitted. */
     configSummaryIcon?(config: Config, liveRendererActive: boolean): ReactNode;
 

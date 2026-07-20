@@ -8,6 +8,10 @@ import { CohostPreviewFooter } from './preview-footer';
 import { EXPORT_ACTIONS } from './export-actions';
 import { CohostPlusIcon, CohostRegularIcon, PreviewRenderIcon } from '../../ui/components/icons';
 import './styles.scss';
+// @ts-ignore
+import mascotAwake from './mascot-awake.svg?raw';
+// @ts-ignore
+import mascotAsleep from './mascot-asleep.svg?raw';
 
 export { COHOST_RENDERER_VERSION };
 
@@ -34,6 +38,8 @@ const plugin: SiteTargetPlugin<RenderConfig> = {
         if (!liveRendererActive) return <PreviewRenderIcon />;
         return config.hasCohostPlus ? <CohostPlusIcon /> : <CohostRegularIcon />;
     },
+
+    outputMascot: { awake: mascotAwake, asleep: mascotAsleep },
 };
 
 export default plugin;

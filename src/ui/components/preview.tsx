@@ -4,8 +4,8 @@ import { CodeEditor } from './code-editor';
 import { javascript } from '@codemirror/lang-javascript';
 import { PostPreview, PreviewConfig, makeDefaultPreviewConfig } from './post-preview';
 import { DataPreview } from './data-preview';
-import { SITE_TARGETS, DEFAULT_SITE_TARGET } from '../../targets';
-import { SiteTargetPlugin } from '../../targets/types';
+import { SITE_TARGETS } from '../../targets';
+import { useSiteTarget } from '../../targets/context';
 import './preview.scss';
 
 export function Preview({
@@ -17,22 +17,11 @@ export function Preview({
     onRender,
 }: Preview.Props) {
     let contents = null;
-    const [siteTargetId, setSiteTargetId] = useState(DEFAULT_SITE_TARGET);
-    const [siteTargetPlugin, setSiteTargetPlugin] = useState<SiteTargetPlugin<any> | null>(null);
+    const { id: siteTargetId, plugin: siteTargetPlugin, setId: setSiteTargetId } = useSiteTarget();
     const [previewConfig, onPreviewConfigChange] = useState<PreviewConfig | null>(null);
     const [readMore, setReadMore] = useState(false);
     const lastPostPreviewHeight = useRef(0);
     const previewContainer = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        let cancelled = false;
-        SITE_TARGETS[siteTargetId].load().then((plugin) => {
-            if (!cancelled) setSiteTargetPlugin(plugin);
-        });
-        return () => {
-            cancelled = true;
-        };
-    }, [siteTargetId]);
 
     useEffect(() => {
         if (siteTargetPlugin && (!previewConfig || previewConfig.target !== siteTargetPlugin.id)) {
