@@ -20,7 +20,6 @@ export type EdgeId = string;
 
 const ReactFlow = lazy(() => import('./reactflow'));
 
-const SNAP_GRID = [GRID_SIZE, GRID_SIZE];
 export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
     state = {
         draggingNode: false,
@@ -36,7 +35,7 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
         this.reactFlow = instance;
     };
 
-    onConnect = ({ source, target, sourceHandle, targetHandle }: Connection) => {
+    onConnect = ({ source, target, targetHandle }: Connection) => {
         if (!source || !target || !targetHandle) return;
 
         if (targetHandle === 'in') {
@@ -88,7 +87,7 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
     graphPosForNextAdd: [number, number] | null = null;
     connectionForNextAdd: [string, ModuleId] | null = null;
 
-    onConnectStart = (e: unknown, params: OnConnectStartParams) => {
+    onConnectStart = (_e: unknown, params: OnConnectStartParams) => {
         this.currentConnectionParams = params;
     };
 

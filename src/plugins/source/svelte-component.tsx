@@ -65,7 +65,7 @@ export default {
         if (data.name) return `${data.name} (Svelte Component)`;
         return 'Svelte Component';
     },
-    async eval(data: SvelteComponentPluginData, inputs: Data[], namedInputs: NamedInputData) {
+    async eval(data: SvelteComponentPluginData, _inputs: Data[], _namedInputs: NamedInputData) {
         return new SvelteComponentData(data.name, data.contents);
     },
 } as ModulePlugin<SvelteComponentPluginData>;

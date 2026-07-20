@@ -43,7 +43,7 @@ class FileDataEditor extends PureComponent<ModulePluginProps<FileDataPluginData>
         } else if (type.startsWith('image/')) {
             const dataUrl = `data:${type};base64,${data.dataBase64}`;
 
-            preview = <img src={dataUrl} />;
+            preview = <img alt="image preview" src={dataUrl} />;
         }
 
         if (data.dataBase64.length && !preview) {

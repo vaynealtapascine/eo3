@@ -409,7 +409,7 @@ export class Document extends EventTarget {
                     target,
                     source: err.source,
                     error: err.error,
-                } as RenderError;
+                };
             } else {
                 console.error(err);
                 return {
@@ -417,7 +417,7 @@ export class Document extends EventTarget {
                     target,
                     source: null,
                     error: err,
-                } as RenderError;
+                };
             }
         }
     }
@@ -488,6 +488,8 @@ export interface RenderOutput {
 
 export interface RenderError {
     type: 'error';
+    /** The render target this error was produced for, if any. */
+    target?: ModuleId | null;
     source: ModuleId | null;
     error: unknown;
 }
@@ -689,9 +691,11 @@ export class BlobData extends ByteSliceData {
     objectUrl: string;
     blob: Blob;
 
-    constructor(contents: Uint8Array<ArrayBuffer>, type: string) {
+    constructor(contents: Uint8Array<ArrayBufferLike>, type: string) {
         super(contents);
-        this.blob = new Blob([contents], { type });
+        // Callers pass fresh ArrayBuffer-backed arrays (base64js / TextEncoder); eo3 never
+        // uses SharedArrayBuffer, so this narrowing to the BlobPart-accepted form is safe.
+        this.blob = new Blob([contents as Uint8Array<ArrayBuffer>], { type });
         this.objectUrl = URL.createObjectURL(this.blob);
     }
 

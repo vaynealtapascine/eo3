@@ -21,7 +21,7 @@ class FileDataUrlEditor extends PureComponent<ModulePluginProps<FileDataUrlPlugi
     };
 
     render() {
-        const { data, onChange } = this.props;
+        const { data } = this.props;
         const typeMatch = data.url.match(/^data:(.+?);/);
         const type = typeMatch ? typeMatch[1] : '';
         let preview = null;
@@ -34,7 +34,7 @@ class FileDataUrlEditor extends PureComponent<ModulePluginProps<FileDataUrlPlugi
                 preview = <span />;
             }
         } else if (type.startsWith('image/')) {
-            preview = <img src={data.url} />;
+            preview = <img alt="image preview" src={data.url} />;
         }
 
         if (!preview) {

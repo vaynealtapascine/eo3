@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { DirPopover } from '../../../uikit/dir-popover';
 import { Button } from '../../../uikit/button';
 import { SiteTargetExportAction, SiteTargetExportOutput } from '../../../targets/types';

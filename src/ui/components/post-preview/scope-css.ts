@@ -23,7 +23,8 @@ export function scopeCss(css: string, scope: string): string {
         enter: function (node: CssNode) {
             if (node.type !== 'Rule' || node.prelude.type !== 'SelectorList') return;
 
-            const atName = (this.atrule?.name ?? '').toLowerCase();
+            const ctx = this as unknown as { atrule?: { name?: string } | null };
+            const atName = (ctx.atrule?.name ?? '').toLowerCase();
             if (atName.endsWith('keyframes') || atName === 'font-face') return;
 
             const scoped = node.prelude.children

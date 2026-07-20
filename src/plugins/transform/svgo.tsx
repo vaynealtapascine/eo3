@@ -4,7 +4,7 @@ import { optimize } from 'svgo/dist/svgo.browser';
 
 export type SvgoData = {};
 
-function Svgo({ data, onChange }: ModulePluginProps<SvgoData>) {
+function Svgo(_props: ModulePluginProps<SvgoData>) {
     return null;
 }
 
@@ -19,7 +19,7 @@ export default {
     description() {
         return 'SVG Optimizer';
     },
-    async eval(data: SvgoData, inputs: Data[]) {
+    async eval(_data: SvgoData, inputs: Data[]) {
         let svgInput = '';
         if (inputs.length > 1) throw new Error('cannot use SVGO with multiple inputs');
         for (const input of inputs) {

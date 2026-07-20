@@ -1,4 +1,3 @@
-import React from 'react';
 import { unified } from 'unified';
 import remarkParse from 'remark-parse';
 import remarkBreaks from 'remark-breaks';
@@ -321,7 +320,6 @@ export function getExportWarnings(input: string): string[] {
     }
 
     const isUrlLoopback = (url: URL) => {
-        console.log(url);
         if (!['http:', 'https:'].includes(url.protocol)) return false;
         if (url.hostname.match(/^localhost(\b|$)/i)) return true;
         if (url.hostname.match(/^127\.0\.0/)) return true;

@@ -3,12 +3,10 @@ import { deserialize, migrate, Schema, serialize, nextDocumentId } from './versi
 import { Document } from '../document';
 
 export async function initStorage(): Promise<Storage> {
-    let oldVersion = null;
     const newVersion = 1;
     const db = await openDB<Schema>('eo3_data', newVersion, {
         async upgrade(database: IDBPDatabase<any>, old, _, transaction) {
             console.log(`upgrade database ${old} → ${newVersion}`);
-            oldVersion = old;
             await migrate(database, old, newVersion, transaction);
         },
         blocking(currentVersion: number, blockedVersion: number | null) {

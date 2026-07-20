@@ -57,7 +57,7 @@ function bundleModules(
             }
         };
         worker.addEventListener('message', onMessage);
-        worker.addEventListener('error', (e) => {
+        worker.addEventListener('error', () => {
             reject(new Error('Error in svelte worker'));
             worker?.terminate();
             worker = null;

@@ -30,7 +30,7 @@ const extraModules = {
             },
         };
     },
-    80641: function (e: any, t: any, n: any) {
+    80641: function (e: any, _t: any, n: any) {
         const React = n(CONFIG.modules.react);
         const ctx = React.createContext({
             HCAPTCHA_SITE_KEY: '',
@@ -73,7 +73,7 @@ const extraModules = {
     84008: function (e: any) {
         e.exports = {
             ZP: {
-                t: (id: any, { defaultValue }: any) => defaultValue,
+                t: (_id: any, { defaultValue }: any) => defaultValue,
             },
         };
     },
@@ -84,7 +84,7 @@ const extraModules = {
             },
         };
     },
-    56575: function (e: any, t: any, n: any) {
+    56575: function (e: any, _t: any, n: any) {
         const React = n(CONFIG.modules.react);
         e.exports = {
             // seems to be some kind of message box
@@ -230,7 +230,6 @@ function innerLoad(): Promise<LiveRenderFn<RenderConfig>> {
         .then(() => {
             const require = chunkRuntime();
             const markdown = require(CONFIG.modules.markdown);
-            console.log('cohost renderer loaded!');
 
             return async (source: string, config: RenderConfig): Promise<RenderResult> => {
                 const data = await markdown[CONFIG.symbols.renderToData](

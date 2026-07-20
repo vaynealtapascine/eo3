@@ -1,4 +1,3 @@
-import React from 'react';
 import { SiteTargetPlugin } from '../types';
 import { RenderConfig, DEFAULT_RENDER_CONFIG, CONFIG_ITEMS } from './config';
 import { loadRenderer, COHOST_RENDERER_VERSION } from './live-renderer';

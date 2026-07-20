@@ -50,7 +50,7 @@ export function OutputNode({ data }: { data: any }) {
     const onMove = (e: React.PointerEvent) => {
         if (!isPointerDown) return;
         const dx = e.clientX - lastPointer.current[0];
-        const dy = e.clientY - lastPointer.current[0];
+        const dy = e.clientY - lastPointer.current[1];
 
         const dist = Math.sqrt(Math.hypot(dx, dy)) * (0.5 + 0.5 * Math.random());
         addBounce(dist * 0.02);

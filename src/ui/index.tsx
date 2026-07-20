@@ -505,7 +505,7 @@ class ContentSplit extends PureComponent<ContentSplit.Props> {
         return null;
     }
 
-    componentDidUpdate(prevProps: ContentSplit.Props, prevState: {}, snapshot?: DOMRect) {
+    componentDidUpdate(_prevProps: ContentSplit.Props, _prevState: {}, snapshot?: DOMRect) {
         if (snapshot) {
             const node = this.node.current;
             if (!node) return;
@@ -951,7 +951,7 @@ function NoOpenDocument() {
                 <img
                     src={new URL('../../assets/no-data.svg', import.meta.url).toString()}
                     alt="confused shark"
-                    role="presentation"
+                    role="img"
                     draggable={false}
                 />
                 <h3>

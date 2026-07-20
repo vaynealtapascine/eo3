@@ -9,7 +9,7 @@ import {
 } from '../../document';
 import { Form, FormItem } from '../../uikit/form';
 import Checkbox from '../../uikit/checkbox';
-import { useMemo } from 'react';
+import { useId } from 'react';
 import { ModuleStatus } from '../../ui/components/module-status';
 import {
     StyleInlinerMode,
@@ -24,8 +24,8 @@ export type StyleInlinerData = {
 };
 
 function StyleInliner({ data, onChange, userData }: ModulePluginProps<StyleInlinerData>) {
-    const id1 = useMemo(() => Math.random().toString(36), []);
-    const id2 = useMemo(() => Math.random().toString(36), []);
+    const id1 = useId();
+    const id2 = useId();
 
     const stats = userData.stats as StyleInlinerStats | undefined;
 
@@ -94,7 +94,7 @@ export default {
     async eval(
         data: StyleInlinerData,
         inputs: Data[],
-        named: NamedInputData,
+        _named: NamedInputData,
         { userData }: EvalOptions
     ) {
         let htmlInput = '';

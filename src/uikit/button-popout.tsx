@@ -1,14 +1,4 @@
-import React, {
-    createRef,
-    PureComponent,
-    RefObject,
-    StyleHTMLAttributes,
-    useContext,
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
-} from 'react';
+import React, { createRef, PureComponent, RefObject, useContext, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimationValue, ElAnim, getNow, shouldReduceMotion, Spring } from './animation';
 import './button-popout.css';

@@ -206,7 +206,7 @@ export default {
     },
     async eval(
         data: SassPluginData,
-        inputs: Data[],
+        _inputs: Data[],
         namedInputs: NamedInputData,
         options: EvalOptions
     ) {

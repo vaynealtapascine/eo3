@@ -217,7 +217,6 @@ export class ModuleList extends PureComponent<ModuleList.Props, ModuleListState>
             let precedingHeight = 0;
 
             const modules = this.props.document.modules;
-            let y = 0;
             const itemHeights = new Map<ModuleId, number>();
             for (let j = 0; j < modules.length; j++) {
                 const m = modules[j];

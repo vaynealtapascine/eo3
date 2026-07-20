@@ -1,4 +1,3 @@
-import React from 'react';
 import { CopyToClipboardButton } from '../../ui/components/post-preview/copy-to-clipboard-button';
 import { SiteTargetPreviewProps } from '../types';
 import { RenderConfig } from './config';

@@ -72,7 +72,7 @@ export default {
     description() {
         return 'LessCSS';
     },
-    async eval(data: LessPluginData, inputs: Data[], namedInputs: NamedInputData) {
+    async eval(data: LessPluginData, _inputs: Data[], namedInputs: NamedInputData) {
         const variables: { [k: string]: any } = {};
         for (const [k, v] of namedInputs) {
             const plain = v.into(PlainTextData);
@@ -82,7 +82,7 @@ export default {
             variables[k] = {
                 eval: () => ({
                     value: plain.contents.trim(),
-                    genCSS: (context: any, output: any) => output.add(plain.contents.trim()),
+                    genCSS: (_context: any, output: any) => output.add(plain.contents.trim()),
                     toCSS: () => plain.contents.trim(),
                 }),
             };

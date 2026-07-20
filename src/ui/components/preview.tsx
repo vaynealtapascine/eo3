@@ -1,4 +1,12 @@
-import { createRef, useState, useEffect, PureComponent, useRef, useInsertionEffect } from 'react';
+import {
+    createRef,
+    useState,
+    useEffect,
+    useId,
+    PureComponent,
+    useRef,
+    useInsertionEffect,
+} from 'react';
 import { Document, RenderState, RenderTarget } from '../../document';
 import { CodeEditor } from './code-editor';
 import { javascript } from '@codemirror/lang-javascript';
@@ -127,7 +135,7 @@ export function Preview({
         );
     }
 
-    const liveCheckbox = Math.random().toString(36);
+    const liveCheckbox = useId();
 
     return (
         <div className="data-preview" aria-label="Preview">
@@ -186,7 +194,7 @@ export function Preview({
                     {errorContents}
                 </div>
             </div>
-        </div >
+        </div>
     );
 }
 

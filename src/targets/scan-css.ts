@@ -1,4 +1,4 @@
-import { parse, walk, generate } from 'css-tree';
+import { parse, walk, generate, Declaration } from 'css-tree';
 import { PushError } from './types';
 
 /**
@@ -17,7 +17,7 @@ export function scanCssForWarnings(css: string, pushError: PushError): void {
 
     walk(ast, {
         visit: 'Declaration',
-        enter: function (node) {
+        enter: function (node: Declaration) {
             if (node.property.startsWith('--')) {
                 pushError('strip-css-variable', { name: node.property });
                 return;

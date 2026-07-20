@@ -3,9 +3,16 @@
         "lib": ["ES2022", "DOM", "DOM.Iterable"],
         "target": "ES2022",
         "strict": true,
-        "module": "ES2022",
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "noFallthroughCasesInSwitch": true,
+        "forceConsistentCasingInFileNames": true,
+        "module": "esnext",
+        "moduleResolution": "bundler",
         "jsx": "react-jsx",
-        "esModuleInterop": true
+        "esModuleInterop": true,
+        "resolveJsonModule": true,
+        "skipLibCheck": true
     },
     "include": [
         "src/**/*.tsx",

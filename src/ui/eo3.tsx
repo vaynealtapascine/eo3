@@ -1,4 +1,4 @@
-import React, { PureComponent } from 'react';
+import { PureComponent } from 'react';
 import { SplitPanel } from './components/split-panel';
 import { ModuleList } from './components/module-list';
 import { ModuleGraph, EdgeId } from './components/module-graph';

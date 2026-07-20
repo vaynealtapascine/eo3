@@ -1,4 +1,4 @@
-import React, { Fragment, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import React, { Fragment, useContext, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { RenderContext } from '../../render-context';
 import { scopeCss } from './scope-css';
@@ -517,6 +517,7 @@ function RenderConfigPopover({
     onConfigChange: (c: PreviewConfig) => void;
 }) {
     const renderContext = useContext(RenderContext);
+    const baseId = useId();
 
     return (
         <div className="i-config-contents">
@@ -533,7 +534,7 @@ function RenderConfigPopover({
                 if (v.requiresLiveRenderer && !hasLiveRenderer) return null;
                 if (k !== 'useLiveRenderer' && v.requiresLiveRenderer && !config.useLiveRenderer)
                     return null;
-                const checkboxId = Math.random().toString(36);
+                const checkboxId = `${baseId}-${k}`;
                 return (
                     <div className="config-item" key={k}>
                         <div className="item-header">

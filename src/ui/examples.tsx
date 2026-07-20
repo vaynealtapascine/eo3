@@ -1,6 +1,5 @@
-import { useContext, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Document } from '../document';
-import { StorageContext } from '../storage-context';
 import { Button } from '../uikit/button';
 import { getExampleDocument } from '../storage';
 import './examples.css';
@@ -19,7 +18,6 @@ export function ExamplesMenu({ onLoad }: ExamplesProps) {
     const [loadingExample, setLoadingExample] = useState(false);
     const [error, setError] = useState<any>(null);
     const [items, setItems] = useState<Record<string, ExampleDef>>({});
-    const storage = useContext(StorageContext);
 
     const load = () => {
         setLoading(true);

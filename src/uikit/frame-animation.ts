@@ -15,7 +15,7 @@ export class AnimationController {
             setTimeout(() => this.start(), 1000); // try again later
             return;
         }
-        this.lastTime = now;
+        this.lastTime = Number(now);
         requestAnimationFrame(() => this.loop(++this.animationId));
     }
 
@@ -27,8 +27,8 @@ export class AnimationController {
             setTimeout(() => this.loop(animationId), 1000); // try again later
             return;
         }
-        const dt = (now - this.lastTime) / 1000;
-        this.lastTime = now;
+        const dt = (Number(now) - this.lastTime) / 1000;
+        this.lastTime = Number(now);
 
         const targetsToRemove = [];
         for (const target of this.targets) {
