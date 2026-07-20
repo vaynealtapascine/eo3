@@ -5,7 +5,7 @@ export const EXPORT_ACTIONS: SiteTargetExportAction[] = [
     {
         id: 'copy-to-clipboard',
         label: 'Copy to clipboard',
-        getData: (markdown) => markdown,
+        outputId: 'html',
         getWarnings: getExportWarnings,
     },
 ];

@@ -5,13 +5,12 @@ export const EXPORT_ACTIONS: SiteTargetExportAction[] = [
     {
         id: 'copy-html',
         label: 'Copy HTML',
-        getData: (markdown) => markdown,
+        outputId: 'html',
         getWarnings: getExportWarnings,
     },
     {
         id: 'copy-workskin',
         label: 'Copy Workskin CSS',
-        getData: (markdown) => markdown,
-        getWarnings: getExportWarnings,
+        outputId: 'css',
     },
 ];

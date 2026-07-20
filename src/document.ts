@@ -327,28 +327,44 @@ export class Document extends EventTarget {
         };
     }
 
-    /** Calls eval() and converts it to one markdown string. */
+    /**
+     * Calls eval() and buckets the terminal inputs by type: CSS inputs are collected into a
+     * single stylesheet, everything else is joined into the content string. Both keep the
+     * order in which their source modules appear in the document (see evalModuleInputs).
+     */
     async evalMdOutput(): Promise<{
         markdown: string;
+        css: string;
         nodes: Map<ModuleId, Data>;
         userData: Map<ModuleId, UserData>;
     }> {
         const { inputs, nodes, userData } = await this.evalOutput();
-        const markdown = inputs
-            .map((item, i) => {
-                const output = item.asMdOutput();
-                if (output === null) {
-                    throw new Error(
-                        'output received data type that could not be converted to markdown: ' +
-                            item.constructor.name +
-                            ` (item ${i + 1})`
-                    );
-                }
-                return output;
-            })
-            .join('\n');
 
-        return { markdown, nodes, userData };
+        const contentParts: string[] = [];
+        const cssParts: string[] = [];
+        inputs.forEach((item, i) => {
+            const cssData = item.into(CssData);
+            if (cssData) {
+                cssParts.push(cssData.contents);
+                return;
+            }
+            const output = item.asMdOutput();
+            if (output === null) {
+                throw new Error(
+                    'output received data type that could not be converted to markdown: ' +
+                        item.constructor.name +
+                        ` (item ${i + 1})`
+                );
+            }
+            contentParts.push(output);
+        });
+
+        return {
+            markdown: contentParts.join('\n'),
+            css: cssParts.join('\n'),
+            nodes,
+            userData,
+        };
     }
 
     async eval(target: ModuleId | null): Promise<RenderOutput | RenderError> {
@@ -356,9 +372,11 @@ export class Document extends EventTarget {
             let nodes = new Map();
             let userData = new Map();
             let mdOutput = null;
+            let cssOutput = '';
             if (!target) {
                 const output = await this.evalMdOutput();
                 mdOutput = output.markdown;
+                cssOutput = output.css;
                 nodes = output.nodes;
                 userData = output.userData;
             } else {
@@ -377,6 +395,7 @@ export class Document extends EventTarget {
                 target,
                 outputs: nodes,
                 markdownOutput: mdOutput,
+                cssOutput,
                 userData,
                 drop() {
                     for (const data of this.outputs.values()) data.drop();
@@ -458,6 +477,8 @@ export interface RenderOutput {
     outputs: Map<ModuleId, Data>;
     /** The final markdown output, if the render target is the output */
     markdownOutput: string | null;
+    /** Assembled CSS from all CSS-typed inputs to the output, in module order. */
+    cssOutput: string;
     /** Evaluated module user data */
     userData: Map<ModuleId, UserData>;
 

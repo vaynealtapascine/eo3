@@ -158,11 +158,21 @@ export const ERRORS = {
             </div>
         );
     },
-    'position-fixed'({ node }: { node: HTMLElement }) {
+    'position-fixed'({ node, selector }: { node?: HTMLElement; selector?: string }) {
         return (
             <div>
-                <code>position: fixed</code> will be removed on a{' '}
-                <code>{node.tagName.toLowerCase()}</code> element
+                <code>position: fixed</code> will be removed
+                {node ? (
+                    <>
+                        {' '}
+                        on a <code>{node.tagName.toLowerCase()}</code> element
+                    </>
+                ) : selector ? (
+                    <>
+                        {' '}
+                        in <code>{selector}</code>
+                    </>
+                ) : null}
             </div>
         );
     },

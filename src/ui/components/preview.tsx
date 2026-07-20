@@ -61,6 +61,7 @@ export function Preview({
                         renderId={render.id}
                         stale={render.rendering}
                         markdown={render.output.markdownOutput!}
+                        cssInput={render.output.cssOutput}
                         plugin={siteTargetPlugin}
                         config={previewConfig}
                         onConfigChange={onPreviewConfigChange}

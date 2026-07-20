@@ -42,17 +42,18 @@ function PostSize({ size }: { size: number }) {
     );
 }
 
-export function CohostPreviewFooter({ markdown, error }: SiteTargetPreviewProps<RenderConfig>) {
+export function CohostPreviewFooter({ exportOutput, error }: SiteTargetPreviewProps<RenderConfig>) {
+    const html = exportOutput.get('html') ?? '';
     return (
         <>
             <hr />
             <div className="post-footer">
-                <PostSize size={markdown.length} />
+                <PostSize size={html.length} />
                 {EXPORT_ACTIONS.map((action) => (
                     <CopyToClipboardButton
                         key={action.id}
                         action={action}
-                        markdown={markdown}
+                        exportOutput={exportOutput}
                         disabled={!!error}
                     />
                 ))}

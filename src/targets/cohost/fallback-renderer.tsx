@@ -158,11 +158,33 @@ export const ERRORS = {
             </div>
         );
     },
-    'position-fixed'({ node }: { node: HTMLElement }) {
+    'invalid-css'({ message, isFirstOfType }: { message: string } & ErrProps) {
         return (
             <div>
-                <code>position: fixed</code> will be removed on a{' '}
-                <code>{node.tagName.toLowerCase()}</code> element
+                The CSS could not be parsed, so none of it was inlined: <code>{message}</code>
+                {isFirstOfType && (
+                    <div className="quick-help">
+                        Fix the syntax error in your CSS source and it’ll be applied again.
+                    </div>
+                )}
+            </div>
+        );
+    },
+    'position-fixed'({ node, selector }: { node?: HTMLElement; selector?: string }) {
+        return (
+            <div>
+                <code>position: fixed</code> will be removed
+                {node ? (
+                    <>
+                        {' '}
+                        on a <code>{node.tagName.toLowerCase()}</code> element
+                    </>
+                ) : selector ? (
+                    <>
+                        {' '}
+                        in <code>{selector}</code>
+                    </>
+                ) : null}
             </div>
         );
     },

@@ -1,5 +1,7 @@
 import React, { Fragment, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { RenderContext } from '../../render-context';
+import { scopeCss } from './scope-css';
 import { PreviewRenderIcon } from '../icons';
 import './index.scss';
 import { createPortal } from 'react-dom';
@@ -11,6 +13,7 @@ import {
     PreviewConfig,
     PushError,
     RenderResult,
+    SiteTargetExportOutput,
     SiteTargetPlugin,
     SiteTargetPreviewProps,
 } from '../../../targets/types';
@@ -109,6 +112,7 @@ function MarkdownRenderer<Config extends JsonValue>({
     onReadMoreChange,
     errorPortal,
     onRender,
+    onExportSource,
 }: {
     renderId: string;
     pluginId: string;
@@ -120,6 +124,7 @@ function MarkdownRenderer<Config extends JsonValue>({
     onReadMoreChange: (b: boolean) => void;
     errorPortal: HTMLDivElement | null;
     onRender: () => void;
+    onExportSource: (html: string) => void;
 }) {
     const [rendered, setRendered] = useState<RenderResult | null>(null);
     const [error, setError] = useState<React.ReactNode | null>(null);
@@ -161,6 +166,23 @@ function MarkdownRenderer<Config extends JsonValue>({
     }, [liveRenderer, config, markdown]);
 
     useEffect(() => {
+        // Serialize the accurate rendered HTML for export: the live renderer's full output
+        // (initial + expanded, regardless of the read-more toggle) when it's active, else the
+        // approximate fallback string.
+        let source = fallbackHtml;
+        if (liveRenderer && rendered) {
+            try {
+                source = renderToStaticMarkup(
+                    <>
+                        {rendered.initial}
+                        {rendered.expanded}
+                    </>
+                );
+            } catch {
+                source = fallbackHtml;
+            }
+        }
+        onExportSource(source);
         onRender();
     }, [triggerOnRender]);
 
@@ -181,6 +203,7 @@ function MarkdownRenderer<Config extends JsonValue>({
 export function PostPreview({
     renderId,
     markdown,
+    cssInput,
     error,
     stale,
     plugin,
@@ -201,6 +224,41 @@ export function PostPreview({
     }
 
     const liveRenderer = useLiveRenderer(plugin);
+
+    // Accurate rendered HTML from the active renderer (see MarkdownRenderer.onExportSource),
+    // fed to the target's export() to produce the finished, copyable artifacts.
+    const [sourceHtml, setSourceHtml] = useState('');
+    const exportResult = useMemo(() => {
+        const errs: ErrorMessage[] = [];
+        try {
+            const output = plugin.export(
+                { html: sourceHtml, css: cssInput, config: config.targetConfig },
+                (id, props) => errs.push({ id, props })
+            );
+            return { output, error: null as Error | null, errs };
+        } catch (err) {
+            return { output: new Map() as SiteTargetExportOutput, error: err as Error, errs };
+        }
+    }, [plugin, sourceHtml, cssInput, config.targetConfig]);
+
+    const exportOutput = exportResult.output;
+    if (exportResult.error) error = exportResult.error;
+    renderErrors.push(...exportResult.errs);
+
+    // Apply CSS so the preview reflects the styling the post relies on. For targets that emit
+    // a CSS artifact (AO3's workskin, which includes the generated classes the exported HTML
+    // references) inject those; for targets that inline CSS into the HTML instead (cohost,
+    // no CSS output) inject the authored CSS so the classed preview is still styled. Each is
+    // scoped under the target's previewCssScope so it applies only within the mockup and wins
+    // over the surrounding page styles (see scopeCss).
+    const cssTypedOutputs = plugin.outputs
+        .filter((o) => o.typeId === 'text/css')
+        .map((o) => exportOutput.get(o.id))
+        .filter((s): s is string => !!s);
+    const styleSources = cssTypedOutputs.length ? cssTypedOutputs : cssInput ? [cssInput] : [];
+    const styleOutputs = styleSources.map((css) =>
+        plugin.previewCssScope ? scopeCss(css, plugin.previewCssScope) : css
+    );
 
     const proseContainer = useRef<HTMLDivElement>(null);
     const [asyncErrors, setAsyncErrors] = useState<ErrorMessage[]>([]);
@@ -232,7 +290,7 @@ export function PostPreview({
     const previewProps: SiteTargetPreviewProps<any> = {
         plugin,
         markdown,
-        html,
+        exportOutput,
         config: config.targetConfig,
         previewConfig: config,
         onPreviewConfigChange: onConfigChange,
@@ -273,6 +331,9 @@ export function PostPreview({
                     style={plugin.disableProseInteraction ? { pointerEvents: 'none' } : undefined}
                 >
                     <DynamicStyles config={config} />
+                    {styleOutputs.map((css, i) => (
+                        <style key={i}>{css}</style>
+                    ))}
                     <MarkdownRenderer
                         renderId={renderId}
                         pluginId={plugin.id}
@@ -284,6 +345,7 @@ export function PostPreview({
                         onReadMoreChange={onReadMoreChange}
                         errorPortal={errorPortal}
                         onRender={onRender}
+                        onExportSource={setSourceHtml}
                     />
                 </div>
             )}
@@ -296,6 +358,7 @@ namespace PostPreview {
     export interface Props {
         renderId: string;
         markdown: string;
+        cssInput: string;
         error?: Error | null;
         stale?: boolean;
         plugin: SiteTargetPlugin<any>;

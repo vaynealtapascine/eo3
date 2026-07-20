@@ -6,6 +6,7 @@ import { renderMarkdown, handleAsyncErrors } from './fallback-renderer';
 import { CohostPreviewHeader } from './preview-header';
 import { CohostPreviewFooter } from './preview-footer';
 import { EXPORT_ACTIONS } from './export-actions';
+import { exportPost } from './export';
 import { CohostPlusIcon, CohostRegularIcon, PreviewRenderIcon } from '../../ui/components/icons';
 import './styles.scss';
 // @ts-ignore
@@ -31,6 +32,12 @@ const plugin: SiteTargetPlugin<RenderConfig> = {
     PreviewFooter: CohostPreviewFooter,
 
     configItems: CONFIG_ITEMS,
+
+    outputs: [{ id: 'html', label: 'HTML', typeId: 'text/html' }],
+
+    previewCssScope: '.co-prose',
+
+    export: exportPost,
 
     exportActions: EXPORT_ACTIONS,
 

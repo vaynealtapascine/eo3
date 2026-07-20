@@ -1,24 +1,26 @@
 import React, { useRef, useState } from 'react';
 import { DirPopover } from '../../../uikit/dir-popover';
 import { Button } from '../../../uikit/button';
-import { SiteTargetExportAction } from '../../../targets/types';
+import { SiteTargetExportAction, SiteTargetExportOutput } from '../../../targets/types';
 
 export function CopyToClipboardButton({
     action,
-    markdown,
+    exportOutput,
     disabled,
 }: {
     action: SiteTargetExportAction;
-    markdown: string;
+    exportOutput: SiteTargetExportOutput;
     disabled?: boolean;
 }) {
     const [copied, setCopied] = useState(false);
     const [warnings, setWarnings] = useState<string[]>([]);
     const [warningsOpen, setWarningsOpen] = useState(false);
 
+    const getData = () => exportOutput.get(action.outputId) ?? '';
+
     const copy = () => {
         try {
-            navigator.clipboard.writeText(action.getData(markdown));
+            navigator.clipboard.writeText(getData());
             setCopied(true);
             setTimeout(() => {
                 setCopied(false);
@@ -29,7 +31,7 @@ export function CopyToClipboardButton({
     };
 
     const tryCopy = () => {
-        const data = action.getData(markdown);
+        const data = getData();
         const warnings = action.getWarnings ? action.getWarnings(data) : [];
         setWarnings(warnings);
         if (warnings.length) {

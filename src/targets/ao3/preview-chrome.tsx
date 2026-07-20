@@ -64,8 +64,7 @@ function PostSize({ size }: { size: number }) {
 }
 
 export function Ao3PreviewHeader({
-    markdown,
-    html,
+    exportOutput,
     error,
     renderErrors,
     asyncErrors,
@@ -74,6 +73,7 @@ export function Ao3PreviewHeader({
     const [errorsOpen, setErrorsOpen] = useState(false);
 
     const errorCount = renderErrors.length + asyncErrors.length;
+    const html = exportOutput.get('html') ?? '';
 
     return (
         <React.Fragment>
@@ -560,12 +560,12 @@ export function Ao3PreviewHeader({
                         <div id="feedback" className="feedback">
                             <h3 className="landmark heading">Actions</h3>
                             <div className="post-footer-simulate" style={{ float: 'right' }}>
-                                <PostSize size={markdown.length} />
+                                <PostSize size={html.length} />
                                 {EXPORT_ACTIONS.map((action) => (
                                     <CopyToClipboardButton
                                         key={action.id}
                                         action={action}
-                                        markdown={markdown}
+                                        exportOutput={exportOutput}
                                         disabled={!!error}
                                     />
                                 ))}

@@ -21,6 +21,25 @@ export type PushError = (id: string, props: { [k: string]: any }) => void;
 /** Renders markdown using the target site's real, live-loaded renderer. */
 export type LiveRenderFn<Config> = (markdown: string, config: Config) => Promise<RenderResult>;
 
+/** Describes one input or output slot of a site target (e.g. its HTML or Workskin CSS output). */
+export interface SiteTargetIO {
+    id: string;
+    label: string;
+    /** The `Data.typeId` of the artifact (e.g. 'text/html', 'text/css'). */
+    typeId: string;
+}
+
+export interface SiteTargetExportInput<Config> {
+    /** Accurate rendered HTML from the active renderer (live serialized, else the fallback). */
+    html: string;
+    /** Assembled authored CSS from every CSS input to the output, in module order. */
+    css: string;
+    config: Config;
+}
+
+/** The finished export artifacts, keyed by `SiteTargetPlugin.outputs[].id`. */
+export type SiteTargetExportOutput = Map<string, string>;
+
 export interface SiteTargetConfigItem<Config> {
     /** [offLabel, onLabel] shown as a compact summary chip in the config button; null to omit from the summary. */
     short: [string | null, string] | null;
@@ -37,7 +56,8 @@ export interface SiteTargetConfigItem<Config> {
 export interface SiteTargetExportAction {
     id: string;
     label: string;
-    getData(markdown: string): string;
+    /** Which entry of the target's `outputs` this action copies. */
+    outputId: string;
     getWarnings?(data: string): string[];
 }
 
@@ -64,8 +84,12 @@ export function makeDefaultPreviewConfig(plugin: SiteTargetPlugin<any>): Preview
 export interface SiteTargetPreviewProps<Config extends JsonValue> {
     plugin: SiteTargetPlugin<Config>;
     markdown: string;
-    /** The fallback-rendered HTML, for embedding inside the target's page-chrome mockup. */
-    html: string;
+    /**
+     * The finished export artifacts for this target, keyed by `outputs[].id`. The primary
+     * output (`outputs[0].id`) is what page-chrome mockups embed; other outputs are exported
+     * via their copy buttons.
+     */
+    exportOutput: SiteTargetExportOutput;
     config: Config;
     previewConfig: PreviewConfig;
     onPreviewConfigChange: (c: PreviewConfig) => void;
@@ -93,6 +117,27 @@ export interface SiteTargetPlugin<Config extends JsonValue = JsonValue> {
 
     /** Always-available local approximation, used when the live renderer is unavailable or disabled. */
     renderFallback(markdown: string, config: Config, pushError: PushError): string;
+
+    /**
+     * The export artifacts this target emits, in order. The first is the primary output
+     * (drives the preview mockup). cohost emits one (HTML); AO3 emits two (HTML + Workskin
+     * CSS); other targets may emit any number.
+     */
+    outputs: SiteTargetIO[];
+
+    /**
+     * Selector the preview's injected CSS is scoped under, so it applies only within this
+     * target's mockup and gains that selector's specificity (AO3: `#workskin`, matching how
+     * AO3 wraps a Work Skin; cohost: its prose container). Omit to inject CSS unscoped.
+     */
+    previewCssScope?: string;
+
+    /**
+     * Produces the finished, site-ready export artifacts from the accurately-rendered HTML
+     * plus the authored CSS. This is where site-specific sanitation and CSS strategy live
+     * (AO3: lift/scope into a workskin; cohost: inline everything into style attributes).
+     */
+    export(input: SiteTargetExportInput<Config>, pushError: PushError): SiteTargetExportOutput;
 
     /** Scans rendered DOM for problems the string-level fallback renderer can't catch (e.g. broken image loads). */
     scanForAsyncErrors?(container: HTMLElement, pushError: PushError): void;

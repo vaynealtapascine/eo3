@@ -5,6 +5,7 @@ import { loadRenderer, AO3_RENDERER_VERSION } from './live-renderer';
 import { renderMarkdown, handleAsyncErrors } from './fallback-renderer';
 import { Ao3PreviewHeader } from './preview-chrome';
 import { EXPORT_ACTIONS } from './export-actions';
+import { exportPost } from './export';
 import { Ao3PlusIcon, Ao3RegularIcon, PreviewRenderIcon } from '../../ui/components/icons';
 import './styles.scss';
 // @ts-ignore
@@ -29,6 +30,15 @@ const plugin: SiteTargetPlugin<RenderConfig> = {
     disableProseInteraction: true,
 
     configItems: CONFIG_ITEMS,
+
+    outputs: [
+        { id: 'html', label: 'HTML', typeId: 'text/html' },
+        { id: 'css', label: 'Workskin CSS', typeId: 'text/css' },
+    ],
+
+    previewCssScope: '#workskin',
+
+    export: exportPost,
 
     exportActions: EXPORT_ACTIONS,
 
