@@ -34,7 +34,7 @@ if (CONFIG.staticUrlPrefix.includes('//archiveofourown.org')) {
 
 console.error(`\x1b[32mUsing EO3_COHOST_STATIC=${CONFIG.cohostStaticUrlPrefix}\x1b[m`);
 console.error(
-    '\x1b[33m| cohost shut down in Dec 2023 — the live cohost renderer will only work\x1b[m'
+    '\x1b[33m| cohost shut down in Jan 2025 — the live cohost renderer will only work\x1b[m'
 );
 console.error(
     '\x1b[33m| if EO3_COHOST_STATIC points at a preserved mirror of its static assets.\x1b[m'
@@ -151,18 +151,11 @@ function bundledNodeModules() {
 
 /**
  * Svelte 5's client runtime and its "legacy" (non-runes) component support share
- * mutable module state — most importantly `legacy_mode_flag` in
- * svelte-v5/src/internal/flags/index.js, which gates whether legacy-style
- * `export let`/`$:` components actually behave correctly (read by
- * internal/client/context.js, reactivity/props.js, reactivity/sources.js).
- * Bundling each entry point (main index, internal/client,
- * internal/disclose-version, internal/flags/legacy) independently, the way
- * bundledNodeModules() does for svelte-v4, would give each its own private copy
- * of that state, silently breaking legacy-mode components. Instead this bundles
- * all four together with Rollup's `preserveModules`, so cross-references between
- * them resolve to the exact same underlying module instances (matching what a
- * real bundler does), and hands the whole file tree + entry filenames to the
- * worker so it can register them as one connected module graph.
+ * mutable module state — specifically `legacy_mode_flag` in svelte-v5/src/internal/flags/index.js,
+ * which gates whether legacy-style `export let`/`$:` components actually behave
+ * correctly independently. Instead this bundles all four together with Rollup's
+ * `preserveModules`, so cross-references between them resolve to the exact same
+ * underlying module instances.
  */
 function svelteV5RuntimeTree() {
     const id = 'svelte-v5-runtime-tree:group';
@@ -183,6 +176,13 @@ function svelteV5RuntimeTree() {
                 }),
                 commonjs(),
             ],
+            // preserveModules keeps svelte-v5's own file boundaries, surfacing
+            // the cycles inherent to its internal reactivity. Those are expected
+            // and harmless under ESM live bindings, so silencing it here.
+            onwarn(warning, warn) {
+                if (warning.code === 'CIRCULAR_DEPENDENCY') return;
+                warn(warning);
+            },
         });
         try {
             const { output } = await bundle.generate({ format: 'es', preserveModules: true });
