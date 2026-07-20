@@ -16,6 +16,7 @@ Do not change module data interfaces in a backwards-incompatible way because peo
 ## Changes from prechoster
 -   Rich Text Editor has been replaced with TinyMCE.
 -   Svelte 3.55.1 is the default for now, but Svelte 4 and 5 have been added as options.
+-	Modularized the render pipeline, so `SiteTargetPlugin`s can be used to extend EO3 to work with new or other sites.
 
 ### Building
 in the repository:

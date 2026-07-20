@@ -29,8 +29,8 @@
 
 @font-face {
     font-family: 'League Mono';
-    /* I don't know what version of League Mono this is, so this is stolen from ao3 */
-    src: url('../../assets/ao3-leaguemono.woff') format('woff');
+    /* I don't know what version of League Mono this is, so this is stolen from cohost/ao3 */
+    src: url('../../assets/leaguemono.woff') format('woff');
     font-weight: 100 900;
     font-stretch: 50% 200%;
 }
@@ -40,8 +40,8 @@ html {
 
     /* --P- variable prefix to avoid confusion with variables inherited from ao3 */
 
-    --P-monospace: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, liberation mono, courier new,
-        monospace;
+    --P-monospace: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, liberation mono,
+        courier new, monospace;
     --P-font-size-ui: 14px;
     --P-font-size-content: 16px;
     --P-font-size-code: 13px;
@@ -66,6 +66,8 @@ html {
 
     --P-ao3-bg: rgb(255 249 242);
     --P-ao3-dark-bg: rgb(25 25 25);
+    --P-cohost-bg: rgb(255 249 242);
+    --P-cohost-dark-bg: rgb(25 25 25);
     --P-card-bg: 255 255 255;
     --P-danger: #f43;
     --P-danger-content-fg: white;
@@ -169,14 +171,14 @@ html {
         overflow: auto;
     }
 
-    &.is-error>.i-error {
+    &.is-error > .i-error {
         background: rgb(var(--P-card-bg));
         border-radius: 0.5em;
         margin: 1em;
         padding: 1em;
     }
 
-    >.i-toolbar {
+    > .i-toolbar {
         display: flex;
         background: rgb(var(--P-toolbar-bg));
         color: rgb(var(--P-toolbar-fg));
@@ -186,15 +188,15 @@ html {
         height: 2.2em;
         padding: 0 0.5em;
 
-        >.i-buttons {
+        > .i-buttons {
             display: flex;
             flex-shrink: 0;
 
-            >.i-spacer {
+            > .i-spacer {
                 width: 0.5em;
             }
 
-            >.i-section {
+            > .i-section {
                 margin-left: 0.5em;
                 border-left: 1px solid var(--P-separator);
                 padding: 0 0.5em;
@@ -205,7 +207,7 @@ html {
             }
         }
 
-        >.i-memory-storage-warning {
+        > .i-memory-storage-warning {
             align-self: center;
             background: rgb(var(--P-color-danger));
             color: rgb(var(--P-color-danger-fg));
@@ -270,33 +272,33 @@ html {
                     }
                 }
 
-                &+li {
+                & + li {
                     border-left: 1px solid var(--P-separator);
                 }
             }
         }
     }
 
-    >.i-content-split {
+    > .i-content-split {
         display: flex;
         height: 0;
         flex: 1;
 
-        >.i-sidebar {
+        > .i-sidebar {
             display: none;
 
             &.is-open {
                 display: flex;
                 flex-direction: column;
 
-                &>* {
+                & > * {
                     height: 0;
                     flex: 1;
                 }
             }
         }
 
-        >.i-contents {
+        > .i-contents {
             display: grid;
             width: 0;
             flex: 1;
@@ -310,7 +312,7 @@ html {
     }
 }
 
-.application-frame>.i-toolbar>.i-buttons>.i-toolbar-button {
+.application-frame > .i-toolbar > .i-buttons > .i-toolbar-button {
     font: inherit;
     color: inherit;
     background: none;
@@ -352,7 +354,6 @@ html {
 }
 
 @keyframes P-toolbar-button-drop-highlight {
-
     0%,
     100% {
         border-color: currentColor;
@@ -369,13 +370,13 @@ html {
     grid-template-columns: 100%;
     grid-template-rows: 100%;
 
-    >.i-contents {
+    > .i-contents {
         display: grid;
         grid-area: 1 / 1;
         grid-template-columns: 100%;
         grid-template-rows: 100%;
 
-        >* {
+        > * {
             grid-area: 1 / 1;
         }
 
@@ -388,11 +389,11 @@ html {
                 font-size: 0.8em;
                 line-height: 1.5;
 
-                >.i-line {
+                > .i-line {
                     display: flex;
                     gap: 0.5em;
 
-                    >.i-gutter {
+                    > .i-gutter {
                         text-align: right;
                         width: 4em;
                         opacity: 0.5;
@@ -401,14 +402,14 @@ html {
             }
         }
 
-        >.i-loading {
+        > .i-loading {
             grid-area: 1 / 1;
             display: flex;
             align-items: center;
             justify-content: center;
             z-index: 1;
 
-            >.i-loading-contents {
+            > .i-loading-contents {
                 background: var(--P-dialog-bg);
                 padding: 1em;
                 border-radius: 0.5em;
@@ -417,7 +418,7 @@ html {
                 gap: 0.5em;
                 align-items: center;
 
-                >.i-loading-icon {
+                > .i-loading-icon {
                     width: 2em;
                     height: 2em;
                     border: 4px solid rgb(var(--P-color-accent));
@@ -449,7 +450,7 @@ html {
     display: flex;
     flex: 1;
 
-    >.i-tab {
+    > .i-tab {
         display: flex;
         flex-direction: row-reverse;
         width: 0;
@@ -485,7 +486,7 @@ html {
             transition: background 0.05s;
         }
 
-        >.i-close {
+        > .i-close {
             background: none;
             border: none;
             color: inherit;
@@ -529,19 +530,19 @@ html {
             }
         }
 
-        >.i-tab-interactable {
+        > .i-tab-interactable {
             flex: 1;
             width: 0;
             display: flex;
 
-            >.i-title {
+            > .i-title {
                 flex: 1;
                 text-align: center;
                 white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;
 
-                >.i-virtual-title {
+                > .i-virtual-title {
                     font-style: italic;
                 }
             }
@@ -555,7 +556,7 @@ html {
     justify-content: center;
     cursor: default;
 
-    >.i-contents {
+    > .i-contents {
         display: grid;
         grid-template-rows: 1fr;
         place-items: center;
@@ -574,7 +575,7 @@ html {
             max-width: 100%;
         }
 
-        >.i-nothing {
+        > .i-nothing {
             left: 50%;
             top: 64px;
             font-size: 1.5em;
@@ -602,12 +603,12 @@ html {
         max-width: 64ch;
         padding: 0.75em;
 
-        >.i-title {
+        > .i-title {
             margin: 0;
             font-size: 1.2em;
         }
 
-        >.i-url {
+        > .i-url {
             border: 1px solid var(--P-separator);
             border-radius: 0.5em;
             padding: 0.5em;
@@ -617,7 +618,7 @@ html {
             user-select: text;
         }
 
-        >.i-actions {
+        > .i-actions {
             display: flex;
             justify-content: flex-end;
             gap: 1em;
