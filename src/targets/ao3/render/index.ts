@@ -52,6 +52,9 @@ function runPipeline(content: string, onDiagnostic: Ao3DiagnosticSink): Ao3Rende
     const root = document.createElement('myroot');
     root.innerHTML = fixBadCharacters(rubyStrip(content)).replace(UNSUITABLE_CHARS, '');
     processParagraphs(root);
+    // AO3 serializes after ParagraphMaker and Sanitize re-parses; that round trip can restructure
+    // (e.g. a <p> inside raw-text <title> becomes text), so do the same.
+    root.innerHTML = root.innerHTML;
     const css = liftInlineStyles(root);
     sanitizeFragment(root, buildContentConfig(onDiagnostic), onDiagnostic);
     // sanitize_value turns &nbsp; entities into literal U+00A0, so the output equals what AO3 stores.

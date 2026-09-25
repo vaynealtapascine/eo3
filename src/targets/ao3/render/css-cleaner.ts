@@ -6,18 +6,24 @@
  * AO3 parses with the `css_parser` gem; this uses css-tree with raw preludes/values and
  * reproduces the gem's observable behaviour: properties lowercased, a duplicate property keeps
  * the last value in the first slot, selector whitespace collapsed, `@media` flattened (query
- * discarded), statement at-rules dropped, other block at-rules rejected. The value regexes are
- * transcribed from the Ruby; note `\s` is a literal space in a double-quoted Ruby string.
+ * discarded), statement at-rules dropped, other block at-rules rejected.
  */
-import { parse, CssNode, Block, Rule, Atrule, Declaration } from 'css-tree';
+import { parse, CssNode, Rule, Atrule } from 'css-tree';
 import {
     SUPPORTED_CSS_PROPERTIES,
     SUPPORTED_CSS_SHORTHAND_PROPERTIES,
     SUPPORTED_CSS_KEYWORDS,
-    SUPPORTED_EXTERNAL_URLS,
-    TOP_LEVEL_DOMAINS,
 } from './css-config';
 import { rubyStrip as strip } from './ruby-str';
+import {
+    ALPHA,
+    CUSTOM_PROPERTY_NAME,
+    NUMBER_OR_RATIO,
+    PREFIX,
+    URL_FUNCTION,
+    VAR_FUNCTION,
+    matchesValueList,
+} from './css-value';
 
 export type CssDiagnostic =
     /** Nothing parseable at all (`no_valid_css`). */
@@ -68,43 +74,8 @@ export interface CleanCssOptions {
     onDiagnostic?: CssDiagnosticSink;
 }
 
-// --- Regexes (lib/css_cleaner.rb) ----------------------------------------------------------------
-// Built as strings and composed the way the Ruby interpolates `.to_s`; each Ruby part is grouped.
+// --- Regexes (lib/css_cleaner.rb); the value grammar itself is in ./css-value ---------------
 
-const ALPHA = '[a-z\\-]+';
-const UNITS = '(?:deg|cm|em|ex|in|mm|pc|pt|px|s|%)';
-const NUMBER = '-?\\.?\\d{1,3}\\.?\\d{0,3}';
-// Double-quoted in Ruby: `\s` is a literal space here.
-const NUMBER_OR_RATIO = `${NUMBER}(?: */ *${NUMBER})?`;
-const NUMBER_WITH_UNIT = `${NUMBER} *${UNITS}? *,? *`;
-const PAREN_NUMBER = `\\(\\s*(?:${NUMBER_WITH_UNIT})+\\s*\\)`;
-const PREFIX = '(?:moz|ms|o|webkit)';
-const FUNCTION_NAME = '(?:scalex?y?|translatex?y?|skewx?y?|rotatex?y?|matrix)';
-const TRANSFORM_FUNCTION = `${FUNCTION_NAME}${PAREN_NUMBER}`;
-const SHAPE_FUNCTION = `rect${PAREN_NUMBER}`;
-const RGBA = `rgba?${PAREN_NUMBER}`;
-const HSLA = `hsla?${PAREN_NUMBER}`;
-const COLOR = `(?:#[0-9a-f]{3,6}|${ALPHA}|${RGBA}|${HSLA})`;
-const COLOR_STOP_FUNCTION = `color-stop\\s*\\(${NUMBER_WITH_UNIT}\\s*,?\\s*${COLOR}\\s*\\)`;
-const FILTER_NAME =
-    '(?:blur|brightness|contrast|grayscale|hue-rotate|invert|opacity|saturate|sepia)';
-const FILTER_FUNCTION = `${FILTER_NAME}${PAREN_NUMBER}`;
-const DROP_SHADOW_VALUE = `\\(\\s*(?:${NUMBER_WITH_UNIT}|${COLOR}\\s*)+\\s*\\)`;
-const DROP_SHADOW_FUNCTION = `drop-shadow${DROP_SHADOW_VALUE}`;
-const CUSTOM_PROPERTY_NAME = '\\-\\-[0-9a-z\\-_]+';
-const VAR_FUNCTION = `var\\(\\s*${CUSTOM_PROPERTY_NAME}\\s*\\)`;
-const DOMAIN = `https?://\\w[\\w\\-\\.]+\\.(?:${TOP_LEVEL_DOMAINS.join('|')})`;
-const DOMAIN_OR_IMAGES = `(?:\\/images|${DOMAIN})`;
-const URI = `${DOMAIN_OR_IMAGES}/[\\w\\-\\.\\/]*[\\w\\-]\\.(?:${SUPPORTED_EXTERNAL_URLS.join(
-    '|'
-)})`;
-const URL = `(?:${URI}|"${URI}"|'${URI}')`;
-const URL_FUNCTION = `url\\(\\s*${URL}\\s*\\)`;
-const VALUE = `(?:${TRANSFORM_FUNCTION}|${URL_FUNCTION}|${COLOR_STOP_FUNCTION}|${COLOR}|${NUMBER_WITH_UNIT}|${ALPHA}|${SHAPE_FUNCTION}|${FILTER_FUNCTION}|${DROP_SHADOW_FUNCTION}|${VAR_FUNCTION})`;
-
-// Ruby `^`/`$` are line anchors, hence the `m` flag. The value is downcased before this check,
-// so a global `i` is equivalent to the Ruby's per-part case flags.
-const VALUE_LIST_RE = new RegExp(`^(?:${VALUE},?\\s*)+$`, 'im');
 const VAR_FUNCTION_RE = new RegExp(VAR_FUNCTION, 'gi');
 const CUSTOM_PROPERTY_RE = new RegExp(`^(${CUSTOM_PROPERTY_NAME})$`, 'i');
 // Case-sensitive on purpose: the Ruby runs these against the original (not downcased) value.
@@ -148,43 +119,37 @@ function isAllowedProperty(property: string): boolean {
 /** ActiveSupport `blank?` for strings. */
 const isBlank = (s: string | null | undefined): boolean => !s || /^\s*$/.test(s);
 
+const IMPORTANT_IN_VALUE_RE = /\s*!important\b\s*/i;
+
+/** css_parser ignores a `}` with no open block; css-tree would fold it into the next selector. */
+function dropStrayClosingBraces(css: string): string {
+    let depth = 0;
+    let quote: string | null = null;
+    let out = '';
+    for (let i = 0; i < css.length; i++) {
+        const c = css[i];
+        if (quote) {
+            if (c === '\\') out += c + (css[++i] ?? '');
+            else {
+                if (c === quote) quote = null;
+                out += c;
+            }
+            continue;
+        }
+        if (c === '"' || c === "'") quote = c;
+        else if (c === '{') depth++;
+        else if (c === '}') {
+            if (depth === 0) continue;
+            depth--;
+        }
+        out += c;
+    }
+    return out;
+}
+
 /** `strip_value`: downcase, remove `!important`, strip. */
 function stripValue(value: string): string {
     return strip(value.toLowerCase().replace(/!important/g, ''));
-}
-
-/** Like `str.split(delim)`, but a `delim` occurrence inside parentheses doesn't split. */
-function splitTopLevel(str: string, delim: string): string[] {
-    const parts: string[] = [];
-    let depth = 0;
-    let start = 0;
-    for (let i = 0; i < str.length; i++) {
-        const ch = str[i];
-        if (ch === '(') depth++;
-        else if (ch === ')') depth = Math.max(0, depth - 1);
-        else if (ch === delim && depth === 0) {
-            parts.push(str.slice(start, i));
-            start = i + 1;
-        }
-    }
-    parts.push(str.slice(start));
-    return parts;
-}
-
-/**
- * `value_stripped.match?(/^(VALUE,?\s*)+$/i)`, made safe against the regex's catastrophic
- * backtracking (the Ruby side rescues `Regexp::TimeoutError` and treats the value as invalid).
- * Splitting at top-level commas is equivalent for this grammar — a VALUE never spans one — and
- * bounds the backtracking per chunk; absurd digit runs are rejected outright.
- */
-function matchesValueList(stripped: string): boolean {
-    if (/\d{21,}/.test(stripped)) return false;
-    // The `,?\s*` tail of each VALUE absorbs the whitespace after a comma, so a chunk's leading
-    // whitespace (left behind by the split, which drops the comma itself) is never part of what
-    // the anchored regex has to match.
-    return splitTopLevel(stripped, ',')
-        .map((chunk) => chunk.replace(/^\s+/, ''))
-        .every((chunk) => isBlank(chunk) || VALUE_LIST_RE.test(chunk));
 }
 
 /** `sanitize_css_value`: the value must be a (comma-separated) list of recognised value forms, or a bare supported keyword. */
@@ -199,7 +164,10 @@ function sanitizeCssValue(value: string): string {
     return '';
 }
 
-/** `tokenize_and_sanitize_css_value`: a port of the StringScanner loop, token by token. */
+/**
+ * `tokenize_and_sanitize_css_value`: a port of the StringScanner loop, token by token.
+ * Ruby's `^`/`$` are line anchors, hence the `m` flags here and below.
+ */
 function tokenizeAndSanitizeCssValue(value: string): string {
     let cleanval = '';
     let pos = 0;
@@ -223,15 +191,15 @@ function tokenizeAndSanitizeCssValue(value: string): string {
             cleanval += token;
             continue;
         }
-        let inParen = /\($/.test(token) ? 1 : 0;
+        let inParen = /\($/m.test(token) ? 1 : 0;
         while (inParen > 0) {
             const next = scanUntil(PAREN);
             if (next === null) return ''; // mismatched parens
             token += next;
-            if (/\($/.test(token)) inParen += 1;
-            if (/\)$/.test(token)) inParen -= 1;
+            if (/\($/m.test(token)) inParen += 1;
+            if (/\)$/m.test(token)) inParen -= 1;
         }
-        const separator = /(\s|,)$/.exec(token)?.[0] ?? '';
+        const separator = /(\s|,)$/m.exec(token)?.[0] ?? '';
         token = strip(token).replace(/,$/, '');
         const cleantoken = sanitizeCssToken(token);
         if (isBlank(cleantoken)) return '';
@@ -253,7 +221,7 @@ function sanitizeCssToken(token: string): string {
 
 /** `sanitize_css_gradient`: `fn(interior)` where fn contains "gradient" and the interior tokenizes cleanly. */
 function sanitizeCssGradient(value: string): string {
-    const m = /^([a-z\-]+)\((.*)\)/.exec(value);
+    const m = /^([a-z\-]+)\((.*)\)/m.exec(value);
     if (m) {
         const [, fn, interior] = m;
         const cleaned = tokenizeAndSanitizeCssValue(interior);
@@ -275,7 +243,7 @@ function sanitizeCssContent(value: string): string {
 function sanitizeCssFont(value: string): string {
     const ok = stripValue(value)
         .split(',')
-        .every((name) => /^(?:'?[a-z0-9\- ]+'?|"?[a-z0-9\- ]+"?)$/.test(name.trim()));
+        .every((name) => /^(?:'?[a-z0-9\- ]+'?|"?[a-z0-9\- ]+"?)$/m.test(strip(name)));
     return ok ? value : '';
 }
 
@@ -310,28 +278,41 @@ interface Decl {
 }
 
 /**
- * css_parser splits a rule's body at every `;` that isn't inside parentheses — including inside
- * quoted strings — so `content: "a;b"` reaches the validator as `"a` (and is then rejected).
+ * css_parser's `RuleSet#parse_declarations!` + `Declarations#[]=` on a rule's raw body. The body
+ * is split at every `;`, even inside strings (`content: "a;b"` becomes `"a`); a segment with a `(`
+ * and no later `)` is joined to the next, and one still open at the end is dropped. Properties
+ * are lowercased, `!important` is sliced out of the value, and a repeated property keeps its
+ * first slot, taking the new value unless only the old one was important.
  */
-function truncateAtBareSemicolon(value: string): string {
-    return splitTopLevel(value, ';')[0];
-}
-
-/**
- * css_parser's RuleSet: properties lowercased; declarations with an empty value are dropped at
- * parse time; a repeated property keeps the last value in the first slot.
- */
-function collectDeclarations(block: Block, selectors: string, emit: CssDiagnosticSink): Decl[] {
+function parseDeclarations(body: string, selectors: string, emit: CssDiagnosticSink): Decl[] {
     const decls = new Map<string, Decl>();
-    block.children.forEach((child: CssNode) => {
-        if (child.type !== 'Declaration') return;
-        const d = child as Declaration;
-        const property = d.property.trim().toLowerCase();
-        const value = d.value.type === 'Raw' ? strip(truncateAtBareSemicolon(d.value.value)) : '';
-        if (isBlank(property) || isBlank(value)) return;
-        if (decls.has(property)) emit({ kind: 'duplicate-property', property, selectors });
-        decls.set(property, { property, value, important: !!d.important });
-    });
+    const segments = body.split(';');
+    while (segments.length && segments[segments.length - 1] === '') segments.pop(); // Ruby's split
+
+    let continuation: string | null = null;
+    for (const segment of segments) {
+        const decs: string = continuation === null ? segment : `${continuation};${segment}`;
+        const lparen = decs.indexOf('(');
+        if (lparen !== -1 && decs.indexOf(')', lparen) === -1) {
+            continuation = decs;
+            continue;
+        }
+        // As in the Ruby, the `next`s below leave `continuation` set.
+        const colon = decs.indexOf(':');
+        if (colon === -1) continue;
+        const property = strip(decs.slice(0, colon)).toLowerCase();
+        let value = strip(decs.slice(colon + 1));
+        if (!property || !value || value.toLowerCase() === '!important') continue;
+
+        const important = IMPORTANT_IN_VALUE_RE.test(value);
+        value = strip(value.replace(IMPORTANT_IN_VALUE_RE, ''));
+        const current = decls.get(property);
+        if (current) emit({ kind: 'duplicate-property', property, selectors });
+        if (value && !(current?.important && !important)) {
+            decls.set(property, { property, value, important });
+        }
+        continuation = null;
+    }
     return [...decls.values()];
 }
 
@@ -357,6 +338,7 @@ export const WORK_SKIN_CALLER_CHECK: CssCallerCheck = (selectors, property, valu
 /** Returns the cleaned rule text, or null if css_parser would have dropped the rule set at parse time (no declarations). */
 function cleanRule(
     rule: Rule,
+    css: string,
     prefix: string,
     callerCheck: CssCallerCheck | undefined,
     emit: CssDiagnosticSink
@@ -364,11 +346,12 @@ function cleanRule(
     if (rule.prelude.type !== 'Raw') return null;
     const selectors = cleanSelectors(rule.prelude.value, prefix);
     const selectorsLabel = selectors.join(', ');
-    const decls = collectDeclarations(rule.block, selectorsLabel, emit);
+    const { start, end } = rule.block.loc!;
+    const body = strip(css.slice(start.offset + 1, end.offset).replace(/\}\s*$/, ''));
+    // `.a{}` never becomes a rule set; `.a{color:}` does, and then fails for having no rules.
+    if (!body) return null;
+    const decls = parseDeclarations(body, selectorsLabel, emit);
     if (decls.length === 0) {
-        // `.a{}` never becomes a rule set; `.a{color:}` does (its only declaration is dropped
-        // for the empty value), and then fails for having no rules.
-        if (rule.block.children.toArray().length === 0) return null;
         emit({ kind: 'no-rules-for-selectors', selectors: selectorsLabel });
         return '';
     }
@@ -411,6 +394,7 @@ export function cleanWorkskinCss(
     cssCode: string,
     options: Omit<CleanCssOptions, 'callerCheck'> = {}
 ): string {
+    if (isBlank(cssCode)) return cssCode; // `return if self.css.blank?`
     return cleanCssCode(cssCode, { ...options, callerCheck: WORK_SKIN_CALLER_CHECK });
 }
 
@@ -427,7 +411,7 @@ export function cleanCssCode(cssCode: string, options: CleanCssOptions = {}): st
     if (!/\w/.test(cssCode)) return ''; // only spaces of various kinds
 
     // css_parser strips comments before parsing.
-    const stripped = cssCode.replace(/\/\*[\s\S]*?\*\//g, '');
+    const stripped = dropStrayClosingBraces(cssCode.replace(/\/\*[\s\S]*?\*\//g, ''));
 
     let ast: CssNode;
     try {
@@ -435,6 +419,7 @@ export function cleanCssCode(cssCode: string, options: CleanCssOptions = {}): st
             parseValue: false,
             parseRulePrelude: false,
             parseAtrulePrelude: false,
+            positions: true,
         });
     } catch {
         emit({ kind: 'no-valid-css' });
@@ -446,7 +431,7 @@ export function cleanCssCode(cssCode: string, options: CleanCssOptions = {}): st
 
     const visit = (node: CssNode): void => {
         if (node.type === 'Rule') {
-            const cleaned = cleanRule(node, prefix, options.callerCheck, emit);
+            const cleaned = cleanRule(node, stripped, prefix, options.callerCheck, emit);
             if (cleaned !== null) {
                 ruleSetsSeen++;
                 cleanCss += cleaned;
