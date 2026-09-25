@@ -30,6 +30,8 @@ const plugin: SiteTargetPlugin<RenderConfig> = {
     PreviewHeader: CohostPreviewHeader,
     PreviewFooter: CohostPreviewFooter,
 
+    previewSettings: ['darkTheme', 'siteDarkTheme', 'prefersReducedMotion'],
+
     configItems: CONFIG_ITEMS,
 
     outputs: [{ id: 'html', label: 'HTML', typeId: 'text/html' }],

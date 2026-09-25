@@ -368,18 +368,19 @@ export function Ao3PreviewHeader({
                                                     >
                                                         <li>
                                                             <form
-                                                                accept-charset="UTF-8"
+                                                                acceptCharset="UTF-8"
                                                                 method="get"
                                                             >
                                                                 <p>
                                                                     <select
                                                                         name="selected_id"
                                                                         id="selected_id"
+                                                                        defaultValue="2"
                                                                     >
                                                                         <option value="1">
                                                                             Chapter 1
                                                                         </option>
-                                                                        <option selected value="2">
+                                                                        <option value="2">
                                                                             Chapter 2
                                                                         </option>
                                                                         <option value="3">
@@ -431,7 +432,7 @@ export function Ao3PreviewHeader({
                                                 <li className="subscribe">
                                                     <form
                                                         className="ajax-create-destroy"
-                                                        accept-charset="UTF-8"
+                                                        acceptCharset="UTF-8"
                                                         method="post"
                                                     >
                                                         <input
@@ -677,7 +678,7 @@ export function Ao3PreviewHeader({
                                         <div className="post comment">
                                             <form
                                                 className="new_comment"
-                                                accept-charset="UTF-8"
+                                                acceptCharset="UTF-8"
                                                 method="post"
                                             >
                                                 <input type="hidden" name="authenticity_token" />
@@ -693,7 +694,7 @@ export function Ao3PreviewHeader({
                                                             title="Choose Name"
                                                             name="comment[pseud_id]"
                                                         >
-                                                            <option selected>User</option>
+                                                            <option>User</option>
                                                         </select>
                                                     </h4>
 

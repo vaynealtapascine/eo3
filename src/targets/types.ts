@@ -63,6 +63,9 @@ export interface SiteTargetExportAction {
     getWarnings?(data: string): string[];
 }
 
+/** Preview settings shared across targets; each target opts into the ones its styles respond to. */
+export type SharedPreviewSetting = 'darkTheme' | 'siteDarkTheme' | 'prefersReducedMotion';
+
 export interface PreviewConfig {
     target: SiteTargetId;
     targetConfig: JsonValue;
@@ -156,6 +159,9 @@ export interface SiteTargetPlugin<Config extends JsonValue = JsonValue> {
      * content (e.g. AO3's page mockup) and the comparison section is purely visual.
      */
     disableProseInteraction?: boolean;
+
+    /** Shared preview settings this target supports; the others are neither shown nor applied. */
+    previewSettings?: SharedPreviewSetting[];
 
     /** Config toggles shown in the preview settings popover. */
     configItems?: { [k: string]: SiteTargetConfigItem<Config> };

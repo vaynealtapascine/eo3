@@ -13,6 +13,7 @@ import {
     PreviewConfig,
     PushError,
     RenderResult,
+    SharedPreviewSetting,
     SiteTargetConfigItem,
     SiteTargetExportOutput,
     SiteTargetPlugin,
@@ -290,6 +291,11 @@ export function PostPreview({
         }
     };
 
+    const supports = (s: SharedPreviewSetting) => !!plugin.previewSettings?.includes(s);
+    const darkTheme = supports('darkTheme') && config.darkTheme;
+    const siteDarkTheme = supports('siteDarkTheme') && config.siteDarkTheme;
+    const reducedMotion = supports('prefersReducedMotion') && config.prefersReducedMotion;
+
     const previewProps: SiteTargetPreviewProps<any> = {
         plugin,
         markdown,
@@ -309,8 +315,8 @@ export function PostPreview({
                 'post-preview' +
                 ` target-${plugin.id}` +
                 (stale ? ' is-stale' : '') +
-                (config.darkTheme ? ' dark-theme' : '') +
-                (config.siteDarkTheme ? ' is-site-dark-theme' : '')
+                (darkTheme ? ' dark-theme' : '') +
+                (siteDarkTheme ? ' is-site-dark-theme' : '')
             }
         >
             {plugin.PreviewHeader ? <plugin.PreviewHeader {...previewProps} /> : null}
@@ -329,11 +335,11 @@ export function PostPreview({
                 <div
                     className="prose-container p-prose-outer co-themed-box"
                     ref={proseContainer}
-                    data-theme={config.darkTheme ? 'dark' : 'light'}
-                    data-media-color-scheme={config.siteDarkTheme ? 'dark' : 'light'}
+                    data-theme={darkTheme ? 'dark' : 'light'}
+                    data-media-color-scheme={siteDarkTheme ? 'dark' : 'light'}
                     style={plugin.disableProseInteraction ? { pointerEvents: 'none' } : undefined}
                 >
-                    <DynamicStyles config={config} />
+                    <DynamicStyles reducedMotion={reducedMotion} />
                     {styleOutputs.map((css, i) => (
                         <style key={i}>{css}</style>
                     ))}
@@ -403,6 +409,9 @@ function buildConfigItems(plugin: SiteTargetPlugin<any>): { [k: string]: Unified
             set: (c, v) => ({ ...c, siteDarkTheme: v }),
         },
     };
+    for (const setting of ['prefersReducedMotion', 'siteDarkTheme'] as const) {
+        if (!plugin.previewSettings?.includes(setting)) delete items[setting];
+    }
 
     for (const [k, item] of Object.entries(plugin.configItems ?? {})) {
         items[k] = {
@@ -435,13 +444,13 @@ export function RenderConfigEditor({
 
     const liveRendererActive = hasLiveRenderer && config.useLiveRenderer;
     items.push(
-        <>
+        <Fragment key="icon">
             {liveRendererActive && plugin.configSummaryIcon ? (
                 plugin.configSummaryIcon(config.targetConfig, true)
             ) : (
                 <PreviewRenderIcon />
             )}
-        </>
+        </Fragment>
     );
 
     for (const k in configItems) {
@@ -584,10 +593,10 @@ const globalDynamicStyles = (() => {
     return { setReducedMotion };
 })();
 
-function DynamicStyles({ config }: { config: PreviewConfig }) {
+function DynamicStyles({ reducedMotion }: { reducedMotion: boolean }) {
     useEffect(() => {
-        globalDynamicStyles.setReducedMotion(config.prefersReducedMotion);
-    }, [config]);
+        globalDynamicStyles.setReducedMotion(reducedMotion);
+    }, [reducedMotion]);
 
     return null;
 }
