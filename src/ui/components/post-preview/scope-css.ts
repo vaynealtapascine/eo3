@@ -1,12 +1,9 @@
 import { parse, generate, walk, CssNode } from 'css-tree';
 
 /**
- * Prefixes every style rule's selectors with `scope` (as a descendant), so CSS injected into
- * the preview applies only within the mockup and gains the scope's specificity. This mirrors
- * how AO3 wraps a Work Skin under `#workskin`: the ID prefix both scopes the rules and lets
- * them win over the surrounding page styles. Rules inside `@keyframes`/`@font-face` are left
- * untouched (their `from`/`to`/`0%` blocks aren't real selectors); `@media`/`@supports`
- * blocks are descended into so their inner rules get scoped too.
+ * Prefixes every style rule's selectors with `scope` so injected CSS applies only within the
+ * mockup and gains the scope's specificity (as AO3 does with `#workskin`). `@keyframes` and
+ * `@font-face` blocks are skipped; `@media`/`@supports` are descended into.
  */
 export function scopeCss(css: string, scope: string): string {
     if (!scope) return css;
@@ -17,6 +14,11 @@ export function scopeCss(css: string, scope: string): string {
     } catch {
         return css; // leave unparseable CSS untouched rather than dropping it
     }
+
+    // Skip selectors already under the scope (`#workskin .x`), but not `#workskin-note`.
+    const alreadyScoped = new RegExp(
+        '^' + scope.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?![\\w-])'
+    );
 
     walk(ast, {
         visit: 'Rule',
@@ -29,7 +31,8 @@ export function scopeCss(css: string, scope: string): string {
 
             const scoped = node.prelude.children
                 .toArray()
-                .map((sel) => `${scope} ${generate(sel)}`)
+                .map((sel) => generate(sel))
+                .map((sel) => (alreadyScoped.test(sel) ? sel : `${scope} ${sel}`))
                 .join(', ');
             node.prelude = { type: 'Raw', value: scoped };
         },

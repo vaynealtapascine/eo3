@@ -1,5 +1,5 @@
 import { SiteTargetExportAction } from '../types';
-import { getExportWarnings } from './fallback-renderer';
+import { getExportWarnings } from './diagnostics';
 
 export const EXPORT_ACTIONS: SiteTargetExportAction[] = [
     {

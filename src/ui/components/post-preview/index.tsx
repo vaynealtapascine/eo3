@@ -13,6 +13,7 @@ import {
     PreviewConfig,
     PushError,
     RenderResult,
+    SiteTargetConfigItem,
     SiteTargetExportOutput,
     SiteTargetPlugin,
     SiteTargetPreviewProps,
@@ -40,7 +41,7 @@ function FallbackRenderedProse({
                 dangerouslySetInnerHTML={{ __html: html }}
             />
             {error && errorPortal
-                ? createPortal(<div className="inner-ao3-error">{error}</div>, errorPortal)
+                ? createPortal(<div className="inner-render-error">{error}</div>, errorPortal)
                 : null}
         </>
     );
@@ -60,7 +61,7 @@ function LiveRenderedProse({
     return (
         <Fragment>
             <div
-                className="inner-prose prose p-prose co-prose ao3-renderer"
+                className="inner-prose prose p-prose co-prose live-renderer"
                 role="article"
                 key={RESET_ON_RENDER && renderId}
             >
@@ -213,15 +214,21 @@ export function PostPreview({
     onReadMoreChange,
     errorPortal,
 }: PostPreview.Props) {
-    let html = '';
-    const renderErrors: ErrorMessage[] = [];
-    try {
-        html = plugin.renderFallback(markdown, config.targetConfig, (id, props) =>
-            renderErrors.push({ id, props })
-        );
-    } catch (err) {
-        error = err as Error;
-    }
+    // Memoized: the fallback can be a full DOM pipeline (AO3) and shouldn't rerun on unrelated renders.
+    const fallbackResult = useMemo(() => {
+        const errs: ErrorMessage[] = [];
+        try {
+            const html = plugin.renderFallback(markdown, config.targetConfig, (id, props) =>
+                errs.push({ id, props })
+            );
+            return { html, error: null as Error | null, errs };
+        } catch (err) {
+            return { html: '', error: err as Error, errs };
+        }
+    }, [plugin, markdown, config.targetConfig]);
+    const html = fallbackResult.html;
+    if (fallbackResult.error) error = fallbackResult.error;
+    const renderErrors: ErrorMessage[] = [...fallbackResult.errs];
 
     const liveRenderer = useLiveRenderer(plugin);
 
@@ -232,25 +239,21 @@ export function PostPreview({
         const errs: ErrorMessage[] = [];
         try {
             const output = plugin.export(
-                { html: sourceHtml, css: cssInput, config: config.targetConfig },
+                { html: sourceHtml, source: markdown, css: cssInput, config: config.targetConfig },
                 (id, props) => errs.push({ id, props })
             );
             return { output, error: null as Error | null, errs };
         } catch (err) {
             return { output: new Map() as SiteTargetExportOutput, error: err as Error, errs };
         }
-    }, [plugin, sourceHtml, cssInput, config.targetConfig]);
+    }, [plugin, sourceHtml, markdown, cssInput, config.targetConfig]);
 
     const exportOutput = exportResult.output;
     if (exportResult.error) error = exportResult.error;
     renderErrors.push(...exportResult.errs);
 
-    // Apply CSS so the preview reflects the styling the post relies on. For targets that emit
-    // a CSS artifact (AO3's workskin, which includes the generated classes the exported HTML
-    // references) inject those; for targets that inline CSS into the HTML instead (cohost,
-    // no CSS output) inject the authored CSS so the classed preview is still styled. Each is
-    // scoped under the target's previewCssScope so it applies only within the mockup and wins
-    // over the surrounding page styles (see scopeCss).
+    // Inject the target's CSS outputs (AO3's workskin) or, if it has none (cohost inlines styles),
+    // the authored CSS, scoped under previewCssScope.
     const cssTypedOutputs = plugin.outputs
         .filter((o) => o.typeId === 'text/css')
         .map((o) => exportOutput.get(o.id))
@@ -370,15 +373,7 @@ namespace PostPreview {
     }
 }
 
-interface UnifiedConfigItem {
-    short: [string | null, string] | null;
-    label: string;
-    description: string;
-    requiresLiveRenderer?: boolean;
-    renderOnChange?: boolean;
-    get(config: PreviewConfig): boolean;
-    set(config: PreviewConfig, value: boolean): PreviewConfig;
-}
+type UnifiedConfigItem = SiteTargetConfigItem<PreviewConfig>;
 
 function buildConfigItems(plugin: SiteTargetPlugin<any>): { [k: string]: UnifiedConfigItem } {
     const items: { [k: string]: UnifiedConfigItem } = {
@@ -409,14 +404,9 @@ function buildConfigItems(plugin: SiteTargetPlugin<any>): { [k: string]: Unified
         },
     };
 
-    for (const k in plugin.configItems) {
-        const item = plugin.configItems[k];
+    for (const [k, item] of Object.entries(plugin.configItems ?? {})) {
         items[k] = {
-            short: item.short,
-            label: item.label,
-            description: item.description,
-            requiresLiveRenderer: item.requiresLiveRenderer,
-            renderOnChange: item.renderOnChange,
+            ...item,
             get: (c) => item.get(c.targetConfig),
             set: (c, v) => ({ ...c, targetConfig: item.set(c.targetConfig, v) }),
         };
@@ -522,7 +512,7 @@ function RenderConfigPopover({
     return (
         <div className="i-config-contents">
             <div className="i-config-title">Post Preview Settings</div>
-            {!hasLiveRenderer && (
+            {!hasLiveRenderer && plugin.loadLiveRenderer && (
                 <div className="i-renderer-unavailable">
                     <div className="i-icon">
                         <PreviewRenderIcon />

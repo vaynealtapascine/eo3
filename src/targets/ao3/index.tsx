@@ -1,16 +1,13 @@
 import { SiteTargetPlugin } from '../types';
-import { RenderConfig, DEFAULT_RENDER_CONFIG, CONFIG_ITEMS } from './config';
-import { loadRenderer, AO3_RENDERER_VERSION } from './live-renderer';
-import { renderMarkdown, handleAsyncErrors } from './fallback-renderer';
+import { RenderConfig, DEFAULT_RENDER_CONFIG } from './config';
+import { handleAsyncErrors } from './diagnostics';
+import { renderAo3Content } from './render';
 import { Ao3PreviewHeader } from './preview-chrome';
 import { EXPORT_ACTIONS } from './export-actions';
 import { exportPost } from './export';
-import { Ao3PlusIcon, Ao3RegularIcon, PreviewRenderIcon } from '../../ui/components/icons';
 import './styles.scss';
 // @ts-ignore
 import mascot from './mascot.svg?raw';
-
-export { AO3_RENDERER_VERSION };
 
 const plugin: SiteTargetPlugin<RenderConfig> = {
     id: 'ao3',
@@ -18,17 +15,16 @@ const plugin: SiteTargetPlugin<RenderConfig> = {
 
     initialConfig: () => DEFAULT_RENDER_CONFIG,
 
-    loadLiveRenderer: loadRenderer,
-
-    renderFallback: (markdown, _config, pushError) => renderMarkdown(markdown, pushError),
+    // No live renderer: AO3 processes posts server-side, and ./render is a verified port of that.
+    // export() runs the same pipeline, so the preview is what gets posted.
+    renderFallback: (content, _config, pushError) =>
+        renderAo3Content(content, (d) => pushError(d.kind, d)).html,
 
     scanForAsyncErrors: handleAsyncErrors,
 
     PreviewHeader: Ao3PreviewHeader,
 
     disableProseInteraction: true,
-
-    configItems: CONFIG_ITEMS,
 
     outputs: [
         { id: 'html', label: 'HTML', typeId: 'text/html' },
@@ -40,11 +36,6 @@ const plugin: SiteTargetPlugin<RenderConfig> = {
     export: exportPost,
 
     exportActions: EXPORT_ACTIONS,
-
-    configSummaryIcon: (config, liveRendererActive) => {
-        if (!liveRendererActive) return <PreviewRenderIcon />;
-        return config.hasAo3Plus ? <Ao3PlusIcon /> : <Ao3RegularIcon />;
-    },
 
     // AO3 doesn't have a separate mascot pose for each state, so reuse it for both.
     outputMascot: { awake: mascot, asleep: mascot },

@@ -32,6 +32,8 @@ export interface SiteTargetIO {
 export interface SiteTargetExportInput<Config> {
     /** Accurate rendered HTML from the active renderer (live serialized, else the fallback). */
     html: string;
+    /** The raw module-graph output, for targets whose export re-runs their own pipeline (AO3). */
+    source: string;
     /** Assembled authored CSS from every CSS input to the output, in module order. */
     css: string;
     config: Config;
@@ -156,7 +158,7 @@ export interface SiteTargetPlugin<Config extends JsonValue = JsonValue> {
     disableProseInteraction?: boolean;
 
     /** Config toggles shown in the preview settings popover. */
-    configItems: { [k: string]: SiteTargetConfigItem<Config> };
+    configItems?: { [k: string]: SiteTargetConfigItem<Config> };
 
     /** Raw SVG markup for the module graph's output node while this target is selected. */
     outputMascot: {
