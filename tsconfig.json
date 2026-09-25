@@ -18,6 +18,8 @@
         "src/**/*.tsx",
         "src/**/*.ts",
         "src/globals.d.ts",
-        "src/ui/components/tiny-plugins/ruby-characters.js"
+        "src/ui/components/tiny-plugins/ruby-characters.js",
+        "test/**/*.ts",
+        "vitest.config.ts"
     ]
 }

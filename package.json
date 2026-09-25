@@ -7,7 +7,9 @@
     "fmt": "prettier --write .",
     "dev": "vite dev",
     "build": "vite build",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:ao3-update": "ruby test/ao3-parity/generate.rb"
   },
   "homepage": "https://github.com/vaynealtapascine/eo3",
   "license": "MIT",
@@ -25,12 +27,14 @@
     "@types/react": "^18.0.25",
     "@types/react-dom": "^18.0.9",
     "autoprefixer": "^10.4.14",
+    "jsdom": "^30.1.1",
     "postcss": "^8.4.19",
     "postcss-nesting": "^10.2.0",
     "prettier": "^2.7.1",
     "rollup-plugin-postcss": "^4.0.2",
     "typescript": "^7.0.2",
-    "vite": "^8.1.5"
+    "vite": "^8.1.5",
+    "vitest": "^5.0.2"
   },
   "dependencies": {
     "@bramus/specificity": "^2.1.0",

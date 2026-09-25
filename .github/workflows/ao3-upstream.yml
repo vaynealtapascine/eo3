@@ -1,0 +1,54 @@
+# Re-runs the AO3 parity cases against otwarchive's latest sanitizer code. When a tracked source
+# file or pinned gem changed upstream, opens a PR with the new expected results; its CI run shows
+# whether the port still matches.
+name: AO3 upstream parity
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  regenerate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run test:ao3-update
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - id: parity
+        run: |
+          if git diff --quiet test/ao3-parity/expected.json; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          echo "commit=$(node -p "require('./test/ao3-parity/expected.json').commit.slice(0, 7)")" >> "$GITHUB_OUTPUT"
+          if npm test > parity.log 2>&1; then echo "result=passing" >> "$GITHUB_OUTPUT"; else echo "result=failing" >> "$GITHUB_OUTPUT"; fi
+          tail -n 40 parity.log
+      - if: steps.parity.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: ao3-upstream-parity
+          add-paths: test/ao3-parity/expected.json
+          commit-message: 'test(ao3): update parity expectations to otwarchive@${{ steps.parity.outputs.commit }}'
+          title: 'AO3 sanitizer changed upstream (otwarchive@${{ steps.parity.outputs.commit }}): port ${{ steps.parity.outputs.result }}'
+          body: |
+            otwarchive changed a file or gem the AO3 port in `src/targets/ao3/render/` mirrors.
+            This updates `test/ao3-parity/expected.json` to what AO3 now produces; the port is
+            currently **${{ steps.parity.outputs.result }}** against it.
+
+            Review the diff to see what AO3 now does differently, update the port until
+            `npm test` passes, and merge.
