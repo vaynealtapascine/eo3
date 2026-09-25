@@ -521,7 +521,7 @@ function CreateShareUrl() {
                     <p>Result:</p>
                     <TextField
                         value={shareUrl.toString()}
-                        onChange={() => { }}
+                        onChange={() => {}}
                         readOnly
                         onFocus={(e) => {
                             e.target.select();

@@ -352,7 +352,7 @@ export function getExportWarnings(input: string): string[] {
                     `a <${node.tagName.toLowerCase()}> src has a localhost URL source. it will stop working for other people`
                 );
             }
-        } catch { }
+        } catch {}
     }
     for (const node of doc.querySelectorAll('[style]')) {
         if ((node as HTMLElement).style?.backgroundImage) {
@@ -369,7 +369,7 @@ export function getExportWarnings(input: string): string[] {
                             `a <${node.tagName.toLowerCase()}> background-image has a localhost URL source. it will stop working for other people`
                         );
                     }
-                } catch { }
+                } catch {}
             }
         }
     }

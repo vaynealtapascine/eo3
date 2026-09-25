@@ -1,5 +1,22 @@
 @use './reset.scss' as v;
 
+// registered so the copy button's gradient stops can transition
+@property --color-stop-1 {
+    syntax: '<color>';
+    inherits: true;
+    initial-value: rgb(255 255 255);
+}
+@property --color-stop-2 {
+    syntax: '<color>';
+    inherits: true;
+    initial-value: rgb(221 221 221);
+}
+@property --color-stop-3 {
+    syntax: '<color>';
+    inherits: true;
+    initial-value: rgb(187 187 187);
+}
+
 .post-preview {
     background: white;
     color: black;
@@ -279,21 +296,6 @@
         }
 
         .copy-to-clipboard {
-            @property --color-stop-1 {
-                syntax: '<color>';
-                inherits: true;
-                initial-value: rgb(var(--P-color-accent));
-            }
-            @property --color-stop-2 {
-                syntax: '<color>';
-                inherits: true;
-                initial-value: rgb(var(--P-color-accent));
-            }
-            @property --color-stop-3 {
-                syntax: '<color>';
-                inherits: true;
-                initial-value: rgb(var(--P-color-accent));
-            }
             --color-stop-1: rgb(255 255 255);
             --color-stop-2: rgb(221 221 221);
             --color-stop-3: rgb(187 187 187);

@@ -5053,21 +5053,6 @@ IN REVIEW: this block is very old (2008), a bit wonky and has an unexpected effe
         }
 
         .copy-to-clipboard {
-            @property --color-stop-1 {
-                syntax: '<color>';
-                inherits: true;
-                initial-value: rgb(var(--P-color-accent));
-            }
-            @property --color-stop-2 {
-                syntax: '<color>';
-                inherits: true;
-                initial-value: rgb(var(--P-color-accent));
-            }
-            @property --color-stop-3 {
-                syntax: '<color>';
-                inherits: true;
-                initial-value: rgb(var(--P-color-accent));
-            }
             --color-stop-1: rgb(255 255 255);
             --color-stop-2: rgb(221 221 221);
             --color-stop-3: rgb(187 187 187);

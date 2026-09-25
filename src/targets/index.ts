@@ -10,7 +10,8 @@ export type SiteTargetDef = {
 export const SITE_TARGETS: { [k: string]: SiteTargetDef } = {
     ao3: {
         title: 'Archive of Our Own',
-        description: 'Renders using AO3’s real markdown renderer where possible.',
+        description:
+            'Renders with a faithful port of AO3’s HTML sanitizer and Work Skin CSS validator.',
         load: lazy(() => import('./ao3')),
     },
     cohost: {

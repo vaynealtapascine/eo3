@@ -28,14 +28,14 @@
         runHook postInstall
       '';
 
-      EO3_STATIC = staticUrl;
+      EO3_COHOST_STATIC = staticUrl;
       EO3_GIT_COMMIT_HASH = if (self ? rev) then self.rev else "dirty";
     };
 
     devShells.default = pkgs.mkShell {
       buildInputs = with pkgs; [ nodejs ];
 
-      EO3_STATIC = staticUrl;
+      EO3_COHOST_STATIC = staticUrl;
     };
 
   });

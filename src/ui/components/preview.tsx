@@ -62,7 +62,11 @@ export function Preview({
                     <DataPreview data={data} />
                 </div>
             );
-        } else if (siteTargetPlugin && previewConfig && previewConfig.target === siteTargetPlugin.id) {
+        } else if (
+            siteTargetPlugin &&
+            previewConfig &&
+            previewConfig.target === siteTargetPlugin.id
+        ) {
             contents = (
                 <div className="i-post-preview" ref={previewContainer}>
                     <PostPreview
@@ -214,7 +218,7 @@ class SourceJavascript extends PureComponent<{ source: string; line?: number }> 
     editor = createRef<CodeEditor>();
     wasUnmounted = false;
 
-    onChange = () => { };
+    onChange = () => {};
 
     highlightErrorLine() {
         if (this.wasUnmounted) return;

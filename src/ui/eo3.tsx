@@ -187,10 +187,10 @@ export class Eo3 extends PureComponent<Eo3.Props, Eo3State> {
                                     clickToRender={
                                         this.state.clickToRender
                                             ? () => {
-                                                this.setState({ clickToRender: false }, () => {
-                                                    this.renderPreview();
-                                                });
-                                            }
+                                                  this.setState({ clickToRender: false }, () => {
+                                                      this.renderPreview();
+                                                  });
+                                              }
                                             : null
                                     }
                                     onLiveChange={(live) => {

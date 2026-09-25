@@ -31,7 +31,7 @@ let lastEo3Init = 0;
 try {
     lastEo3Init = +window.sessionStorage.lastEo3Init || 0;
     window.sessionStorage.lastEo3Init = Date.now();
-} catch { }
+} catch {}
 
 interface TabState {
     canUndo: boolean;
@@ -483,7 +483,7 @@ function OpenFromUrl({
                 anchor={[window.innerWidth / 2, 0]}
                 anchorBias="above"
                 open
-                onClose={() => { }}
+                onClose={() => {}}
             >
                 {contents}
             </DirPopover>

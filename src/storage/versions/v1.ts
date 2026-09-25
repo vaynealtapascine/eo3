@@ -18,8 +18,8 @@ type TomlValue =
     | ReturnType<typeof tomlMultiline>
     | TomlValue[]
     | {
-        [k: string]: TomlValue;
-    };
+          [k: string]: TomlValue;
+      };
 
 function markTomlMultiline(data: JsonValue): TomlValue {
     if (Array.isArray(data)) {
@@ -124,7 +124,7 @@ export function deserializeV1(input: string): Document {
         try {
             // no real way to distinguish whether it's JSON or not. try JSON first, then V1 object notation
             data = JSON.parse(input);
-        } catch { }
+        } catch {}
         if (!data) data = parseON(input);
     } else {
         data = parseToml(input, {
