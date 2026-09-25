@@ -8,7 +8,7 @@
 import { fixBadCharacters } from './fix-bad-characters';
 import { processParagraphs } from './paragraph-maker';
 import { liftInlineStyles } from './lift-styles';
-import { sanitizeFragment, Ao3DiagnosticSink } from './sanitize';
+import { sanitizeFragment, Ao3Diagnostic, Ao3DiagnosticSink } from './sanitize';
 import { buildContentConfig } from './transformers';
 import { rubyStrip } from './ruby-str';
 
@@ -28,11 +28,27 @@ const UNSUITABLE_CHARS =
  * is lifted into `eo3-*` classes *before* sanitizing, because AO3 strips `style` but allows
  * `class`, so the styling survives as a workskin reference. The whole thing runs over one parsed
  * DOM tree; `onDiagnostic` receives every element/attribute the sanitizer drops.
+ *
+ * The result depends only on `content`, so the last run is cached and its diagnostics replayed:
+ * the preview and the export both render the same content on every edit.
  */
 export function renderAo3Content(
     content: string,
     onDiagnostic?: Ao3DiagnosticSink
 ): Ao3RenderResult {
+    if (lastRun?.content !== content) {
+        const diagnostics: Ao3Diagnostic[] = [];
+        const result = runPipeline(content, (d) => diagnostics.push(d));
+        lastRun = { content, result, diagnostics };
+    }
+    if (onDiagnostic) lastRun.diagnostics.forEach(onDiagnostic);
+    return lastRun.result;
+}
+
+let lastRun: { content: string; result: Ao3RenderResult; diagnostics: Ao3Diagnostic[] } | null =
+    null;
+
+function runPipeline(content: string, onDiagnostic: Ao3DiagnosticSink): Ao3RenderResult {
     const root = document.createElement('myroot');
     root.innerHTML = fixBadCharacters(rubyStrip(content)).replace(UNSUITABLE_CHARS, '');
     processParagraphs(root);
