@@ -61,3 +61,17 @@ export function SiteTargetProvider({ children }: { children: ReactNode }) {
 export function useSiteTarget(): SiteTargetState {
     return useContext(SiteTargetContext);
 }
+
+/** A target's display name: a built-in title, a custom profile's title, else its id. */
+export function targetTitle(id: SiteTargetId): string {
+    return (
+        SITE_TARGETS[id]?.title ??
+        listProfiles().find((p) => PROFILE_TARGET_PREFIX + p.id === id)?.title ??
+        id
+    );
+}
+
+/** Key for "this part was copied for this site" in the session's copy reminders. */
+export function copiedKey(targetId: SiteTargetId, partId: string): string {
+    return `${targetId} ${partId}`;
+}

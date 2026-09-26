@@ -108,9 +108,14 @@ export function serializeV1(doc: Document, format?: string): string {
     const docData: Record<string, any> = { version: 1 };
     if (doc.title) docData.title = doc.title;
     if (doc.titleInPost) docData.titleInPost = doc.titleInPost;
-    if (Object.keys(doc.skinRecord).length) docData.skinRecord = doc.skinRecord;
-    if (doc.protectedSkinClasses.length) docData.protectedSkinClasses = doc.protectedSkinClasses;
-    if (doc.skinBaseline !== null) docData.skinBaseline = doc.skinBaseline;
+    const nonEmpty = <T>(map: Record<string, T>, empty: (v: T) => boolean) =>
+        Object.fromEntries(Object.entries(map).filter(([, v]) => !empty(v)));
+    const skinRecords = nonEmpty(doc.state.skinRecords, (r) => !Object.keys(r).length);
+    const protectedClasses = nonEmpty(doc.state.protectedSkinClasses, (c) => !c.length);
+    if (Object.keys(skinRecords).length) docData.skinRecords = skinRecords;
+    if (Object.keys(protectedClasses).length) docData.protectedSkinClasses = protectedClasses;
+    if (Object.keys(doc.state.skinBaselines).length)
+        docData.skinBaselines = doc.state.skinBaselines;
     const importedSkin = doc.importedSkinModuleId && moduleIndices.get(doc.importedSkinModuleId);
     if (importedSkin !== undefined && importedSkin !== null) docData.importedSkin = importedSkin;
     if (doc.groupDefinitions.length) docData.groupDefinitions = doc.groupDefinitions;
@@ -129,14 +134,21 @@ export function serializeV1(doc: Document, format?: string): string {
         first.outputId === MOD_OUTPUT &&
         !first.title &&
         !first.stylesModuleId &&
-        !first.posted;
+        !Object.keys(first.postedTo).length;
     if (!trivialParts) {
         docData.parts = doc.parts.map((part) => {
             const partData: Record<string, JsonValue> = { id: part.id, output: part.outputId };
             if (part.title) partData.title = part.title;
             const styles = part.stylesModuleId && moduleIndices.get(part.stylesModuleId);
             if (styles !== undefined && styles !== null) partData.styles = styles;
-            if (part.posted) partData.posted = { ...part.posted };
+            if (Object.keys(part.postedTo).length) {
+                partData.postedTo = Object.fromEntries(
+                    Object.entries(part.postedTo).map(([target, snapshot]) => [
+                        target,
+                        { ...snapshot },
+                    ])
+                );
+            }
             return format === 'toml'
                 ? TomlSection(partData as Record<string, TomlValue>)
                 : partData;
@@ -160,6 +172,12 @@ export function serializeV1(doc: Document, format?: string): string {
             }).trimStart();
     }
 }
+
+/**
+ * Files written before crossposting kept one posting state (`posted`, `skinRecord`,
+ * `skinBaseline`, a `protectedSkinClasses` list); AO3 was the only site with posting then.
+ */
+const LEGACY_TARGET = 'ao3';
 
 export function deserializeV1(input: string): Document {
     let data;
@@ -231,16 +249,21 @@ export function deserializeV1(input: string): Document {
         outputId: String(partData.output),
         stylesModuleId:
             partData.styles !== undefined ? moduleIdAssignments.get(partData.styles) ?? null : null,
-        posted: partData.posted
-            ? {
-                  at: String(partData.posted.at),
-                  classes: [...(partData.posted.classes || [])],
-                  htmlHash: String(partData.posted.htmlHash ?? ''),
-                  ...(partData.posted.skinCss !== undefined
-                      ? { skinCss: String(partData.posted.skinCss) }
-                      : {}),
-              }
-            : null,
+        postedTo: Object.fromEntries(
+            Object.entries(
+                partData.postedTo ?? (partData.posted ? { [LEGACY_TARGET]: partData.posted } : {})
+            ).map(([target, snapshot]: [string, any]) => [
+                target,
+                {
+                    at: String(snapshot.at),
+                    classes: [...(snapshot.classes || [])],
+                    htmlHash: String(snapshot.htmlHash ?? ''),
+                    ...(snapshot.skinCss !== undefined
+                        ? { skinCss: String(snapshot.skinCss) }
+                        : {}),
+                },
+            ])
+        ),
     }));
 
     doc.init({
@@ -248,9 +271,14 @@ export function deserializeV1(input: string): Document {
         titleInPost: data.titleInPost || false,
         modules: docModules,
         parts,
-        skinRecord: data.skinRecord || {},
-        protectedSkinClasses: data.protectedSkinClasses || [],
-        skinBaseline: data.skinBaseline ?? null,
+        skinRecords:
+            data.skinRecords ?? (data.skinRecord ? { [LEGACY_TARGET]: data.skinRecord } : {}),
+        protectedSkinClasses: Array.isArray(data.protectedSkinClasses)
+            ? { [LEGACY_TARGET]: data.protectedSkinClasses }
+            : data.protectedSkinClasses ?? {},
+        skinBaselines:
+            data.skinBaselines ??
+            (typeof data.skinBaseline === 'string' ? { [LEGACY_TARGET]: data.skinBaseline } : {}),
         importedSkinModuleId:
             data.importedSkin !== undefined
                 ? moduleIdAssignments.get(data.importedSkin) ?? null

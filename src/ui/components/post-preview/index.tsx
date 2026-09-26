@@ -233,6 +233,10 @@ export function PostPreview({
         work.parts.findIndex((p) => p.id === partId)
     );
     const part = work.parts[partIndex];
+    // Posting state is per site, so a crossposted work tracks each site separately.
+    const skinRecord = work.skinRecords[plugin.id] ?? {};
+    const protectedClasses = work.protectedSkinClasses[plugin.id] ?? [];
+    const skinBaseline = work.skinBaselines[plugin.id] ?? null;
     const markdown = part.content;
     const cssInput = [work.workCss, part.css].filter(Boolean).join('\n');
 
@@ -269,12 +273,12 @@ export function PostPreview({
                         source: p.content,
                         html: p.id === part.id ? liveHtml : null,
                         css: p.css,
-                        posted: p.posted,
+                        posted: p.postedTo[plugin.id] ?? null,
                     })),
                     workCss: work.workCss,
                     cssSources: work.cssSources,
-                    skinRecord: work.skinRecord,
-                    protectedSkinClasses: work.protectedSkinClasses,
+                    skinRecord,
+                    protectedSkinClasses: protectedClasses,
                     config: config.targetConfig,
                 },
                 (id, props) => errs.push({ id, props })
@@ -284,7 +288,7 @@ export function PostPreview({
             const output: WorkExportOutput = { parts: new Map(), work: new Map() };
             return { output, error: err as Error, errs };
         }
-    }, [plugin, work, part.id, liveHtml, config.targetConfig]);
+    }, [plugin, work, part.id, liveHtml, config.targetConfig, skinRecord, protectedClasses]);
 
     // The part on screen's own artifacts plus the work-wide ones, which is what the chrome shows.
     const exportOutput: SiteTargetExportOutput = new Map([
@@ -352,11 +356,11 @@ export function PostPreview({
     );
     const skinCss = skinOutput ? exportOutput.get(skinOutput.id) ?? '' : null;
     const unusedStyles = skinOutput
-        ? Object.entries(work.skinRecord)
+        ? Object.entries(skinRecord)
               .filter(
                   ([name]) =>
-                      !work.protectedSkinClasses.includes(name) &&
-                      !work.parts.some((p) => p.posted?.classes.includes(name))
+                      !protectedClasses.includes(name) &&
+                      !work.parts.some((p) => p.postedTo[plugin.id]?.classes.includes(name))
               )
               .map(([className, css]) => ({ className, css }))
         : [];
@@ -366,14 +370,14 @@ export function PostPreview({
         )
     );
     const protectedStyles = skinOutput
-        ? work.protectedSkinClasses
+        ? protectedClasses
               .filter(
                   (name) =>
-                      work.skinRecord[name] &&
+                      skinRecord[name] &&
                       !currentClasses.has(name) &&
-                      !work.parts.some((p) => p.posted?.classes.includes(name))
+                      !work.parts.some((p) => p.postedTo[plugin.id]?.classes.includes(name))
               )
-              .map((className) => ({ className, css: work.skinRecord[className] }))
+              .map((className) => ({ className, css: skinRecord[className] }))
         : [];
     const maxChars = plugin.partMaxChars ?? null;
     const sizing: PartSizing = {
@@ -395,8 +399,8 @@ export function PostPreview({
         copiedUnmarked: copied && !posted,
         changedSincePosted: !!posted && !exportResult.error && posted.htmlHash !== postedHtmlHash,
         skinDiff:
-            (posted?.skinCss ?? work.skinBaseline) !== null && skinCss !== null
-                ? diffSkinRules((posted?.skinCss ?? work.skinBaseline)!, skinCss)
+            (posted?.skinCss ?? skinBaseline) !== null && skinCss !== null
+                ? diffSkinRules((posted?.skinCss ?? skinBaseline)!, skinCss)
                 : undefined,
         unusedStyles,
         protectedStyles,

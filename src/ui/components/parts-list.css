@@ -75,6 +75,16 @@
         }
     }
 
+    .i-also-posted {
+        flex-shrink: 1;
+        min-width: 0;
+        font-size: 0.8em;
+        opacity: 0.7;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
     .i-actions {
         display: flex;
         gap: 0.2em;

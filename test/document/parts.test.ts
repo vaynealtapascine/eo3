@@ -153,12 +153,15 @@ describe('saving and loading parts', () => {
         doc.insertModule(styles);
         doc.updatePart(second.id, {
             stylesModuleId: styles.id,
-            posted: { at: '2026-09-26', classes: ['eo3-h66u19'], htmlHash: 'abc123' },
+            postedTo: {
+                ao3: { at: '2026-09-26', classes: ['eo3-h66u19'], htmlHash: 'abc123' },
+                'profile:my-site': { at: '2026-09-27', classes: [], htmlHash: 'def456' },
+            },
         });
 
         const loaded = deserializeV1(serializeV1(doc, format));
-        expect(loaded.parts.map((p) => [p.id, p.title, p.outputId, p.posted])).toEqual(
-            doc.parts.map((p) => [p.id, p.title, p.outputId, p.posted])
+        expect(loaded.parts.map((p) => [p.id, p.title, p.outputId, p.postedTo])).toEqual(
+            doc.parts.map((p) => [p.id, p.title, p.outputId, p.postedTo])
         );
         const loadedStyles = loaded.findModule(loaded.parts[1].stylesModuleId!)!;
         expect(loadedStyles.data).toEqual({ text: '.two{}' });
@@ -169,6 +172,7 @@ describe('saving and loading parts', () => {
         const doc = new Document();
         const id = doc.parts[0].id;
         doc.setPartPosted(
+            'ao3',
             id,
             {
                 at: '2026-09-26',
@@ -179,13 +183,13 @@ describe('saving and loading parts', () => {
             { 'eo3-used': '.eo3-used { color: red; }', 'eo3-unused': '.eo3-unused {}' }
         );
         const loaded = deserializeV1(serializeV1(doc, format));
-        expect(loaded.parts[0].posted).toEqual(doc.parts[0].posted);
-        expect(loaded.skinRecord).toEqual(doc.skinRecord);
+        expect(loaded.parts[0].postedTo).toEqual(doc.parts[0].postedTo);
+        expect(loaded.skinRecordFor('ao3')).toEqual(doc.skinRecordFor('ao3'));
 
-        loaded.cleanupUnusedSkinRules();
-        expect(loaded.skinRecord).toEqual({ 'eo3-used': '.eo3-used { color: red; }' });
+        loaded.cleanupUnusedSkinRules('ao3');
+        expect(loaded.skinRecordFor('ao3')).toEqual({ 'eo3-used': '.eo3-used { color: red; }' });
         loaded.undo();
-        expect(loaded.skinRecord).toEqual(doc.skinRecord);
+        expect(loaded.skinRecordFor('ao3')).toEqual(doc.skinRecordFor('ao3'));
     });
 });
 
@@ -218,6 +222,7 @@ describe('AO3 import', () => {
     it('keeps an imported skin shared as chapters are added', async () => {
         const doc = new Document();
         const skinId = await doc.importWorkSkin(
+            'ao3',
             '#workskin .note { color: red; }',
             '#workskin .note { color: red; }',
             {}
@@ -237,6 +242,7 @@ describe('AO3 import', () => {
         expect(doc.findModule(skinId)!.sends).toContain(fourth.outputId);
 
         const reimported = await doc.importWorkSkin(
+            'ao3',
             '.note { color: blue; }',
             '#workskin .note { color: blue; }',
             {}
@@ -257,6 +263,7 @@ describe('AO3 import', () => {
     it.each(['toml', 'json'])('round-trips the imported skin reference (%s)', async (format) => {
         const doc = new Document();
         const id = await doc.importWorkSkin(
+            'ao3',
             '#workskin .eo3-h66u19 { color: red; }',
             '#workskin .eo3-h66u19 { color: red; }',
             { 'eo3-h66u19': '#workskin .eo3-h66u19 { color: red; }' }
@@ -265,27 +272,69 @@ describe('AO3 import', () => {
         const loadedId = loaded.importedSkinModuleId;
         expect(loadedId).toBeTruthy();
         expect(loaded.findModule(loadedId!)!.data).toEqual(doc.findModule(id)!.data);
-        expect(loaded.skinRecord).toEqual(doc.skinRecord);
-        expect(loaded.protectedSkinClasses).toEqual(['eo3-h66u19']);
-        expect(loaded.skinBaseline).toBe('#workskin .eo3-h66u19 { color: red; }');
+        expect(loaded.skinRecordFor('ao3')).toEqual(doc.skinRecordFor('ao3'));
+        expect(loaded.protectedClassesFor('ao3')).toEqual(['eo3-h66u19']);
+        expect(loaded.skinBaselineFor('ao3')).toBe('#workskin .eo3-h66u19 { color: red; }');
         const part = loaded.addPart('Second');
         expect(loaded.findModule(loadedId!)!.sends).toContain(part.outputId);
         loaded.removeModule(loadedId!);
         expect(loaded.importedSkinModuleId).toBeNull();
-        expect(loaded.protectedSkinClasses).toEqual(['eo3-h66u19']);
+        expect(loaded.protectedClassesFor('ao3')).toEqual(['eo3-h66u19']);
     });
 
     it('only prunes imported rules after an explicit selection', async () => {
         const doc = new Document();
         const css = '#workskin .eo3-h66u19 { color: red; }';
-        const id = await doc.importWorkSkin(css, css, { 'eo3-h66u19': css });
-        doc.cleanupUnusedSkinRules();
-        expect(doc.skinRecord).toHaveProperty('eo3-h66u19');
-        doc.pruneImportedSkinRules(['eo3-h66u19'], '');
-        expect(doc.skinRecord).toEqual({});
-        expect(doc.protectedSkinClasses).toEqual([]);
+        const id = await doc.importWorkSkin('ao3', css, css, { 'eo3-h66u19': css });
+        doc.cleanupUnusedSkinRules('ao3');
+        expect(doc.skinRecordFor('ao3')).toHaveProperty('eo3-h66u19');
+        doc.pruneImportedSkinRules('ao3', ['eo3-h66u19'], '');
+        expect(doc.skinRecordFor('ao3')).toEqual({});
+        expect(doc.protectedClassesFor('ao3')).toEqual([]);
         expect(doc.findModule(id)!.data).toEqual({ contents: '', language: 'css' });
         doc.undo();
-        expect(doc.skinRecord).toHaveProperty('eo3-h66u19');
+        expect(doc.skinRecordFor('ao3')).toHaveProperty('eo3-h66u19');
+    });
+});
+
+describe('crossposting', () => {
+    it('keeps posted state and the skin record separately for each site', () => {
+        const doc = new Document();
+        const id = doc.parts[0].id;
+        const snapshot = (classes: string[]) => ({ at: '2026-09-26', classes, htmlHash: 'h' });
+        doc.setPartPosted('ao3', id, snapshot(['eo3-a']), { 'eo3-a': '.eo3-a {}' });
+        doc.setPartPosted('profile:site', id, snapshot(['eo3-b']), { 'eo3-b': '.eo3-b {}' });
+
+        expect(Object.keys(doc.parts[0].postedTo)).toEqual(['ao3', 'profile:site']);
+        expect(doc.skinRecordFor('ao3')).toEqual({ 'eo3-a': '.eo3-a {}' });
+        expect(doc.skinRecordFor('profile:site')).toEqual({ 'eo3-b': '.eo3-b {}' });
+
+        doc.setPartPosted('ao3', id, null);
+        expect(Object.keys(doc.parts[0].postedTo)).toEqual(['profile:site']);
+    });
+
+    it('reads files from before crossposting as posted to AO3', () => {
+        const doc = deserializeV1(
+            JSON.stringify({
+                version: 1,
+                skinRecord: { 'eo3-a': '.eo3-a {}' },
+                skinBaseline: '.eo3-a {}',
+                protectedSkinClasses: ['eo3-a'],
+                parts: [
+                    {
+                        id: 'p1',
+                        output: 'output',
+                        posted: { at: '2026-09-26', classes: ['eo3-a'], htmlHash: 'h' },
+                    },
+                ],
+                modules: [],
+            })
+        );
+        expect(doc.parts[0].postedTo).toEqual({
+            ao3: { at: '2026-09-26', classes: ['eo3-a'], htmlHash: 'h' },
+        });
+        expect(doc.skinRecordFor('ao3')).toEqual({ 'eo3-a': '.eo3-a {}' });
+        expect(doc.skinBaselineFor('ao3')).toBe('.eo3-a {}');
+        expect(doc.protectedClassesFor('ao3')).toEqual(['eo3-a']);
     });
 });

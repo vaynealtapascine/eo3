@@ -13,7 +13,7 @@ import { javascript } from '@codemirror/lang-javascript';
 import { PostPreview, PreviewConfig, makeDefaultPreviewConfig } from './post-preview';
 import { DataPreview } from './data-preview';
 import { SITE_TARGETS } from '../../targets';
-import { useSiteTarget } from '../../targets/context';
+import { copiedKey, useSiteTarget } from '../../targets/context';
 import { removeLiftedSkinRules } from '../../targets/delivery/skin-record';
 import { splitHtml } from '../../util/split-html';
 import {
@@ -95,19 +95,20 @@ export function Preview({
                         stale={render.rendering}
                         work={work}
                         partId={shownPart.id}
-                        posted={shownPart.posted}
-                        copied={copiedParts.includes(shownPart.id)}
-                        onPartCopied={onPartCopied}
+                        posted={shownPart.postedTo[siteTargetId] ?? null}
+                        copied={copiedParts.includes(copiedKey(siteTargetId, shownPart.id))}
+                        onPartCopied={(id) => onPartCopied(copiedKey(siteTargetId, id))}
                         onPostedChange={(id, posted, rules) =>
-                            document.setPartPosted(id, posted, rules)
+                            document.setPartPosted(siteTargetId, id, posted, rules)
                         }
-                        onCleanupUnusedStyles={() => document.cleanupUnusedSkinRules()}
+                        onCleanupUnusedStyles={() => document.cleanupUnusedSkinRules(siteTargetId)}
                         onSplitPart={(id, fits) => splitPart(document, id, fits)}
                         onPruneProtectedStyles={(names) => {
                             const module = document.findModule(document.importedSkinModuleId ?? '');
                             const css =
                                 (module?.data as { contents?: string } | undefined)?.contents ?? '';
                             document.pruneImportedSkinRules(
+                                siteTargetId,
                                 names,
                                 removeLiftedSkinRules(css, names)
                             );

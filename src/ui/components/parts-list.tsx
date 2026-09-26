@@ -1,5 +1,5 @@
 import { Document, ModuleId } from '../../document';
-import { useSiteTarget } from '../../targets/context';
+import { copiedKey, targetTitle, useSiteTarget } from '../../targets/context';
 import { Ao3Import } from './ao3-import';
 import { EFFECTS, EffectKey } from '../../effects';
 import './parts-list.css';
@@ -70,14 +70,14 @@ export function PartsList({
                                 document.updatePart(part.id, { title: e.target.value })
                             }
                         />
-                        {part.posted ? (
+                        {part.postedTo[target.id] ? (
                             <span
                                 className="i-badge"
-                                title={`Marked as posted on ${part.posted.at}`}
+                                title={`Marked as posted on ${part.postedTo[target.id].at}`}
                             >
                                 posted
                             </span>
-                        ) : copiedParts.includes(part.id) ? (
+                        ) : copiedParts.includes(copiedKey(target.id, part.id)) ? (
                             <span
                                 className="i-badge is-warning"
                                 title="Copied but not marked as posted; mark it in the preview once it's up"
@@ -85,6 +85,18 @@ export function PartsList({
                                 not marked posted
                             </span>
                         ) : null}
+                        {Object.keys(part.postedTo).some((id) => id !== target.id) && (
+                            <span
+                                className="i-also-posted"
+                                title="Crossposted: marked as posted on these sites too"
+                            >
+                                also on{' '}
+                                {Object.keys(part.postedTo)
+                                    .filter((id) => id !== target.id)
+                                    .map(targetTitle)
+                                    .join(', ')}
+                            </span>
+                        )}
                         <span className="i-actions">
                             <button
                                 onClick={() => openStyles(part.id)}

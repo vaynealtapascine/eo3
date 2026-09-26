@@ -28,7 +28,12 @@ export function Ao3Import({
         try {
             const { cleanWorkskinCss } = await import('../../targets/ao3/render');
             const canonical = cleanWorkskinCss(skin, { prefix: '#workskin' }).trimEnd();
-            const id = await document.importWorkSkin(skin, canonical, liftedSkinRules(canonical));
+            const id = await document.importWorkSkin(
+                'ao3',
+                skin,
+                canonical,
+                liftedSkinRules(canonical)
+            );
             onSelectModule(id);
             setSkin('');
             setMessage(

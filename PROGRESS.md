@@ -10,15 +10,15 @@ update it whenever a step lands (what changed, what's next, anything surprising)
 
 ## Status
 
-| Phase | Scope                                                                                                          | State       |
-| ----- | -------------------------------------------------------------------------------------------------------------- | ----------- |
-| 1     | Canonical, sorted Work Skin; pinned-hash test; collision check                                                 | Done        |
-| 2     | `Work` + parts in the document; migration of saved documents; parts list UI; `export()` over a work            | Done        |
-| 3     | Delivery strategies (`shared-stylesheet`, `inline`); skin record; diff before copy; part-scoped CSS; conflicts | Done        |
-| 4     | Import an existing skin, then existing chapters                                                                | Done        |
-| 5     | Group nodes (shared but detachable); first packaged effects                                                    | Done        |
-| 6     | Size-based splitting; custom target profiles; crossposting                                                     | In progress |
-| 7     | wafrn target (read its sanitizer source first)                                                                 | Not started |
+| Phase | Scope                                                                                                          | State |
+| ----- | -------------------------------------------------------------------------------------------------------------- | ----- |
+| 1     | Canonical, sorted Work Skin; pinned-hash test; collision check                                                 | Done  |
+| 2     | `Work` + parts in the document; migration of saved documents; parts list UI; `export()` over a work            | Done  |
+| 3     | Delivery strategies (`shared-stylesheet`, `inline`); skin record; diff before copy; part-scoped CSS; conflicts | Done  |
+| 4     | Import an existing skin, then existing chapters                                                                | Done  |
+| 5     | Group nodes (shared but detachable); first packaged effects                                                    | Done  |
+| 6     | Size-based splitting; custom target profiles; crossposting                                                     | Done  |
+| 7     | wafrn target (read its sanitizer source first)                                                                 | Next  |
 
 ## Phase 1 — canonical, sorted Work Skin (done)
 
@@ -170,7 +170,7 @@ module; eo3 never automatically removes its authored rules.
         removed) is listed under the parts with a link to it.
 -   Tests: `test/document/groups-and-splitting.test.ts`.
 
-## Phase 6 — splitting, target profiles, crossposting (in progress)
+## Phase 6 — splitting, target profiles, crossposting (done)
 
 -   [x] **6a — splitting long parts.** Splits the **source**, not the output, so both pieces stay
         editable: `Document.splittableContent(partId)` accepts a part fed by exactly one content
@@ -204,13 +204,18 @@ module; eo3 never automatically removes its authored rules.
         `SiteTargetProvider` loads them and rebuilds on change (falls back to AO3 if the active
         one is deleted). Editor: `ui/components/profile-editor.tsx` (native `<dialog>`), opened
         from "custom sites…" in the site selector. Tests: `test/targets/profile.test.ts`.
--   [ ] **6c — crossposting.** More than one target per work at once, each with its own outputs,
-        warnings and posted state. Today `PostedSnapshot`, the skin record, the skin baseline and
-        the imported skin all assume one target: switching the preview to another site compares
-        its HTML against the AO3 posted hash and shows "changed since you marked it posted".
-        Plan: key posted snapshots (and the shared-stylesheet record/baseline) by target id,
-        migrating existing ones to `ao3`; let a work list its targets; show per-target posted
-        badges in the parts list.
+-   [x] **6c — crossposting.** All posting state is keyed by target id (`ao3`,
+        `profile:<id>`, …): `Part.postedTo` replaces `Part.posted`; `DocumentState.skinRecords`,
+        `skinBaselines` and `protectedSkinClasses` are per-target maps (accessors
+        `skinRecordFor` / `skinBaselineFor` / `protectedClassesFor`), and `setPartPosted`,
+        `cleanupUnusedSkinRules`, `pruneImportedSkinRules` and `importWorkSkin` take the target
+        id. The imported skin _module_ stays global (it's content every target sees). Files from
+        before crossposting load as posted to `ao3` (`LEGACY_TARGET` in `storage/versions/v1.ts`).
+        `PostPreview` reads the state for `plugin.id`; session copy reminders are keyed by
+        target + part (`copiedKey` in `targets/context.tsx`). The parts list shows "posted" for
+        the site on screen and "also on …" for the others (`targetTitle`). Crossposting in
+        practice = switching the site selector; each site keeps its own marks, record and diff.
+        Tests: "crossposting" in `test/document/parts.test.ts`.
 
 ## Log
 
@@ -238,3 +243,4 @@ module; eo3 never automatically removes its authored rules.
     `fx-`, styles-module naming and unsent-styles warning added, tests. Next: phase 6.
 -   2026-09-26 — Phase 6a (splitting long parts) done. Next: 6b custom target profiles.
 -   2026-09-26 — Phase 6b (custom target profiles) done. Next: 6c crossposting.
+-   2026-09-26 — Phase 6c (crossposting: per-target posting state) done; phase 6 complete. Next: phase 7 (wafrn).
