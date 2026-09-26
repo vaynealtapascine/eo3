@@ -4,7 +4,7 @@ import { handleAsyncErrors } from './diagnostics';
 import { renderAo3Content } from './render';
 import { Ao3PreviewHeader } from './preview-chrome';
 import { EXPORT_ACTIONS } from './export-actions';
-import { exportPost } from './export';
+import { exportWork } from './export';
 import './styles.scss';
 // @ts-ignore
 import mascot from './mascot.svg?raw';
@@ -27,13 +27,15 @@ const plugin: SiteTargetPlugin<RenderConfig> = {
     disableProseInteraction: true,
 
     outputs: [
-        { id: 'html', label: 'HTML', typeId: 'text/html' },
-        { id: 'css', label: 'Workskin CSS', typeId: 'text/css' },
+        { id: 'html', label: 'HTML', typeId: 'text/html', scope: 'part' },
+        { id: 'css', label: 'Workskin CSS', typeId: 'text/css', scope: 'work' },
     ],
 
     previewCssScope: '#workskin',
 
-    export: exportPost,
+    partLabel: 'Chapter',
+
+    export: exportWork,
 
     exportActions: EXPORT_ACTIONS,
 

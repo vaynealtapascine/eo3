@@ -65,6 +65,7 @@ function PostSize({ size }: { size: number }) {
 
 export function Ao3PreviewHeader({
     exportOutput,
+    part,
     error,
     renderErrors,
     asyncErrors,
@@ -629,7 +630,8 @@ export function Ao3PreviewHeader({
 
                                                 <div className="chapter preface group">
                                                     <h3 className="title">
-                                                        <a>Chapter 1</a>: Chapter Title
+                                                        <a>Chapter {part.index + 1}</a>:{' '}
+                                                        {part.title || 'Chapter Title'}
                                                     </h3>
                                                 </div>
 

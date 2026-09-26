@@ -14,6 +14,8 @@ interface Eo3State {
     render: RenderState;
     clickToRender: boolean;
     selected: ModuleId | EdgeId | null;
+    /** The part shown in the post preview; null = the first part. */
+    partId: string | null;
 }
 
 export class Eo3 extends PureComponent<Eo3.Props, Eo3State> {
@@ -28,6 +30,7 @@ export class Eo3 extends PureComponent<Eo3.Props, Eo3State> {
         },
         clickToRender: false,
         selected: null,
+        partId: null,
     };
 
     componentDidMount() {
@@ -184,6 +187,8 @@ export class Eo3 extends PureComponent<Eo3.Props, Eo3State> {
                                 <Preview
                                     document={doc}
                                     render={render}
+                                    partId={this.state.partId}
+                                    onPartChange={(partId) => this.setState({ partId })}
                                     clickToRender={
                                         this.state.clickToRender
                                             ? () => {

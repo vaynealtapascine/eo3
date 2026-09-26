@@ -19,6 +19,8 @@ import './preview.scss';
 export function Preview({
     document,
     render,
+    partId,
+    onPartChange,
     clickToRender,
     onTargetChange,
     onLiveChange,
@@ -74,8 +76,8 @@ export function Preview({
                     <PostPreview
                         renderId={render.id}
                         stale={render.rendering}
-                        markdown={work.parts[0].content}
-                        cssInput={[work.workCss, work.parts[0].css].filter(Boolean).join('\n')}
+                        work={work}
+                        partId={partId}
                         plugin={siteTargetPlugin}
                         config={previewConfig}
                         onConfigChange={onPreviewConfigChange}
@@ -159,6 +161,21 @@ export function Preview({
                         {outputTargets}
                         <option value="output">output</option>
                     </select>
+                    {!render.target && document.parts.length > 1 && (
+                        <select
+                            className="part-select"
+                            aria-label="Part to preview"
+                            value={partId ?? document.parts[0].id}
+                            onChange={(e) => onPartChange((e.target as HTMLSelectElement).value)}
+                        >
+                            {document.parts.map((part, i) => (
+                                <option value={part.id} key={part.id}>
+                                    {siteTargetPlugin?.partLabel ?? 'Part'} {i + 1}
+                                    {part.title ? `: ${part.title}` : ''}
+                                </option>
+                            ))}
+                        </select>
+                    )}
                     {!render.target && (
                         <select
                             className="site-target-select"
@@ -208,6 +225,9 @@ namespace Preview {
     export interface Props {
         document: Document;
         render: RenderState;
+        /** The part shown in the post preview; null = the first part. */
+        partId: string | null;
+        onPartChange: (partId: string) => void;
         clickToRender: (() => void) | null;
         onTargetChange: (target: RenderTarget) => void;
         onLiveChange: (live: boolean) => void;

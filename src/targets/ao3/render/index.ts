@@ -32,27 +32,32 @@ const UNSUITABLE_CHARS =
  * `class`, so the styling survives as a workskin reference. The whole thing runs over one parsed
  * DOM tree; `onDiagnostic` receives every element/attribute the sanitizer drops.
  *
- * The result depends only on `content`, so the last run is cached and its diagnostics replayed:
- * the preview and the export both render the same content on every edit.
+ * The result depends only on `content`, so recent runs are cached and their diagnostics replayed:
+ * the preview and the export render the same chapters on every edit.
  */
 export function renderAo3Content(
     content: string,
     onDiagnostic?: (diagnostic: Ao3RenderDiagnostic) => void
 ): Ao3RenderResult {
-    if (lastRun?.content !== content) {
+    let run = recentRuns.get(content);
+    if (run) {
+        recentRuns.delete(content); // re-insert as most recent
+    } else {
         const diagnostics: Ao3RenderDiagnostic[] = [];
-        const result = runPipeline(content, (d) => diagnostics.push(d));
-        lastRun = { content, result, diagnostics };
+        run = { result: runPipeline(content, (d) => diagnostics.push(d)), diagnostics };
+        if (recentRuns.size >= MAX_CACHED_RUNS) recentRuns.delete(recentRuns.keys().next().value!);
     }
-    if (onDiagnostic) lastRun.diagnostics.forEach(onDiagnostic);
-    return lastRun.result;
+    recentRuns.set(content, run);
+    if (onDiagnostic) run.diagnostics.forEach(onDiagnostic);
+    return run.result;
 }
 
-let lastRun: {
-    content: string;
-    result: Ao3RenderResult;
-    diagnostics: Ao3RenderDiagnostic[];
-} | null = null;
+/** Enough for every chapter of a long work; the least recently used run is dropped first. */
+const MAX_CACHED_RUNS = 256;
+const recentRuns = new Map<
+    string,
+    { result: Ao3RenderResult; diagnostics: Ao3RenderDiagnostic[] }
+>();
 
 function runPipeline(
     content: string,

@@ -6,7 +6,7 @@ import { PreviewRenderIcon } from '../icons';
 import './index.scss';
 import { createPortal } from 'react-dom';
 import { DirPopover } from '../../../uikit/dir-popover';
-import { JsonValue } from '../../../document';
+import { JsonValue, WorkOutput } from '../../../document';
 import {
     ErrorMessage,
     LiveRenderFn,
@@ -18,6 +18,7 @@ import {
     SiteTargetExportOutput,
     SiteTargetPlugin,
     SiteTargetPreviewProps,
+    WorkExportOutput,
 } from '../../../targets/types';
 
 export type { PreviewConfig } from '../../../targets/types';
@@ -204,8 +205,8 @@ function MarkdownRenderer<Config extends JsonValue>({
 
 export function PostPreview({
     renderId,
-    markdown,
-    cssInput,
+    work,
+    partId,
     error,
     stale,
     plugin,
@@ -215,6 +216,14 @@ export function PostPreview({
     onReadMoreChange,
     errorPortal,
 }: PostPreview.Props) {
+    const partIndex = Math.max(
+        0,
+        work.parts.findIndex((p) => p.id === partId)
+    );
+    const part = work.parts[partIndex];
+    const markdown = part.content;
+    const cssInput = [work.workCss, part.css].filter(Boolean).join('\n');
+
     // Memoized: the fallback can be a full DOM pipeline (AO3) and shouldn't rerun on unrelated renders.
     const fallbackResult = useMemo(() => {
         const errs: ErrorMessage[] = [];
@@ -233,23 +242,39 @@ export function PostPreview({
 
     const liveRenderer = useLiveRenderer(plugin);
 
-    // Accurate rendered HTML from the active renderer (see MarkdownRenderer.onExportSource),
-    // fed to the target's export() to produce the finished, copyable artifacts.
-    const [sourceHtml, setSourceHtml] = useState('');
+    // Accurate rendered HTML of the part on screen (see MarkdownRenderer.onExportSource), kept
+    // with the content it came from so a stale render of another part is never exported.
+    const [renderedHtml, setRenderedHtml] = useState({ markdown: '', html: '' });
+    const liveHtml = renderedHtml.markdown === markdown ? renderedHtml.html : null;
     const exportResult = useMemo(() => {
         const errs: ErrorMessage[] = [];
         try {
             const output = plugin.export(
-                { html: sourceHtml, source: markdown, css: cssInput, config: config.targetConfig },
+                {
+                    parts: work.parts.map((p) => ({
+                        id: p.id,
+                        title: p.title,
+                        source: p.content,
+                        html: p.id === part.id ? liveHtml : null,
+                        css: p.css,
+                    })),
+                    workCss: work.workCss,
+                    config: config.targetConfig,
+                },
                 (id, props) => errs.push({ id, props })
             );
             return { output, error: null as Error | null, errs };
         } catch (err) {
-            return { output: new Map() as SiteTargetExportOutput, error: err as Error, errs };
+            const output: WorkExportOutput = { parts: new Map(), work: new Map() };
+            return { output, error: err as Error, errs };
         }
-    }, [plugin, sourceHtml, markdown, cssInput, config.targetConfig]);
+    }, [plugin, work, part.id, liveHtml, config.targetConfig]);
 
-    const exportOutput = exportResult.output;
+    // The part on screen's own artifacts plus the work-wide ones, which is what the chrome shows.
+    const exportOutput: SiteTargetExportOutput = new Map([
+        ...(exportResult.output.parts.get(part.id) ?? []),
+        ...exportResult.output.work,
+    ]);
     if (exportResult.error) error = exportResult.error;
     renderErrors.push(...exportResult.errs);
 
@@ -300,6 +325,7 @@ export function PostPreview({
         plugin,
         markdown,
         exportOutput,
+        part: { index: partIndex, count: work.parts.length, title: part.title },
         config: config.targetConfig,
         previewConfig: config,
         onPreviewConfigChange: onConfigChange,
@@ -354,7 +380,7 @@ export function PostPreview({
                         onReadMoreChange={onReadMoreChange}
                         errorPortal={errorPortal}
                         onRender={onRender}
-                        onExportSource={setSourceHtml}
+                        onExportSource={(html) => setRenderedHtml({ markdown, html })}
                     />
                 </div>
             )}
@@ -366,8 +392,9 @@ export function PostPreview({
 namespace PostPreview {
     export interface Props {
         renderId: string;
-        markdown: string;
-        cssInput: string;
+        work: WorkOutput;
+        /** The part to show; falls back to the first part if it no longer exists. */
+        partId: string | null;
         error?: Error | null;
         stale?: boolean;
         plugin: SiteTargetPlugin<any>;

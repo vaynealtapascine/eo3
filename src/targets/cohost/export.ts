@@ -1,22 +1,34 @@
-import { SiteTargetExportInput, SiteTargetExportOutput, PushError } from '../types';
+import { WorkExportInput, WorkExportOutput, PushError } from '../types';
 import { RenderConfig } from './config';
 import { stylesToAttrs, StyleInlinerStats } from '../../plugins/transform/inline-styles-core';
 import { scanCssForWarnings } from '../scan-css';
+import { renderMarkdown } from './fallback-renderer';
 
 /**
- * Cohost accepts a single HTML string with CSS as inline `style=""` attributes only — it
- * strips `<style>` elements and `class` attributes. So we combine the rendered HTML with the
- * authored CSS, inline every rule onto the elements it matches (reusing the shared
- * style-inliner core), drop classes, and emit one HTML artifact.
+ * Cohost accepts a single HTML string per post with CSS as inline `style=""` attributes only —
+ * it strips `<style>` elements and `class` attributes. So each post's rendered HTML is combined
+ * with the CSS that reaches it, every rule is inlined onto the elements it matches (reusing the
+ * shared style-inliner core), classes are dropped, and each post gets one HTML artifact.
  */
-export function exportPost(
-    { html, css }: SiteTargetExportInput<RenderConfig>,
+export function exportWork(
+    { parts, workCss }: WorkExportInput<RenderConfig>,
     pushError: PushError
-): SiteTargetExportOutput {
+): WorkExportOutput {
     // The content renderer already warns about inline styles in the HTML; scan the authored
     // CSS (which never passes through it) for the same restricted constructs.
-    scanCssForWarnings(css, pushError);
+    for (const css of [workCss, ...parts.map((part) => part.css)]) {
+        scanCssForWarnings(css, pushError);
+    }
 
+    const outputs = parts.map((part): [string, Map<string, string>] => {
+        const html = part.html ?? renderMarkdown(part.source, () => {});
+        const css = [workCss, part.css].filter(Boolean).join('\n');
+        return [part.id, new Map([['html', inlineStyles(html, css, pushError)]])];
+    });
+    return { parts: new Map(outputs), work: new Map() };
+}
+
+function inlineStyles(html: string, css: string, pushError: PushError): string {
     const doc = new DOMParser().parseFromString(
         [
             '<!doctype html><html><head><style>',
@@ -43,5 +55,5 @@ export function exportPost(
         node.removeAttribute('class');
     }
 
-    return new Map([['html', doc.body.innerHTML]]);
+    return doc.body.innerHTML;
 }

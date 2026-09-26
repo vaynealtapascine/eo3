@@ -21,25 +21,45 @@ export type PushError = (id: string, props: { [k: string]: any }) => void;
 /** Renders markdown using the target site's real, live-loaded renderer. */
 export type LiveRenderFn<Config> = (markdown: string, config: Config) => Promise<RenderResult>;
 
-/** Describes one input or output slot of a site target (e.g. its HTML or Workskin CSS output). */
+/** Describes one output slot of a site target (e.g. its chapter HTML or its Work Skin CSS). */
 export interface SiteTargetIO {
     id: string;
     label: string;
     /** The `Data.typeId` of the artifact (e.g. 'text/html', 'text/css'). */
     typeId: string;
+    /** 'part': one per part (a chapter's HTML); 'work': one for the whole work (AO3's Work Skin). */
+    scope: 'part' | 'work';
 }
 
-export interface SiteTargetExportInput<Config> {
-    /** Accurate rendered HTML from the active renderer (live serialized, else the fallback). */
-    html: string;
-    /** The raw module-graph output, for targets whose export re-runs their own pipeline (AO3). */
-    source: string;
-    /** Assembled authored CSS from every CSS input to the output, in module order. */
-    css: string;
+export interface WorkExportInput<Config> {
+    parts: PartExportInput[];
+    /** Authored CSS reaching every part, in module order. */
+    workCss: string;
     config: Config;
 }
 
-/** The finished export artifacts, keyed by `SiteTargetPlugin.outputs[].id`. */
+export interface PartExportInput {
+    id: string;
+    title: string;
+    /** The raw module-graph output, for targets whose export re-runs their own pipeline (AO3). */
+    source: string;
+    /**
+     * Accurate rendered HTML from the live renderer, for the part on screen; null for the others,
+     * which the target renders with its fallback if it needs HTML.
+     */
+    html: string | null;
+    /** Authored CSS reaching this part but not every part, in module order. */
+    css: string;
+}
+
+export interface WorkExportOutput {
+    /** Per part id: its 'part'-scoped artifacts, keyed by `outputs[].id`. */
+    parts: Map<string, SiteTargetExportOutput>;
+    /** The 'work'-scoped artifacts, keyed by `outputs[].id`. */
+    work: SiteTargetExportOutput;
+}
+
+/** Finished export artifacts, keyed by `SiteTargetPlugin.outputs[].id`. */
 export type SiteTargetExportOutput = Map<string, string>;
 
 export interface SiteTargetConfigItem<Config> {
@@ -90,11 +110,13 @@ export interface SiteTargetPreviewProps<Config extends JsonValue> {
     plugin: SiteTargetPlugin<Config>;
     markdown: string;
     /**
-     * The finished export artifacts for this target, keyed by `outputs[].id`. The primary
-     * output (`outputs[0].id`) is what page-chrome mockups embed; other outputs are exported
-     * via their copy buttons.
+     * The finished artifacts for the part on screen plus the work-wide ones, keyed by
+     * `outputs[].id`. The primary output (`outputs[0].id`) is what page-chrome mockups embed;
+     * the others are exported via their copy buttons.
      */
     exportOutput: SiteTargetExportOutput;
+    /** The part on screen: its position (0-based) and how many parts the work has. */
+    part: { index: number; count: number; title: string };
     config: Config;
     previewConfig: PreviewConfig;
     onPreviewConfigChange: (c: PreviewConfig) => void;
@@ -125,10 +147,13 @@ export interface SiteTargetPlugin<Config extends JsonValue = JsonValue> {
 
     /**
      * The export artifacts this target emits, in order. The first is the primary output
-     * (drives the preview mockup). cohost emits one (HTML); AO3 emits two (HTML + Workskin
-     * CSS); other targets may emit any number.
+     * (drives the preview mockup). cohost emits one per post (HTML); AO3 emits one per chapter
+     * (HTML) plus one Work Skin; other targets may emit any number.
      */
     outputs: SiteTargetIO[];
+
+    /** What a part is called on this site ("Chapter", "Post"). */
+    partLabel: string;
 
     /**
      * Selector the preview's injected CSS is scoped under, so it applies only within this
@@ -138,11 +163,11 @@ export interface SiteTargetPlugin<Config extends JsonValue = JsonValue> {
     previewCssScope?: string;
 
     /**
-     * Produces the finished, site-ready export artifacts from the accurately-rendered HTML
+     * Produces the finished, site-ready artifacts for the whole work from each part's content
      * plus the authored CSS. This is where site-specific sanitation and CSS strategy live
-     * (AO3: lift/scope into a workskin; cohost: inline everything into style attributes).
+     * (AO3: lift into one Work Skin shared by every chapter; cohost: inline styles per post).
      */
-    export(input: SiteTargetExportInput<Config>, pushError: PushError): SiteTargetExportOutput;
+    export(input: WorkExportInput<Config>, pushError: PushError): WorkExportOutput;
 
     /** Scans rendered DOM for problems the string-level fallback renderer can't catch (e.g. broken image loads). */
     scanForAsyncErrors?(container: HTMLElement, pushError: PushError): void;

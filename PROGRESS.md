@@ -62,10 +62,19 @@ Landed in four commits, each leaving the app working:
         `RenderOutput.work` replaces `markdownOutput`/`cssOutput`. Saved files stay version 1:
         an optional `parts` list (omitted for a single untouched part) and sends to
         `output:<id>`; older files load as one part. Tests: `test/document/parts.test.ts`.
-        The UI still shows only the first part (`preview.tsx`), until 2b.
--   [ ] **2b — targets.** `SiteTargetPlugin.export` over the work: per-part outputs + shared
-        outputs (AO3: one Work Skin from all parts). Preview a chosen part with the whole-work
-        skin; copy buttons act on the chosen part.
+-   [x] **2b — targets.** `SiteTargetPlugin.export(WorkExportInput) → WorkExportOutput`
+        (`src/targets/types.ts`): each output declares `scope: 'part' | 'work'`; targets declare
+        `partLabel` ("Chapter", "Post"). AO3 (`ao3/export.ts`) emits HTML per chapter and one Work
+        Skin with every chapter's lifted rules merged and sorted; a cross-chapter hash collision
+        is reported (`class-collision`) but not renamed (the class is already in both chapters'
+        HTML; the user changes one style). cohost (`cohost/export.ts`) inlines per post. Only
+        the part on screen has live-rendered `html`; others get `null` and targets use their
+        fallback. `renderAo3Content` caches up to 256 contents (LRU). `PostPreview` takes
+        `work` + `partId`, and hands the chrome the part's outputs merged with the work outputs
+        (so chrome and copy buttons are unchanged); `SiteTargetPreviewProps.part` gives the
+        chrome the part's index/count/title (AO3 mockup shows "Chapter N: title"). Part
+        selection lives in `Eo3` state (`partId`); `preview.tsx` shows a part selector when
+        there's more than one part. Tests: `test/ao3/export.test.ts`.
 -   [ ] **2c — UI.** Parts list (labels from the target: Chapter/Post); one output node per part
         in the graph (`module-graph/index.tsx`, `auto-layout.ts`) and per-part entries in the
         module list's send menu (`module-list.tsx`); managed "Part styles" CSS module per part,
@@ -81,3 +90,4 @@ part CSS is simply added to the shared skin unscoped.
 -   2026-09-26 — Plan written; phase 1 started.
 -   2026-09-26 — Phase 1 done (see findings above). Next: phase 2.
 -   2026-09-26 — Phase 2a (data model) done.
+-   2026-09-26 — Phase 2b (targets export the whole work) done.
