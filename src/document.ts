@@ -131,6 +131,18 @@ export function isPartOutput(id: ModuleId): boolean {
 
 const PART_OUTPUT_PREFIX = 'output:';
 
+/** Text-module languages whose contents are HTML (and so can be split at block boundaries). */
+const HTML_LANGUAGES = new Set(['html', 'html-contenteditable']);
+
+/** Modules that produce CSS rather than content: CSS text, Sass and Less sources. */
+function isCssModule(mod: AnyModule): boolean {
+    if (mod.plugin.id === 'source.sass' || mod.plugin.id === 'source.lesscss') return true;
+    return (
+        mod.plugin.id === 'source.text' &&
+        (mod.data as { language?: unknown } | null)?.language === 'css'
+    );
+}
+
 function newPart(outputId?: ModuleId): Part {
     const id = Module.genModuleId();
     return {
@@ -577,6 +589,74 @@ export class Document extends EventTarget {
         parts.splice(index, 0, part);
         this.pushParts(parts, this.modulesWithImportedSkinFor(part.outputId));
         return part;
+    }
+
+    /**
+     * The module holding a part's content, when the part can be split in place: exactly one
+     * module sends content (anything but CSS) to the part, and it is a Text module holding HTML.
+     * Otherwise, why not.
+     */
+    splittableContent(partId: string): { module: AnyModule } | { reason: string } {
+        const part = this.findPart(partId);
+        if (!part) return { reason: 'That part no longer exists.' };
+        const content = this.modules.filter(
+            (mod) => mod.sends.includes(part.outputId) && !isCssModule(mod)
+        );
+        if (content.length !== 1) {
+            return {
+                reason:
+                    'Its content comes from several modules, so it can’t be split automatically. ' +
+                    'Add a new part and move some of the content there.',
+            };
+        }
+        const [mod] = content;
+        const language = (mod.data as { language?: unknown } | null)?.language;
+        if (mod.plugin.id !== 'source.text' || !HTML_LANGUAGES.has(language as string)) {
+            return {
+                reason:
+                    'Its content is produced by other modules, so it can’t be split ' +
+                    'automatically. Add a new part and move some of the content there.',
+            };
+        }
+        return { module: mod };
+    }
+
+    /**
+     * Splits a part in two at an already chosen point: its content module keeps `first`, and a
+     * new part right after it gets a copy of that module holding `second`. Everything else sent
+     * to the part (its styles, the Work Skin) is sent to the new part too. One undo step.
+     */
+    splitPart(partId: string, first: string, second: string): Part | null {
+        const found = this.splittableContent(partId);
+        const part = this.findPart(partId);
+        if (!('module' in found) || !part) return null;
+        const added = { ...newPart(), title: part.title ? `${part.title} (continued)` : '' };
+
+        const continued = new Module(found.module.plugin, {
+            ...(found.module.data as object),
+            contents: second,
+        } as JsonValue);
+        continued.title = found.module.title;
+        continued.sends = [added.outputId];
+
+        const modules = this.modules.map((mod) => {
+            if (mod.id === found.module.id) {
+                const clone = mod.shallowClone();
+                clone.data = { ...(mod.data as object), contents: first } as JsonValue;
+                return clone;
+            }
+            if (!mod.sends.includes(part.outputId)) return mod;
+            const clone = mod.shallowClone();
+            clone.sends = [...mod.sends, added.outputId];
+            return clone;
+        });
+        const parts = this.parts.slice();
+        parts.splice(parts.indexOf(part) + 1, 0, added);
+        this.pushHistoryState(
+            { ...this.state, modules: [...modules, continued], parts },
+            { type: ChangeType.EditParts }
+        );
+        return added;
     }
 
     /** Adds a part at the end with a rich-text module wired to it, as one undoable step. */

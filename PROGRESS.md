@@ -17,7 +17,7 @@ update it whenever a step lands (what changed, what's next, anything surprising)
 | 3     | Delivery strategies (`shared-stylesheet`, `inline`); skin record; diff before copy; part-scoped CSS; conflicts | Done        |
 | 4     | Import an existing skin, then existing chapters                                                                | Done        |
 | 5     | Group nodes (shared but detachable); first packaged effects                                                    | Done        |
-| 6     | Size-based splitting; custom target profiles; crossposting                                                     | Next        |
+| 6     | Size-based splitting; custom target profiles; crossposting                                                     | In progress |
 | 7     | wafrn target (read its sanitizer source first)                                                                 | Not started |
 
 ## Phase 1 — canonical, sorted Work Skin (done)
@@ -168,7 +168,34 @@ module; eo3 never automatically removes its authored rules.
         to its part (`collapsedStyles` in `auto-layout.ts`); the output node has "+ styles" /
         "edit styles". A styles module that isn't sent anywhere (e.g. detached, then its part
         removed) is listed under the parts with a link to it.
--   Tests: `test/document/groups.test.ts`.
+-   Tests: `test/document/groups-and-splitting.test.ts`.
+
+## Phase 6 — splitting, target profiles, crossposting (in progress)
+
+-   [x] **6a — splitting long parts.** Splits the **source**, not the output, so both pieces stay
+        editable: `Document.splittableContent(partId)` accepts a part fed by exactly one content
+        module (anything but CSS/Sass/Less) that is a Text module holding HTML (`html` or
+        `html-contenteditable`); otherwise it returns a plain-language reason.
+        `Document.splitPart(partId, first, second)` keeps `first` in that module, inserts a new
+        part after it (title "… (continued)") with a copy of the module holding `second`, and
+        sends everything else that reached the part (styles, Work Skin) to the new part too; one
+        undo step. The split point comes from `src/util/split-html.ts`: top-level block
+        boundaries only, descending through a lone wrapper element (closed and reopened with the
+        same attributes), the last cut whose first piece `fits`. Targets declare `partMaxChars`
+        (AO3 500,000; cohost 200,000); `PostPreview` measures candidates with the target's
+        `renderFallback` against 90% of the limit (room for lifted classes and part wrappers).
+        `SiteTargetPreviewProps.sizing` feeds `post-preview/split-prompt.tsx`, shown from 95% of
+        the limit next to the size meter. Tested in the browser on a 530 kB chapter
+        (→ 450 kB + 80 kB, 0.1 s). Tests: `test/util/split-html.test.ts`, split cases in
+        `test/document/groups-and-splitting.test.ts`.
+        Not done: an author-placed break marker in content (adding a part covers it for now).
+-   [ ] **6b — custom target profiles.** A declarative `TargetProfile` (design doc, "Custom
+        target profiles") driving a generic target: the sanitize engine in
+        `targets/ao3/render/sanitize.ts` is already config-driven (`SanitizeConfig`), plus a
+        delivery strategy from `targets/delivery/`. Needs a UI to create/edit a profile, stored
+        with the document or app settings.
+-   [ ] **6c — crossposting.** More than one target per work at once, each with its own outputs,
+        warnings and posted state (today `PostedSnapshot` and the skin record assume one target).
 
 ## Log
 
@@ -194,3 +221,4 @@ module; eo3 never automatically removes its authored rules.
 -   2026-09-26 — Design doc copied into the repo (`docs/design/publishing-model.md`).
 -   2026-09-26 — Phase 5 done (continued from Sol's uncommitted work): effect classes renamed to
     `fx-`, styles-module naming and unsent-styles warning added, tests. Next: phase 6.
+-   2026-09-26 — Phase 6a (splitting long parts) done. Next: 6b custom target profiles.

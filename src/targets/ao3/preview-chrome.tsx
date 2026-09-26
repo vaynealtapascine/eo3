@@ -3,6 +3,7 @@ import parse from 'html-react-parser';
 import { DirPopover } from '../../uikit/dir-popover';
 import { CopyToClipboardButton } from '../../ui/components/post-preview/copy-to-clipboard-button';
 import { PostedStatus } from '../../ui/components/post-preview/posted-status';
+import { SplitPrompt } from '../../ui/components/post-preview/split-prompt';
 import { SiteTargetPreviewProps, ErrorMessage as GenericErrorMessage } from '../types';
 import { RenderConfig } from './config';
 import { ERRORS, AO3_APPROX_MAX_PAYLOAD_SIZE } from './diagnostics';
@@ -68,6 +69,7 @@ export function Ao3PreviewHeader({
     exportOutput,
     part,
     posting,
+    sizing,
     error,
     renderErrors,
     asyncErrors,
@@ -652,6 +654,11 @@ export function Ao3PreviewHeader({
                                 <h3 className="landmark heading">Actions</h3>
                                 <div className="post-footer-simulate" style={{ float: 'right' }}>
                                     <PostSize size={html.length} />
+                                    <SplitPrompt
+                                        sizing={sizing}
+                                        partName={`Chapter ${part.index + 1}`}
+                                        siteName="AO3"
+                                    />
                                     <PostedStatus
                                         posting={posting}
                                         partName={`Chapter ${part.index + 1}`}

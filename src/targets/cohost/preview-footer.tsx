@@ -1,5 +1,6 @@
 import { CopyToClipboardButton } from '../../ui/components/post-preview/copy-to-clipboard-button';
 import { PostedStatus } from '../../ui/components/post-preview/posted-status';
+import { SplitPrompt } from '../../ui/components/post-preview/split-prompt';
 import { SiteTargetPreviewProps } from '../types';
 import { RenderConfig } from './config';
 import { COHOST_APPROX_MAX_PAYLOAD_SIZE } from './fallback-renderer';
@@ -47,6 +48,7 @@ export function CohostPreviewFooter({
     error,
     part,
     posting,
+    sizing,
 }: SiteTargetPreviewProps<RenderConfig>) {
     const html = exportOutput.get('html') ?? '';
     return (
@@ -54,6 +56,11 @@ export function CohostPreviewFooter({
             <hr />
             <div className="post-footer">
                 <PostSize size={html.length} />
+                <SplitPrompt
+                    sizing={sizing}
+                    partName={`Post ${part.index + 1}`}
+                    siteName="cohost"
+                />
                 <PostedStatus posting={posting} partName={`Post ${part.index + 1}`} />
                 {EXPORT_ACTIONS.map((action) => (
                     <CopyToClipboardButton

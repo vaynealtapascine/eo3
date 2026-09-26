@@ -1,6 +1,6 @@
 import { SiteTargetPlugin } from '../types';
 import { RenderConfig, DEFAULT_RENDER_CONFIG } from './config';
-import { handleAsyncErrors } from './diagnostics';
+import { handleAsyncErrors, AO3_APPROX_MAX_PAYLOAD_SIZE } from './diagnostics';
 import { renderAo3Content } from './render';
 import { Ao3PreviewHeader } from './preview-chrome';
 import { EXPORT_ACTIONS } from './export-actions';
@@ -34,6 +34,7 @@ const plugin: SiteTargetPlugin<RenderConfig> = {
     previewCssScope: '#workskin',
 
     partLabel: 'Chapter',
+    partMaxChars: AO3_APPROX_MAX_PAYLOAD_SIZE,
 
     export: exportWork,
 

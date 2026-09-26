@@ -14,6 +14,7 @@ import {
     ErrorMessage,
     LiveRenderFn,
     PartPosting,
+    PartSizing,
     PreviewConfig,
     PushError,
     RenderResult,
@@ -225,6 +226,7 @@ export function PostPreview({
     onPostedChange,
     onCleanupUnusedStyles,
     onPruneProtectedStyles,
+    onSplitPart,
 }: PostPreview.Props) {
     const partIndex = Math.max(
         0,
@@ -373,6 +375,21 @@ export function PostPreview({
               )
               .map((className) => ({ className, css: work.skinRecord[className] }))
         : [];
+    const maxChars = plugin.partMaxChars ?? null;
+    const sizing: PartSizing = {
+        size: postedHtml.length,
+        max: maxChars,
+        split: () =>
+            maxChars
+                ? onSplitPart(
+                      part.id,
+                      // leave room for what export adds (lifted classes, part wrappers)
+                      (html) =>
+                          plugin.renderFallback(html, config.targetConfig, () => {}).length <=
+                          maxChars * 0.9
+                  )
+                : null,
+    };
     const posting: PartPosting = {
         posted,
         copiedUnmarked: copied && !posted,
@@ -415,6 +432,7 @@ export function PostPreview({
         exportOutput,
         part: { index: partIndex, count: work.parts.length, title: part.title },
         posting,
+        sizing,
         config: config.targetConfig,
         previewConfig: config,
         onPreviewConfigChange: onConfigChange,
@@ -512,6 +530,11 @@ namespace PostPreview {
         ) => void;
         onCleanupUnusedStyles: () => void;
         onPruneProtectedStyles: (names: string[]) => void;
+        /**
+         * Splits a part so its first piece passes `fits`; returns why it couldn't, or null.
+         * `fits` measures a candidate piece the way this target renders it.
+         */
+        onSplitPart: (partId: string, fits: (html: string) => boolean) => string | null;
     }
 }
 

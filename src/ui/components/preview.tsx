@@ -15,6 +15,7 @@ import { DataPreview } from './data-preview';
 import { SITE_TARGETS } from '../../targets';
 import { useSiteTarget } from '../../targets/context';
 import { removeLiftedSkinRules } from '../../targets/delivery/skin-record';
+import { splitHtml } from '../../util/split-html';
 import './preview.scss';
 
 export function Preview({
@@ -89,6 +90,7 @@ export function Preview({
                             document.setPartPosted(id, posted, rules)
                         }
                         onCleanupUnusedStyles={() => document.cleanupUnusedSkinRules()}
+                        onSplitPart={(id, fits) => splitPart(document, id, fits)}
                         onPruneProtectedStyles={(names) => {
                             const module = document.findModule(document.importedSkinModuleId ?? '');
                             const css =
@@ -307,4 +309,17 @@ class SourceJavascript extends PureComponent<{ source: string; line?: number }> 
             />
         );
     }
+}
+
+/** Splits a part at the last block boundary where its first piece passes `fits`. */
+function splitPart(document: Document, partId: string, fits: (html: string) => boolean) {
+    const found = document.splittableContent(partId);
+    if ('reason' in found) return found.reason;
+    const contents = (found.module.data as { contents?: string }).contents ?? '';
+    const result = splitHtml(contents, fits);
+    if (!result) {
+        return 'There’s no place to split it: its first paragraph or block is already too long.';
+    }
+    document.splitPart(partId, result.first, result.second);
+    return null;
 }

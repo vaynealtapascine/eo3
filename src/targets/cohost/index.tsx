@@ -1,7 +1,11 @@
 import { SiteTargetPlugin } from '../types';
 import { RenderConfig, DEFAULT_RENDER_CONFIG, CONFIG_ITEMS } from './config';
 import { loadRenderer, COHOST_RENDERER_VERSION } from './live-renderer';
-import { renderMarkdown, handleAsyncErrors } from './fallback-renderer';
+import {
+    renderMarkdown,
+    handleAsyncErrors,
+    COHOST_APPROX_MAX_PAYLOAD_SIZE,
+} from './fallback-renderer';
 import { CohostPreviewHeader } from './preview-header';
 import { CohostPreviewFooter } from './preview-footer';
 import { EXPORT_ACTIONS } from './export-actions';
@@ -37,6 +41,7 @@ const plugin: SiteTargetPlugin<RenderConfig> = {
     outputs: [{ id: 'html', label: 'HTML', typeId: 'text/html', scope: 'part' }],
 
     partLabel: 'Post',
+    partMaxChars: COHOST_APPROX_MAX_PAYLOAD_SIZE,
 
     previewCssScope: '.co-prose',
 

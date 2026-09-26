@@ -119,3 +119,40 @@ describe('saving and loading groups', () => {
         expect(loaded.findModule(first.moduleIds[0])!.title).toBe('Chat log HTML');
     });
 });
+
+describe('splitting a part', () => {
+    async function oneChapter(contents: string) {
+        const doc = new Document();
+        const part = (await doc.addPartWithText('Chapter text'))!;
+        doc.removePart(doc.parts[0].id);
+        const text = doc.modules.find((m) => m.sends.includes(part.outputId))!;
+        edit(doc, text.id, contents);
+        doc.updatePart(part.id, { title: 'Arrival' });
+        return { doc, part, text };
+    }
+
+    it('moves the second piece into a new part after it, sharing its styles', async () => {
+        const { doc, part, text } = await oneChapter('<p>one</p><p>two</p>');
+        const styles = (await doc.partStyles(part.id, 'Chapter styles'))!;
+        const added = doc.splitPart(part.id, '<p>one</p>', '<p>two</p>')!;
+
+        expect(doc.parts.map((p) => p.title)).toEqual(['Arrival', 'Arrival (continued)']);
+        expect(contentsOf(doc, text.id)).toBe('<p>one</p>');
+        const continued = doc.modules.find(
+            (m) => m.sends.includes(added.outputId) && m.id !== styles
+        )!;
+        expect(contentsOf(doc, continued.id)).toBe('<p>two</p>');
+        expect(doc.findModule(styles)!.sends).toEqual([part.outputId, added.outputId]);
+
+        doc.undo();
+        expect(doc.parts).toHaveLength(1);
+        expect(contentsOf(doc, text.id)).toBe('<p>one</p><p>two</p>');
+    });
+
+    it('refuses a part whose content comes from several modules', async () => {
+        const { doc, part } = await oneChapter('<p>one</p>');
+        await doc.addPackagedEffect('letter', part.id);
+        expect(doc.splittableContent(part.id)).toHaveProperty('reason');
+        expect(doc.splitPart(part.id, 'a', 'b')).toBeNull();
+    });
+});

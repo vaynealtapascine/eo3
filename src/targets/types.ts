@@ -113,6 +113,18 @@ export function makeDefaultPreviewConfig(plugin: SiteTargetPlugin<any>): Preview
     };
 }
 
+export interface PartSizing {
+    /** Characters in the part's primary output. */
+    size: number;
+    /** The site's approximate limit for one part, or null if it has none. */
+    max: number | null;
+    /**
+     * Splits the part so its first piece fits comfortably under the limit, moving the rest into
+     * a new part after it. Returns why it couldn't, or null once it has.
+     */
+    split(): string | null;
+}
+
 export interface PartPosting {
     posted: PostedSnapshot | null;
     /** The part's output was copied this session but the part isn't marked as posted. */
@@ -145,6 +157,8 @@ export interface SiteTargetPreviewProps<Config extends JsonValue> {
     part: { index: number; count: number; title: string };
     /** Posted state of the part on screen; chrome shows it next to its copy buttons. */
     posting: PartPosting;
+    /** Size of the part on screen against the site's limit, and splitting it. */
+    sizing: PartSizing;
     config: Config;
     previewConfig: PreviewConfig;
     onPreviewConfigChange: (c: PreviewConfig) => void;
@@ -182,6 +196,9 @@ export interface SiteTargetPlugin<Config extends JsonValue = JsonValue> {
 
     /** What a part is called on this site ("Chapter", "Post"). */
     partLabel: string;
+
+    /** Approximate size limit of one part's primary output, in characters, if the site has one. */
+    partMaxChars?: number;
 
     /**
      * Selector the preview's injected CSS is scoped under, so it applies only within this
