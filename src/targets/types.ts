@@ -1,5 +1,5 @@
 import { ComponentType, ReactNode } from 'react';
-import { JsonValue, PostedSnapshot } from '../document';
+import { CssSourceOutput, JsonValue, PostedSnapshot } from '../document';
 
 export type SiteTargetId = string;
 
@@ -35,6 +35,8 @@ export interface WorkExportInput<Config> {
     parts: PartExportInput[];
     /** Authored CSS reaching every part, in module order. */
     workCss: string;
+    /** CSS reach by source; lets shared stylesheets scope rules that reach only some parts. */
+    cssSources?: CssSourceOutput[];
     config: Config;
 }
 

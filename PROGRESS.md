@@ -14,7 +14,7 @@ update it whenever a step lands (what changed, what's next, anything surprising)
 | ----- | -------------------------------------------------------------------------------------------------------------- | ----------- |
 | 1     | Canonical, sorted Work Skin; pinned-hash test; collision check                                                 | Done        |
 | 2     | `Work` + parts in the document; migration of saved documents; parts list UI; `export()` over a work            | Done        |
-| 3     | Delivery strategies (`shared-stylesheet`, `inline`); skin record; diff before copy; part-scoped CSS; conflicts | Next        |
+| 3     | Delivery strategies (`shared-stylesheet`, `inline`); skin record; diff before copy; part-scoped CSS; conflicts | In progress |
 | 4     | Import an existing skin, then existing chapters                                                                | Not started |
 | 5     | Group nodes (shared but detachable); first packaged effects                                                    | Not started |
 | 6     | Size-based splitting; custom target profiles; crossposting                                                     | Not started |
@@ -102,10 +102,10 @@ Landed in four commits, each leaving the app working:
 
 Plan, in order:
 
--   [ ] Extract `src/targets/delivery/shared-stylesheet.ts` from `ao3/export.ts` (lift merge,
+-   [x] Extract `src/targets/delivery/shared-stylesheet.ts` from `ao3/export.ts` (lift merge,
         sort, canonicalize callback) and `delivery/inline.ts` from `cohost/export.ts`; targets
         call them. Pure refactor; parity + export tests must pass unchanged.
--   [ ] Part-scoped CSS: on shared-stylesheet targets wrap a part's HTML in
+-   [x] Part-scoped CSS: on shared-stylesheet targets wrap a part's HTML in
         `<div class="eo3-part-<partId>">` and prefix CSS that reaches only some parts with that
         class for each part it reaches (scope follows reach). Work CSS stays unscoped. Needs the
         reach per CSS module, not just per part: extend `evalWork` to return, per CSS source,
@@ -126,3 +126,6 @@ Plan, in order:
 -   2026-09-26 — Phase 2c (parts list, graph outputs, part styles) done. Also fixed a pre-existing
     crash: undo that shortened a code editor's text blanked the app (`codemirror.tsx`).
 -   2026-09-26 — Phase 2d (mark as posted) done; phase 2 complete. Next: phase 3.
+-   2026-09-26 — Phase 3 delivery strategies extracted; shared stylesheets now scope CSS by each
+    module's reach and wrap multi-part HTML. The preview uses the same part wrapper. Next: skin
+    record, diff before copy, and cross-part conflict warnings.

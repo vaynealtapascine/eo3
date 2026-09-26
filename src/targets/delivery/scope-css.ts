@@ -1,8 +1,7 @@
 import { parse, generate, walk, CssNode } from 'css-tree';
 
 /**
- * Prefixes every style rule's selectors with `scope` so injected CSS applies only within the
- * mockup and gains the scope's specificity (as AO3 does with `#workskin`). `@keyframes` and
+ * Prefixes every style rule's selectors with `scope`. `@keyframes` and
  * `@font-face` blocks are skipped; `@media`/`@supports` are descended into.
  */
 export function scopeCss(css: string, scope: string): string {

@@ -1,7 +1,8 @@
 import React, { Fragment, useContext, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { RenderContext } from '../../render-context';
-import { scopeCss } from './scope-css';
+import { scopeCss } from '../../../targets/delivery/scope-css';
+import { partScopeClass } from '../../../targets/delivery/shared-stylesheet';
 import { PreviewRenderIcon } from '../icons';
 import './index.scss';
 import { createPortal } from 'react-dom';
@@ -265,6 +266,7 @@ export function PostPreview({
                         css: p.css,
                     })),
                     workCss: work.workCss,
+                    cssSources: work.cssSources,
                     config: config.targetConfig,
                 },
                 (id, props) => errs.push({ id, props })
@@ -294,6 +296,9 @@ export function PostPreview({
     const styleOutputs = styleSources.map((css) =>
         plugin.previewCssScope ? scopeCss(css, plugin.previewCssScope) : css
     );
+    const needsPartScope =
+        work.parts.length > 1 &&
+        plugin.outputs.some((output) => output.scope === 'work' && output.typeId === 'text/css');
 
     const proseContainer = useRef<HTMLDivElement>(null);
     const [asyncErrors, setAsyncErrors] = useState<ErrorMessage[]>([]);
@@ -362,6 +367,22 @@ export function PostPreview({
         asyncErrors,
     };
 
+    const proseRenderer = (
+        <MarkdownRenderer
+            renderId={renderId}
+            pluginId={plugin.id}
+            liveRenderer={config.useLiveRenderer ? liveRenderer : null}
+            config={config.targetConfig}
+            markdown={markdown}
+            fallbackHtml={html}
+            readMore={readMore}
+            onReadMoreChange={onReadMoreChange}
+            errorPortal={errorPortal}
+            onRender={onRender}
+            onExportSource={(html) => setRenderedHtml({ markdown, html })}
+        />
+    );
+
     return (
         <div
             className={
@@ -396,19 +417,11 @@ export function PostPreview({
                     {styleOutputs.map((css, i) => (
                         <style key={i}>{css}</style>
                     ))}
-                    <MarkdownRenderer
-                        renderId={renderId}
-                        pluginId={plugin.id}
-                        liveRenderer={config.useLiveRenderer ? liveRenderer : null}
-                        config={config.targetConfig}
-                        markdown={markdown}
-                        fallbackHtml={html}
-                        readMore={readMore}
-                        onReadMoreChange={onReadMoreChange}
-                        errorPortal={errorPortal}
-                        onRender={onRender}
-                        onExportSource={(html) => setRenderedHtml({ markdown, html })}
-                    />
+                    {needsPartScope ? (
+                        <div className={partScopeClass(part.id)}>{proseRenderer}</div>
+                    ) : (
+                        proseRenderer
+                    )}
                 </div>
             )}
             {plugin.PreviewFooter ? <plugin.PreviewFooter {...previewProps} /> : null}
@@ -443,7 +456,9 @@ namespace PostPreview {
 function liftedClasses(html: string): string[] {
     const classes = new Set<string>();
     for (const [, value] of html.matchAll(/ class="([^"]*)"/g)) {
-        for (const name of value.split(/\s+/)) if (name.startsWith('eo3-')) classes.add(name);
+        for (const name of value.split(/\s+/)) {
+            if (name.startsWith('eo3-') && !name.startsWith('eo3-part-')) classes.add(name);
+        }
     }
     return [...classes].sort();
 }

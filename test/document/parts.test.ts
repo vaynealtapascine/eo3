@@ -97,6 +97,10 @@ describe('a multi-part document', () => {
             ['', 'hi', ''],
             ['Chapter 2', 'hi', '.two{}'],
         ]);
+        expect(work.cssSources).toEqual([
+            { id: doc.modules[0].id, css: '.shared{}', partIds: doc.parts.map((p) => p.id) },
+            { id: doc.modules[1].id, css: '.two{}', partIds: [doc.parts[1].id] },
+        ]);
     });
 
     it('removes a part with its sends and managed styles module, but never the last part', () => {

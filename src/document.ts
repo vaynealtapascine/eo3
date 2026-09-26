@@ -118,6 +118,14 @@ export interface WorkOutput {
     parts: PartOutput[];
     /** CSS from modules that reach every part, in module order. */
     workCss: string;
+    /** Each CSS module and the parts it reaches, in module order. */
+    cssSources: CssSourceOutput[];
+}
+
+export interface CssSourceOutput {
+    id: ModuleId;
+    css: string;
+    partIds: string[];
 }
 
 export interface PartOutput {
@@ -497,7 +505,7 @@ export class Document extends EventTarget {
         );
 
         const cssBySource = new Map<ModuleId, string>();
-        const partsReached = new Map<ModuleId, number>();
+        const partsReached = new Map<ModuleId, Set<string>>();
         const contents = resolved.map((inputs, partIndex) => {
             const contentParts: string[] = [];
             const cssSources = new Set<ModuleId>();
@@ -520,7 +528,9 @@ export class Document extends EventTarget {
                 contentParts.push(output);
             });
             for (const source of cssSources) {
-                partsReached.set(source, (partsReached.get(source) ?? 0) + 1);
+                const reached = partsReached.get(source) ?? new Set<string>();
+                reached.add(this.parts[partIndex].id);
+                partsReached.set(source, reached);
             }
             return { content: contentParts.join('\n'), cssSources };
         });
@@ -531,12 +541,23 @@ export class Document extends EventTarget {
                 .map((mod) => cssBySource.get(mod.id)!)
                 .join('\n');
         const workSources = new Set(
-            [...partsReached].filter(([, n]) => n === this.parts.length).map(([id]) => id)
+            [...partsReached]
+                .filter(([, reached]) => reached.size === this.parts.length)
+                .map(([id]) => id)
         );
 
         return {
             work: {
                 workCss: inModuleOrder(workSources),
+                cssSources: this.modules
+                    .filter((mod) => partsReached.has(mod.id))
+                    .map((mod) => ({
+                        id: mod.id,
+                        css: cssBySource.get(mod.id)!,
+                        partIds: this.parts
+                            .filter((part) => partsReached.get(mod.id)!.has(part.id))
+                            .map((part) => part.id),
+                    })),
                 parts: this.parts.map((part, i) => ({
                     id: part.id,
                     title: part.title,
