@@ -436,20 +436,36 @@ export class Document extends EventTarget {
         this.pushHistoryState({ ...this.state, modules, parts }, { type: ChangeType.EditParts });
     }
 
-    /** Turn modules wired within one part into a reusable shared definition. */
-    createGroup(title: string, partId: string, moduleIds: ModuleId[], shelfKey?: string) {
-        const part = this.findPart(partId);
+    /** A selection can be reused when its wiring is self-contained and reaches one part. */
+    groupablePart(moduleIds: ModuleId[]): Part | null {
         const ids = new Set(moduleIds);
-        if (!part || !ids.size || ids.size !== moduleIds.length) return null;
+        if (!ids.size || ids.size !== moduleIds.length) return null;
         if (this.groupInstances.some((instance) => instance.moduleIds.some((id) => ids.has(id))))
             return null;
         const modules = moduleIds.map((id) => this.findModule(id));
         if (modules.some((mod) => !mod)) return null;
+        const outputs = new Set<ModuleId>();
         for (const mod of modules as AnyModule[]) {
-            if (mod.sends.some((target) => !ids.has(target) && target !== part.outputId))
-                return null;
+            for (const target of mod.sends) {
+                if (ids.has(target)) continue;
+                if (!isPartOutput(target)) return null;
+                outputs.add(target);
+            }
             if ([...mod.namedSends.keys()].some((target) => !ids.has(target))) return null;
         }
+        if (outputs.size !== 1) return null;
+        for (const mod of this.modules) {
+            if (ids.has(mod.id)) continue;
+            if (mod.sends.some((target) => ids.has(target))) return null;
+            if ([...mod.namedSends.keys()].some((target) => ids.has(target))) return null;
+        }
+        return this.parts.find((part) => part.outputId === [...outputs][0]) ?? null;
+    }
+
+    /** Turn modules wired within one part into a reusable shared definition. */
+    createGroup(title: string, partId: string, moduleIds: ModuleId[], shelfKey?: string) {
+        const part = this.groupablePart(moduleIds);
+        if (!part || part.id !== partId) return null;
         const definition: GroupDefinition = {
             id: Module.genModuleId(),
             title,

@@ -101,6 +101,42 @@ describe('shared groups', () => {
         doc.insertModule(inside);
         expect(doc.createGroup('Mixed', doc.parts[0].id, [inside.id])).toBeNull();
     });
+
+    it('groups a self-contained graph selection and remaps its links when copied', () => {
+        const doc = new Document();
+        const second = doc.addPart();
+        const plugin = {
+            id: 'x',
+            acceptsInputs: true,
+            acceptsNamedInputs: false,
+        } as any;
+        const source = new Module(plugin, {}) as AnyModule;
+        const result = new Module(plugin, {}) as AnyModule;
+        source.sends = [result.id];
+        result.sends = [doc.parts[0].outputId];
+        doc.insertModule(source);
+        doc.insertModule(result);
+
+        expect(doc.groupablePart([source.id, result.id])?.id).toBe(doc.parts[0].id);
+        const group = doc.createGroup('Custom', doc.parts[0].id, [source.id, result.id])!;
+        const copy = doc.duplicateGroup(group.id, second.id)!;
+        expect(doc.findModule(copy.moduleIds[0])!.sends).toEqual([copy.moduleIds[1]]);
+        expect(doc.findModule(copy.moduleIds[1])!.sends).toEqual([second.outputId]);
+    });
+
+    it('rejects a selection with incoming links from unselected modules', () => {
+        const doc = new Document();
+        const plugin = { id: 'x', acceptsInputs: true, acceptsNamedInputs: false } as any;
+        const outside = new Module(plugin, {}) as AnyModule;
+        const inside = new Module(plugin, {}) as AnyModule;
+        outside.sends = [inside.id];
+        inside.sends = [doc.parts[0].outputId];
+        doc.insertModule(outside);
+        doc.insertModule(inside);
+
+        expect(doc.groupablePart([inside.id])).toBeNull();
+        expect(doc.createGroup('Incomplete', doc.parts[0].id, [inside.id])).toBeNull();
+    });
 });
 
 describe('saving and loading groups', () => {

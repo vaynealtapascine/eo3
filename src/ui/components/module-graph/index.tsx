@@ -32,7 +32,21 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
         draggingNode: false,
         addingModule: false,
         modulePickerAnchor: null,
+        groupSelection: [] as ModuleId[],
     };
+
+    private selectionChangeFromGraph: ModuleId | EdgeId | null = null;
+
+    componentDidUpdate(previous: ModuleGraph.Props) {
+        if (previous.selected === this.props.selected) return;
+        if (
+            this.selectionChangeFromGraph !== this.props.selected &&
+            this.state.groupSelection.length
+        ) {
+            this.setState({ groupSelection: [] });
+        }
+        this.selectionChangeFromGraph = null;
+    }
 
     containerNode = createRef<HTMLDivElement>();
     addModuleButton = createRef<Button>();
@@ -176,6 +190,8 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
 
     onNodesChange = (changes: NodeChange[]) => {
         let newSelected = this.props.selected;
+        const groupSelection = new Set(this.state.groupSelection);
+        let groupSelectionChanged = false;
         const nodePositionChanges: NodePositionChange[] = [];
         const nodeRemoveChanges: NodeRemoveChange[] = [];
 
@@ -183,17 +199,30 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
             if (change.type === 'select') {
                 if (change.selected && !isPartOutput(change.id)) {
                     newSelected = change.id;
+                    groupSelection.add(change.id);
+                    groupSelectionChanged = true;
                 } else if (!change.selected && newSelected === change.id) {
                     newSelected = null;
+                    groupSelection.delete(change.id);
+                    groupSelectionChanged = true;
+                } else if (!change.selected) {
+                    groupSelection.delete(change.id);
+                    groupSelectionChanged = true;
                 }
             } else if (change.type === 'position') {
                 nodePositionChanges.push(change);
             } else if (change.type === 'remove') {
                 nodeRemoveChanges.push(change);
+                groupSelection.delete(change.id);
+                groupSelectionChanged = true;
             }
         }
 
-        if (newSelected !== this.props.selected) this.props.onSelect(newSelected);
+        if (groupSelectionChanged) this.setState({ groupSelection: [...groupSelection] });
+        if (newSelected !== this.props.selected) {
+            this.selectionChangeFromGraph = newSelected;
+            this.props.onSelect(newSelected);
+        }
 
         if (nodePositionChanges.length || nodeRemoveChanges.length) {
             const { document } = this.props;
@@ -283,6 +312,7 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
         const layout = layoutNodes(document);
         const hidden = collapsedStyles(document);
         const nodes: any[] = [];
+        const groupablePart = document.groupablePart(this.state.groupSelection);
 
         const colStride = Math.ceil((MOD_BASE_WIDTH + MIN_COL_GAP) / GRID_SIZE) * GRID_SIZE;
         const maxLayoutX = (layout.columns.length - 1) * colStride;
@@ -293,7 +323,8 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
             const output = render?.output ? render.output.outputs.get(module.id) || null : null;
             const error =
                 render?.error && render.error.source === module.id ? render.error.error : null;
-            const selected = module.id === this.props.selected;
+            const selected =
+                this.state.groupSelection.includes(module.id) || module.id === this.props.selected;
 
             const autoLayoutPos = {
                 x: nodeLayout.column * colStride - maxLayoutX,
@@ -367,10 +398,34 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
                         onConnectEnd={this.onConnectEnd}
                         onNodeDragStart={() => this.setState({ draggingNode: true })}
                         onNodeDragStop={() => this.setState({ draggingNode: false })}
+                        multiSelectionKeyCode={['Meta', 'Control']}
                     />
                 </Suspense>
                 <div className="i-actions">
                     <Button run={this.runAutoLayout}>auto layout</Button>{' '}
+                    {this.state.groupSelection.length > 1 && (
+                        <Button
+                            disabled={!groupablePart}
+                            title={
+                                groupablePart
+                                    ? 'Make these nodes reusable in other parts'
+                                    : 'Select nodes that connect only to each other and one part output'
+                            }
+                            run={() => {
+                                if (!groupablePart) return;
+                                const title = window.prompt('Name this reusable group');
+                                if (!title?.trim()) return;
+                                document.createGroup(
+                                    title.trim(),
+                                    groupablePart.id,
+                                    this.state.groupSelection
+                                );
+                                this.setState({ groupSelection: [] });
+                            }}
+                        >
+                            group {this.state.groupSelection.length} nodes
+                        </Button>
+                    )}{' '}
                     <Button
                         ref={this.addModuleButton}
                         run={() => {

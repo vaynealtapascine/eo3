@@ -251,8 +251,11 @@ Built as:
 
 Everything in the design's seven phases has landed. Known gaps, roughly by value:
 
--   **Group any modules (power users).** `Document.createGroup` exists and is tested, but there
-    is no UI: it needs multi-select in the graph. Today groups come only from the effect shelf.
+-   **Group any modules (power users).** Ctrl/Cmd-click two or more graph nodes and use "group
+    nodes". The selection must be self-contained and feed one part; incoming links from outside
+    the selection are rejected because a copied group cannot recreate them. The disabled group
+    action explains that constraint. Grouped members remain separate graph cards rather than one
+    collapsible card.
 -   **Break marker in content.** Splitting is offered at 95% of a site's limit and a new part can
     be added by hand; an author-placed marker ("split here") inside a text isn't supported.
 -   **Profile editor, advanced fields.** `styleAttributeProperties`, `removeContents` and
@@ -292,3 +295,7 @@ Everything in the design's seven phases has landed. Known gaps, roughly by value
 -   2026-09-26 — Phase 6b (custom target profiles) done. Next: 6c crossposting.
 -   2026-09-26 — Phase 6c (crossposting: per-target posting state) done; phase 6 complete. Next: phase 7 (wafrn).
 -   2026-09-26 — Phase 7 (wafrn) done. All planned phases complete; see "Open follow-ups".
+-   2026-09-26 — Added graph multi-selection for creating reusable groups from existing modules.
+    `groupablePart` checks a selection's external wiring before creation; copying a group remaps
+    its internal links and part output. Remaining group UI work: optionally collapse members into
+    one card.
