@@ -3,8 +3,8 @@
 Hand-off log for the works/parts/targets implementation. Read this first when picking the work up;
 update it whenever a step lands (what changed, what's next, anything surprising).
 
--   **Design doc:** [eo3 publishing model: works, parts and targets](https://claude.ai/code/artifact/9963cb7e-25bd-4c94-ac4c-8eff7d3f6768)
-    (decisions are recorded at its end).
+-   **Design doc:** [docs/design/publishing-model.md](docs/design/publishing-model.md)
+    (decisions are recorded at its end; the living copy is linked from its header).
 -   **Repo conventions:** see [AGENTS.md](AGENTS.md). Gate before every commit: `npm run typecheck`
     and `npm test`; `npm run build` before pushing.
 

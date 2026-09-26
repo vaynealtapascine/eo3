@@ -1,7 +1,8 @@
 # AGENTS.md
 
 Notes for anyone (human or AI) working on eo3. See README.md for what the app is, and
-[PROGRESS.md](PROGRESS.md) for the work in flight.
+[PROGRESS.md](PROGRESS.md) for the work in flight. Design references live in
+[docs/design/](docs/design/).
 
 ## Commands
 
