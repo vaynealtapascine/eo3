@@ -2,6 +2,7 @@ import { Document, ModuleId } from '../../document';
 import { copiedKey, targetTitle, useSiteTarget } from '../../targets/context';
 import { Ao3Import } from './ao3-import';
 import { EFFECTS, EffectKey } from '../../effects';
+import { SPLIT_MARKER, splitHtmlAtMarker } from '../../util/split-html';
 import './parts-list.css';
 
 /**
@@ -98,6 +99,41 @@ export function PartsList({
                             </span>
                         )}
                         <span className="i-actions">
+                            {document.modules.some(
+                                (module) =>
+                                    module.sends.includes(part.outputId) &&
+                                    (module.data as { contents?: unknown } | null)?.contents
+                                        ?.toString()
+                                        .includes(SPLIT_MARKER)
+                            ) && (
+                                <button
+                                    title="Split this part at its first chapter break marker"
+                                    onClick={() => {
+                                        const found = document.splittableContent(part.id);
+                                        if ('reason' in found) {
+                                            window.alert(found.reason);
+                                            return;
+                                        }
+                                        const html = (found.module.data as { contents: string })
+                                            .contents;
+                                        const split = splitHtmlAtMarker(html);
+                                        if (!split) {
+                                            window.alert(
+                                                'Place the break between content on both sides.'
+                                            );
+                                            return;
+                                        }
+                                        const added = document.splitPart(
+                                            part.id,
+                                            split.first,
+                                            split.second
+                                        );
+                                        if (added) onSelectPart(added.id);
+                                    }}
+                                >
+                                    split at break
+                                </button>
+                            )}
                             <button
                                 onClick={() => openStyles(part.id)}
                                 title={`CSS that applies to this ${label.toLowerCase()} only`}

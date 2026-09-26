@@ -59,6 +59,44 @@ export function splitHtml(
     return { first: serialize(blocks.slice(0, cut)), second: serialize(blocks.slice(cut)) };
 }
 
+/** A non-rendered chapter boundary an author can place in an HTML source module. */
+export const SPLIT_MARKER = '<!-- eo3:split -->';
+
+/** Split at the first explicit marker, including when it is inside a wrapper. */
+export function splitHtmlAtMarker(html: string): { first: string; second: string } | null {
+    const template = document.createElement('template');
+    template.innerHTML = html;
+    const walker = document.createTreeWalker(template.content, NodeFilter.SHOW_COMMENT);
+    let marker: Comment | null = null;
+    while (walker.nextNode()) {
+        const comment = walker.currentNode as Comment;
+        if (comment.data.trim() === 'eo3:split') {
+            marker = comment;
+            break;
+        }
+    }
+    if (!marker) return null;
+
+    const before = document.createRange();
+    before.setStart(template.content, 0);
+    before.setEndBefore(marker);
+    const after = document.createRange();
+    after.setStartAfter(marker);
+    after.setEnd(template.content, template.content.childNodes.length);
+    const serialize = (fragment: DocumentFragment) => {
+        const holder = document.createElement('div');
+        holder.append(fragment);
+        return holder.innerHTML.trim();
+    };
+    const firstFragment = before.cloneContents();
+    const secondFragment = after.cloneContents();
+    const hasContent = (fragment: DocumentFragment) =>
+        !!fragment.textContent?.trim() ||
+        !!fragment.querySelector('img, svg, video, audio, iframe, hr, br, table');
+    if (!hasContent(firstFragment) || !hasContent(secondFragment)) return null;
+    return { first: serialize(firstFragment), second: serialize(secondFragment) };
+}
+
 function nodeHtml(node: ChildNode): string {
     if (node instanceof Element) return node.outerHTML;
     const holder = document.createElement('div');

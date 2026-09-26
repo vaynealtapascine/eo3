@@ -15,7 +15,7 @@ import { DataPreview } from './data-preview';
 import { SITE_TARGETS } from '../../targets';
 import { copiedKey, useSiteTarget } from '../../targets/context';
 import { removeLiftedSkinRules } from '../../targets/delivery/skin-record';
-import { splitHtml } from '../../util/split-html';
+import { splitHtml, splitHtmlAtMarker, SPLIT_MARKER } from '../../util/split-html';
 import {
     listProfiles,
     PROFILE_TARGET_PREFIX,
@@ -345,6 +345,13 @@ function splitPart(document: Document, partId: string, fits: (html: string) => b
     const found = document.splittableContent(partId);
     if ('reason' in found) return found.reason;
     const contents = (found.module.data as { contents?: string }).contents ?? '';
+    if (contents.includes(SPLIT_MARKER)) {
+        const marked = splitHtmlAtMarker(contents);
+        if (!marked) return 'Place the chapter break between content on both sides.';
+        if (!fits(marked.first)) return 'The content before the chapter break is still too long.';
+        document.splitPart(partId, marked.first, marked.second);
+        return null;
+    }
     const result = splitHtml(contents, fits);
     if (!result) {
         return 'There’s no place to split it: its first paragraph or block is already too long.';

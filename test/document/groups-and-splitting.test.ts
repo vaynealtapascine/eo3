@@ -191,4 +191,20 @@ describe('splitting a part', () => {
         expect(doc.splittableContent(part.id)).toHaveProperty('reason');
         expect(doc.splitPart(part.id, 'a', 'b')).toBeNull();
     });
+
+    it('does not rewrite a text source shared with another part or group', async () => {
+        const { doc, part, text } = await oneChapter('<p>one</p><p>two</p>');
+        const second = doc.addPart();
+        const shared = doc.findModule(text.id)!.shallowClone();
+        shared.sends = [part.outputId, second.outputId];
+        doc.insertModule(shared);
+        expect(doc.splittableContent(part.id)).toHaveProperty('reason');
+        expect(doc.splitPart(part.id, '<p>one</p>', '<p>two</p>')).toBeNull();
+
+        const local = doc.findModule(text.id)!.shallowClone();
+        local.sends = [part.outputId];
+        doc.insertModule(local);
+        expect(doc.createGroup('Text', part.id, [text.id])).not.toBeNull();
+        expect(doc.splittableContent(part.id)).toHaveProperty('reason');
+    });
 });

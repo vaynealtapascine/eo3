@@ -633,6 +633,16 @@ export class Document extends EventTarget {
             };
         }
         const [mod] = content;
+        if (mod.sends.length !== 1 || mod.sends[0] !== part.outputId || mod.namedSends.size) {
+            return {
+                reason: 'This text is also sent elsewhere. Make a separate copy before splitting it.',
+            };
+        }
+        if (this.groupInstances.some((instance) => instance.moduleIds.includes(mod.id))) {
+            return {
+                reason: 'This text belongs to a reusable group. Detach or copy it before splitting.',
+            };
+        }
         const language = (mod.data as { language?: unknown } | null)?.language;
         if (mod.plugin.id !== 'source.text' || !HTML_LANGUAGES.has(language as string)) {
             return {

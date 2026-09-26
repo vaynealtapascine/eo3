@@ -1,4 +1,4 @@
-import { PureComponent } from 'react';
+import { createRef, PureComponent } from 'react';
 import {
     ModulePlugin,
     ModulePluginProps,
@@ -8,6 +8,7 @@ import {
     PlainTextData,
 } from '../../document';
 import { CodeEditor } from '../../ui/components/code-editor';
+import { SPLIT_MARKER } from '../../util/split-html';
 import { RichEditor } from '../../ui/components/rich-editor';
 import { EditorView } from '@codemirror/view';
 import { html } from '@codemirror/lang-html';
@@ -45,6 +46,19 @@ class TextEditor extends PureComponent<ModulePluginProps<TextPluginData>> {
 
     memoizedExtensions: any = null;
     modeSelectId = Math.random().toString(36);
+    codeEditor = createRef<CodeEditor>();
+
+    insertSplitMarker = () => {
+        const view = this.codeEditor.current?.editor.current?.view;
+        if (!view) return;
+        const { from, to } = view.state.selection.main;
+        const insert = `\n${SPLIT_MARKER}\n`;
+        view.dispatch({
+            changes: { from, to, insert },
+            selection: { anchor: from + insert.length },
+        });
+        view.focus();
+    };
 
     get extensions() {
         if (!this.memoizedExtensions) {
@@ -92,6 +106,12 @@ class TextEditor extends PureComponent<ModulePluginProps<TextPluginData>> {
                         <label htmlFor={useRichTextCheckboxId}>Rich Text Editor</label>
                     </span>
                 ) : null}
+                {(data.language === 'html' ||
+                    (data.language === HTML_CONTENTEDITABLE && !this.state.editingRichText)) && (
+                    <button type="button" onClick={this.insertSplitMarker}>
+                        insert chapter break
+                    </button>
+                )}
             </div>
         );
 
@@ -107,6 +127,7 @@ class TextEditor extends PureComponent<ModulePluginProps<TextPluginData>> {
         } else {
             editor = (
                 <CodeEditor
+                    ref={this.codeEditor}
                     value={data.contents}
                     onChange={(contents) => onChange({ ...data, contents })}
                     extensions={this.extensions}

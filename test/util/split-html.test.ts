@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { splitHtml } from '../../src/util/split-html';
+import { splitHtml, splitHtmlAtMarker, SPLIT_MARKER } from '../../src/util/split-html';
 
 const underLength = (max: number) => (html: string) => html.length <= max;
 
@@ -34,5 +34,28 @@ describe('splitHtml', () => {
 
     it('returns null when there is only one block', () => {
         expect(splitHtml('<p>only</p>', () => true)).toBeNull();
+    });
+});
+
+describe('splitHtmlAtMarker', () => {
+    it('splits at an explicit marker between paragraphs', () => {
+        expect(splitHtmlAtMarker(`<p>one</p>${SPLIT_MARKER}<p>two</p>`)).toEqual({
+            first: '<p>one</p>',
+            second: '<p>two</p>',
+        });
+    });
+
+    it('reopens a surrounding wrapper and leaves later markers for later splits', () => {
+        const html = `<div class="story"><p>one</p>${SPLIT_MARKER}<p>two</p>${SPLIT_MARKER}<p>three</p></div>`;
+        expect(splitHtmlAtMarker(html)).toEqual({
+            first: '<div class="story"><p>one</p></div>',
+            second: `<div class="story"><p>two</p>${SPLIT_MARKER}<p>three</p></div>`,
+        });
+    });
+
+    it('requires content on both sides of the marker', () => {
+        expect(splitHtmlAtMarker(`${SPLIT_MARKER}<p>only</p>`)).toBeNull();
+        expect(splitHtmlAtMarker(`<div>${SPLIT_MARKER}<p>only</p></div>`)).toBeNull();
+        expect(splitHtmlAtMarker('<p>no marker</p>')).toBeNull();
     });
 });

@@ -188,6 +188,12 @@ module; eo3 never automatically removes its authored rules.
         the limit next to the size meter. Tested in the browser on a 530 kB chapter
         (→ 450 kB + 80 kB, 0.1 s). Tests: `test/util/split-html.test.ts`, split cases in
         `test/document/groups-and-splitting.test.ts`.
+-   [x] **Author-placed break follow-up.** HTML source modules offer "insert chapter break" in
+        code mode, inserting the invisible `<!-- eo3:split -->` marker at the cursor. Parts with a
+        marker offer "split at break" without waiting for the size warning. The size warning
+        prefers the first marker and checks that its first piece fits the target. Splitting can
+        reopen a surrounding wrapper and leaves later markers for subsequent splits. It refuses
+        a text source shared with another part or group so other uses are not silently rewritten.
         Not done: an author-placed break marker in content (adding a part covers it for now).
 -   [x] **6b — custom target profiles.** `src/targets/profile/`: `TargetProfile` + `parseProfile`
         (validates imported JSON, fills defaults) + `newProfile` template (`types.ts`);
@@ -256,8 +262,6 @@ Everything in the design's seven phases has landed. Known gaps, roughly by value
     the selection are rejected because a copied group cannot recreate them. The disabled group
     action explains that constraint. Grouped members remain separate graph cards rather than one
     collapsible card.
--   **Break marker in content.** Splitting is offered at 95% of a site's limit and a new part can
-    be added by hand; an author-placed marker ("split here") inside a text isn't supported.
 -   **Profile editor, advanced fields.** `styleAttributeProperties`, `removeContents` and
     `whitespaceElements` can be set by importing JSON but have no form fields.
 -   **wafrn edge cases** (see phase 7): readers with reduced motion, server-rendered pages and
@@ -299,3 +303,6 @@ Everything in the design's seven phases has landed. Known gaps, roughly by value
     `groupablePart` checks a selection's external wiring before creation; copying a group remaps
     its internal links and part output. Remaining group UI work: optionally collapse members into
     one card.
+-   2026-09-26 — Added an author-placed chapter break marker to HTML source modules. Authors can
+    insert it at the code editor's cursor and split a part at that point, even below the size
+    warning threshold. The size prompt honors it when present.
