@@ -17,6 +17,7 @@ import {
     ReactFlowInstance,
 } from 'reactflow';
 import { collapsedStyles, layoutNodes } from './auto-layout';
+import { connectionId, groupCards, isGroupNode, routeEdge } from './group-cards';
 import { GRID_SIZE, MIN_COL_GAP, MOD_BASE_WIDTH } from './consts';
 import { ModulePicker } from '../module-picker';
 import 'reactflow/dist/style.css';
@@ -33,7 +34,18 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
         addingModule: false,
         modulePickerAnchor: null,
         groupSelection: [] as ModuleId[],
+        /** Group instances shown as their member nodes; the rest are one card each. */
+        expandedGroups: [] as string[],
     };
+
+    toggleGroup(instanceId: string) {
+        const expanded = this.state.expandedGroups;
+        this.setState({
+            expandedGroups: expanded.includes(instanceId)
+                ? expanded.filter((id) => id !== instanceId)
+                : [...expanded, instanceId],
+        });
+    }
 
     private selectionChangeFromGraph: ModuleId | EdgeId | null = null;
 
@@ -196,6 +208,7 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
         const nodeRemoveChanges: NodeRemoveChange[] = [];
 
         for (const change of changes) {
+            if ('id' in change && isGroupNode(change.id)) continue;
             if (change.type === 'select') {
                 if (change.selected && !isPartOutput(change.id)) {
                     newSelected = change.id;
@@ -246,14 +259,16 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
         const edgesToRemove: EdgeId[] = [];
 
         for (const change of changes) {
+            if (change.type !== 'select' && change.type !== 'remove') continue;
+            const id = connectionId(change.id);
             if (change.type === 'select') {
                 if (change.selected) {
-                    newSelected = change.id;
-                } else if (!change.selected && newSelected === change.id) {
+                    newSelected = id;
+                } else if (!change.selected && newSelected === id) {
                     newSelected = null;
                 }
-            } else if (change.type === 'remove') {
-                edgesToRemove.push(change.id);
+            } else {
+                edgesToRemove.push(id);
             }
         }
 
@@ -317,6 +332,9 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
         const colStride = Math.ceil((MOD_BASE_WIDTH + MIN_COL_GAP) / GRID_SIZE) * GRID_SIZE;
         const maxLayoutX = (layout.columns.length - 1) * colStride;
 
+        const { cards, collapsedInto } = groupCards(document, hidden, this.state.expandedGroups);
+        const positions = new Map<ModuleId, { x: number; y: number }>();
+
         for (const module of document.modules) {
             if (hidden.has(module.id)) continue;
             const nodeLayout = layout.layouts.get(module.id)!;
@@ -333,6 +351,8 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
             if (module.graphPos?.x === autoLayoutPos.x && module.graphPos?.y === autoLayoutPos.y) {
                 module.graphPos = null;
             }
+            positions.set(module.id, module.graphPos || autoLayoutPos);
+            if (collapsedInto.has(module.id)) continue;
 
             nodes.push({
                 id: module.id,
@@ -346,6 +366,28 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
                     selected,
                     currentOutput: output,
                     currentError: error,
+                },
+            });
+        }
+
+        // A collapsed card sits at its last member, which usually feeds the part.
+        for (const { instanceId, members, nodeId, expanded, title } of cards) {
+            const anchor = expanded
+                ? members.reduce((a, b) => (positions.get(b)!.y < positions.get(a)!.y ? b : a))
+                : members[members.length - 1];
+            const { x, y } = positions.get(anchor)!;
+            nodes.push({
+                id: nodeId,
+                position: expanded ? { x, y: y - GRID_SIZE * 2 } : { x, y },
+                type: 'group',
+                draggable: false,
+                deletable: false,
+                data: {
+                    title,
+                    memberCount: members.length,
+                    expanded,
+                    selected: !!selected && members.includes(selected),
+                    onToggle: () => this.toggleGroup(instanceId),
                 },
             });
         }
@@ -371,9 +413,10 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
             });
         });
 
-        const edges = getConnections(document, selected).filter(
-            (edge) => !hidden.has(edge.source) && !hidden.has(edge.target)
-        );
+        const edges = getConnections(document, selected).flatMap((edge) => {
+            if (hidden.has(edge.source) || hidden.has(edge.target)) return [];
+            return routeEdge(edge, collapsedInto) ?? [];
+        });
 
         return (
             <div

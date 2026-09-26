@@ -183,6 +183,28 @@
         }
     }
 
+    /* A collapsed group: a card with a second card peeking out behind it. */
+    .i-module-item.is-group {
+        box-shadow: var(--shading), 4px 4px 0 -1px var(--P-graph-node-bg),
+            4px 4px 0 0 var(--P-graph-connection);
+
+        &.is-selected {
+            box-shadow: var(--shading), 0 0 0 2px var(--selected), 4px 4px 0 1px var(--selected);
+        }
+    }
+
+    .i-group-toggle {
+        cursor: pointer;
+        font-size: 0.75em;
+    }
+
+    .i-group-label {
+        width: 160px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
     .i-output-node {
         cursor: grab;
 
