@@ -164,6 +164,29 @@ describe('saving and loading parts', () => {
         expect(loadedStyles.data).toEqual({ text: '.two{}' });
         expect(loaded.modules[0].sends).toEqual([MOD_OUTPUT, second.outputId]);
     });
+
+    it.each(['toml', 'json'])('keeps posted rules and cleans unused ones (%s)', (format) => {
+        const doc = new Document();
+        const id = doc.parts[0].id;
+        doc.setPartPosted(
+            id,
+            {
+                at: '2026-09-26',
+                classes: ['eo3-used'],
+                htmlHash: 'hash',
+                skinCss: '#workskin .eo3-used { color: red; }',
+            },
+            { 'eo3-used': '.eo3-used { color: red; }', 'eo3-unused': '.eo3-unused {}' }
+        );
+        const loaded = deserializeV1(serializeV1(doc, format));
+        expect(loaded.parts[0].posted).toEqual(doc.parts[0].posted);
+        expect(loaded.skinRecord).toEqual(doc.skinRecord);
+
+        loaded.cleanupUnusedSkinRules();
+        expect(loaded.skinRecord).toEqual({ 'eo3-used': '.eo3-used { color: red; }' });
+        loaded.undo();
+        expect(loaded.skinRecord).toEqual(doc.skinRecord);
+    });
 });
 
 describe('managed part modules', () => {

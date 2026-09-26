@@ -54,6 +54,7 @@ export function CohostPreviewFooter({
             <hr />
             <div className="post-footer">
                 <PostSize size={html.length} />
+                <PostedStatus posting={posting} partName={`Post ${part.index + 1}`} />
                 {EXPORT_ACTIONS.map((action) => (
                     <CopyToClipboardButton
                         key={action.id}
@@ -63,7 +64,6 @@ export function CohostPreviewFooter({
                         onCopied={posting.onCopied}
                     />
                 ))}
-                <PostedStatus posting={posting} partName={`Post ${part.index + 1}`} />
             </div>
         </>
     );

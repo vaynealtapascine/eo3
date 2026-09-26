@@ -72,6 +72,8 @@ export interface DocumentState {
     modules: AnyModule[];
     /** The work's parts in publication order (chapters, posts, pages); never empty. */
     parts: Part[];
+    /** Canonical lifted Work Skin rules saved when a part was marked posted. */
+    skinRecord: Record<string, string>;
 }
 
 /** One unit of the work: a chapter, a post in a thread, a page — whatever the target calls it. */
@@ -94,6 +96,8 @@ export interface PostedSnapshot {
     classes: string[];
     /** fnv1a36 of the posted HTML, to tell when the part has changed since. */
     htmlHash: string;
+    /** The complete Work Skin at marking time, for a change summary before the next copy. */
+    skinCss?: string;
 }
 
 export function isPartOutput(id: ModuleId): boolean {
@@ -120,6 +124,7 @@ export interface WorkOutput {
     workCss: string;
     /** Each CSS module and the parts it reaches, in module order. */
     cssSources: CssSourceOutput[];
+    skinRecord: Record<string, string>;
 }
 
 export interface CssSourceOutput {
@@ -135,12 +140,19 @@ export interface PartOutput {
     content: string;
     /** CSS that reaches this part but not every part, in module order. */
     css: string;
+    posted: PostedSnapshot | null;
 }
 
 export class Document extends EventTarget {
     history: HistoryEntry[] = [
         {
-            state: { title: '', titleInPost: false, modules: [], parts: [newPart(MOD_OUTPUT)] },
+            state: {
+                title: '',
+                titleInPost: false,
+                modules: [],
+                parts: [newPart(MOD_OUTPUT)],
+                skinRecord: {},
+            },
             desc: { type: ChangeType.Load },
             time: Date.now(),
         },
@@ -148,11 +160,17 @@ export class Document extends EventTarget {
     historyCursor = 0;
 
     /** Sets the initial state; a state without parts (older files) gets one part on MOD_OUTPUT. */
-    init(state: Omit<DocumentState, 'parts'> & { parts?: Part[] }) {
+    init(
+        state: Omit<DocumentState, 'parts' | 'skinRecord'> & {
+            parts?: Part[];
+            skinRecord?: Record<string, string>;
+        }
+    ) {
         if (this.history.length > 1) throw new Error('cannot init in this state');
         this.history[0].state = {
             ...state,
             parts: state.parts?.length ? state.parts : [newPart(MOD_OUTPUT)],
+            skinRecord: state.skinRecord ?? {},
         };
     }
 
@@ -174,6 +192,10 @@ export class Document extends EventTarget {
 
     get parts(): Readonly<Part[]> {
         return this.state.parts;
+    }
+
+    get skinRecord(): Readonly<Record<string, string>> {
+        return this.state.skinRecord;
     }
 
     findPart(id: string) {
@@ -350,6 +372,33 @@ export class Document extends EventTarget {
 
     updatePart(id: string, changes: Partial<Omit<Part, 'id' | 'outputId'>>) {
         this.pushParts(this.parts.map((part) => (part.id === id ? { ...part, ...changes } : part)));
+    }
+
+    /** Mark a part posted and save its lifted rules in one undoable change. */
+    setPartPosted(
+        id: string,
+        posted: PostedSnapshot | null,
+        skinRules: Record<string, string> = {}
+    ) {
+        if (!this.findPart(id)) return;
+        this.pushHistoryState(
+            {
+                ...this.state,
+                parts: this.parts.map((part) => (part.id === id ? { ...part, posted } : part)),
+                skinRecord: { ...this.skinRecord, ...skinRules },
+            },
+            { type: ChangeType.EditParts }
+        );
+    }
+
+    /** Drop recorded rules no posted part references; currently authored rules export as usual. */
+    cleanupUnusedSkinRules() {
+        const referenced = new Set(this.parts.flatMap((part) => part.posted?.classes ?? []));
+        const skinRecord = Object.fromEntries(
+            Object.entries(this.skinRecord).filter(([name]) => referenced.has(name))
+        );
+        if (Object.keys(skinRecord).length === Object.keys(this.skinRecord).length) return;
+        this.pushHistoryState({ ...this.state, skinRecord }, { type: ChangeType.EditParts });
     }
 
     movePart(id: string, index: number) {
@@ -549,6 +598,7 @@ export class Document extends EventTarget {
         return {
             work: {
                 workCss: inModuleOrder(workSources),
+                skinRecord: this.skinRecord as Record<string, string>,
                 cssSources: this.modules
                     .filter((mod) => partsReached.has(mod.id))
                     .map((mod) => ({
@@ -565,6 +615,7 @@ export class Document extends EventTarget {
                     css: inModuleOrder(
                         new Set([...contents[i].cssSources].filter((id) => !workSources.has(id)))
                     ),
+                    posted: part.posted,
                 })),
             },
             nodes: state.cache,

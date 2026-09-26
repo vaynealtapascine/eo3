@@ -652,6 +652,10 @@ export function Ao3PreviewHeader({
                                 <h3 className="landmark heading">Actions</h3>
                                 <div className="post-footer-simulate" style={{ float: 'right' }}>
                                     <PostSize size={html.length} />
+                                    <PostedStatus
+                                        posting={posting}
+                                        partName={`Chapter ${part.index + 1}`}
+                                    />
                                     {EXPORT_ACTIONS.map((action) => (
                                         <CopyToClipboardButton
                                             key={action.id}
@@ -661,10 +665,6 @@ export function Ao3PreviewHeader({
                                             onCopied={posting.onCopied}
                                         />
                                     ))}
-                                    <PostedStatus
-                                        posting={posting}
-                                        partName={`Chapter ${part.index + 1}`}
-                                    />
                                 </div>
 
                                 <div id="kudos_message"></div>

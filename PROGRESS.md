@@ -14,8 +14,8 @@ update it whenever a step lands (what changed, what's next, anything surprising)
 | ----- | -------------------------------------------------------------------------------------------------------------- | ----------- |
 | 1     | Canonical, sorted Work Skin; pinned-hash test; collision check                                                 | Done        |
 | 2     | `Work` + parts in the document; migration of saved documents; parts list UI; `export()` over a work            | Done        |
-| 3     | Delivery strategies (`shared-stylesheet`, `inline`); skin record; diff before copy; part-scoped CSS; conflicts | In progress |
-| 4     | Import an existing skin, then existing chapters                                                                | Not started |
+| 3     | Delivery strategies (`shared-stylesheet`, `inline`); skin record; diff before copy; part-scoped CSS; conflicts | Done        |
+| 4     | Import an existing skin, then existing chapters                                                                | Next        |
 | 5     | Group nodes (shared but detachable); first packaged effects                                                    | Not started |
 | 6     | Size-based splitting; custom target profiles; crossposting                                                     | Not started |
 | 7     | wafrn target (read its sanitizer source first)                                                                 | Not started |
@@ -98,7 +98,7 @@ Landed in four commits, each leaving the app working:
         `onCopied`; copies of 'part'-scoped outputs are tracked per session in `Eo3` state
         (`copiedParts`, not persisted). Parts list shows "posted" / "not marked posted" badges.
 
-## Phase 3 — delivery strategies and the skin record (next)
+## Phase 3 — delivery strategies and the skin record (done)
 
 Plan, in order:
 
@@ -110,12 +110,18 @@ Plan, in order:
         class for each part it reaches (scope follows reach). Work CSS stays unscoped. Needs the
         reach per CSS module, not just per part: extend `evalWork` to return, per CSS source,
         the set of parts it reaches.
--   [ ] Skin record: keep a rule while any posted snapshot references its class, even if no
+-   [x] Skin record: keep a rule while any posted snapshot references its class, even if no
         current part does; "clean up unused styles" drops the rest after showing them.
--   [ ] Diff before copy: compare the new Work Skin with the one last marked posted (store the
+-   [x] Diff before copy: compare the new Work Skin with the one last marked posted (store the
         skin text or its rule set when a part is marked posted) — "N styles added, M removed".
--   [ ] Cross-part conflict warning: the same selector with different declarations in CSS
+-   [x] Cross-part conflict warning: the same selector with different declarations in CSS
         that reaches different parts.
+
+The skin record is saved in document version 1. Marking a part posted adds its lifted rules to
+that record and saves the current Work Skin for the later diff. Export retains a recorded rule only
+while some posted part references its class. The cleanup control shows the unused rules before
+deleting them from the record. Older posted snapshots have class names but no saved rule text or
+Work Skin; marking those parts posted again seeds the record and diff baseline.
 
 ## Log
 
@@ -129,3 +135,7 @@ Plan, in order:
 -   2026-09-26 — Phase 3 delivery strategies extracted; shared stylesheets now scope CSS by each
     module's reach and wrap multi-part HTML. The preview uses the same part wrapper. Next: skin
     record, diff before copy, and cross-part conflict warnings.
+-   2026-09-26 — Phase 3 complete. Posted snapshots now capture Work Skin text and lifted rules;
+    export retains referenced rules, cleanup lists and removes unreferenced records, the preview
+    shows added/removed style counts before copy, and selectors with conflicting part-specific
+    declarations are reported. Next: phase 4 import.

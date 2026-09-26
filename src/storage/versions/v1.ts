@@ -108,6 +108,7 @@ export function serializeV1(doc: Document, format?: string): string {
     const docData: Record<string, any> = { version: 1 };
     if (doc.title) docData.title = doc.title;
     if (doc.titleInPost) docData.titleInPost = doc.titleInPost;
+    if (Object.keys(doc.skinRecord).length) docData.skinRecord = doc.skinRecord;
     // A single untouched part is implied by older files, so it isn't written.
     const [first] = doc.parts;
     const trivialParts =
@@ -222,6 +223,9 @@ export function deserializeV1(input: string): Document {
                   at: String(partData.posted.at),
                   classes: [...(partData.posted.classes || [])],
                   htmlHash: String(partData.posted.htmlHash ?? ''),
+                  ...(partData.posted.skinCss !== undefined
+                      ? { skinCss: String(partData.posted.skinCss) }
+                      : {}),
               }
             : null,
     }));
@@ -231,6 +235,7 @@ export function deserializeV1(input: string): Document {
         titleInPost: data.titleInPost || false,
         modules: docModules,
         parts,
+        skinRecord: data.skinRecord || {},
     });
 
     return doc;

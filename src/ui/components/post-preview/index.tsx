@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { RenderContext } from '../../render-context';
 import { scopeCss } from '../../../targets/delivery/scope-css';
 import { partScopeClass } from '../../../targets/delivery/shared-stylesheet';
+import { diffSkinRules, liftedSkinRules } from '../../../targets/delivery/skin-record';
 import { PreviewRenderIcon } from '../icons';
 import './index.scss';
 import { createPortal } from 'react-dom';
@@ -222,6 +223,7 @@ export function PostPreview({
     copied,
     onPartCopied,
     onPostedChange,
+    onCleanupUnusedStyles,
 }: PostPreview.Props) {
     const partIndex = Math.max(
         0,
@@ -264,9 +266,11 @@ export function PostPreview({
                         source: p.content,
                         html: p.id === part.id ? liveHtml : null,
                         css: p.css,
+                        posted: p.posted,
                     })),
                     workCss: work.workCss,
                     cssSources: work.cssSources,
+                    skinRecord: work.skinRecord,
                     config: config.targetConfig,
                 },
                 (id, props) => errs.push({ id, props })
@@ -334,22 +338,47 @@ export function PostPreview({
 
     const postedHtml = exportOutput.get(plugin.outputs[0].id) ?? '';
     const postedHtmlHash = fnv1a36(postedHtml);
+    const skinOutput = plugin.outputs.find(
+        (output) => output.scope === 'work' && output.typeId === 'text/css'
+    );
+    const skinCss = skinOutput ? exportOutput.get(skinOutput.id) ?? '' : null;
+    const unusedStyles = skinOutput
+        ? Object.entries(work.skinRecord)
+              .filter(([name]) => !work.parts.some((p) => p.posted?.classes.includes(name)))
+              .map(([className, css]) => ({ className, css }))
+        : [];
     const posting: PartPosting = {
         posted,
         copiedUnmarked: copied && !posted,
         changedSincePosted: !!posted && !exportResult.error && posted.htmlHash !== postedHtmlHash,
+        skinDiff:
+            posted?.skinCss !== undefined && skinCss !== null
+                ? diffSkinRules(posted.skinCss, skinCss)
+                : undefined,
+        unusedStyles,
+        cleanupUnusedStyles: onCleanupUnusedStyles,
         onCopied: (outputId) => {
             if (plugin.outputs.find((o) => o.id === outputId)?.scope === 'part') {
                 onPartCopied(part.id);
             }
         },
-        markPosted: () =>
-            onPostedChange(part.id, {
-                at: new Date().toLocaleDateString('en-CA'), // YYYY-MM-DD, local
-                classes: liftedClasses(postedHtml),
-                htmlHash: postedHtmlHash,
-            }),
-        unmarkPosted: () => onPostedChange(part.id, null),
+        markPosted: () => {
+            const classes = liftedClasses(postedHtml);
+            const rules = skinCss === null ? {} : liftedSkinRules(skinCss);
+            onPostedChange(
+                part.id,
+                {
+                    at: new Date().toLocaleDateString('en-CA'), // YYYY-MM-DD, local
+                    classes,
+                    htmlHash: postedHtmlHash,
+                    ...(skinCss === null ? {} : { skinCss }),
+                },
+                Object.fromEntries(
+                    classes.filter((name) => rules[name]).map((name) => [name, rules[name]])
+                )
+            );
+        },
+        unmarkPosted: () => onPostedChange(part.id, null, {}),
     };
 
     const previewProps: SiteTargetPreviewProps<any> = {
@@ -448,7 +477,12 @@ namespace PostPreview {
         /** Whether the part on screen was copied this session. */
         copied: boolean;
         onPartCopied: (partId: string) => void;
-        onPostedChange: (partId: string, posted: PostedSnapshot | null) => void;
+        onPostedChange: (
+            partId: string,
+            posted: PostedSnapshot | null,
+            skinRules: Record<string, string>
+        ) => void;
+        onCleanupUnusedStyles: () => void;
     }
 }
 

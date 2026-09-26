@@ -1,5 +1,6 @@
 import { PushError, SiteTargetExportOutput, WorkExportInput, WorkExportOutput } from '../types';
 import { scopeCss } from './scope-css';
+import { scanCrossPartConflicts } from './css-conflicts';
 
 export interface SharedStylesheetPart {
     html: string;
@@ -13,7 +14,7 @@ export function partScopeClass(partId: string): string {
 
 /** Package part HTML and lifted rules with a stylesheet shared by the whole work. */
 export function exportSharedStylesheet<Config>(
-    { parts, workCss, cssSources }: WorkExportInput<Config>,
+    { parts, workCss, cssSources, skinRecord }: WorkExportInput<Config>,
     pushError: PushError,
     renderPart: (source: string) => SharedStylesheetPart,
     canonicalize: (css: string, pushError: PushError) => string
@@ -34,6 +35,22 @@ export function exportSharedStylesheet<Config>(
                 pushError('class-collision', { className, styles: [other, rule] });
             }
         }
+    }
+
+    // Posted HTML may still use a generated class after its source style was edited or removed.
+    const postedClasses = new Set(parts.flatMap((part) => part.posted?.classes ?? []));
+    for (const [className, rule] of Object.entries(skinRecord ?? {})) {
+        if (postedClasses.has(className) && !liftedRules.has(className)) {
+            liftedRules.set(className, rule);
+        }
+    }
+
+    if (cssSources && parts.length > 1) {
+        scanCrossPartConflicts(
+            cssSources,
+            parts.map((part) => part.id),
+            pushError
+        );
     }
 
     const lifted = [...liftedRules.keys()]

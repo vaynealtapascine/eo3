@@ -37,6 +37,8 @@ export interface WorkExportInput<Config> {
     workCss: string;
     /** CSS reach by source; lets shared stylesheets scope rules that reach only some parts. */
     cssSources?: CssSourceOutput[];
+    /** Lifted rules captured when parts were marked posted. */
+    skinRecord?: Record<string, string>;
     config: Config;
 }
 
@@ -52,6 +54,7 @@ export interface PartExportInput {
     html: string | null;
     /** Authored CSS reaching this part but not every part, in module order. */
     css: string;
+    posted?: PostedSnapshot | null;
 }
 
 export interface WorkExportOutput {
@@ -114,6 +117,11 @@ export interface PartPosting {
     copiedUnmarked: boolean;
     /** The part is marked as posted but its output has changed since. */
     changedSincePosted: boolean;
+    /** Work Skin rule changes since the part was marked posted. */
+    skinDiff?: { added: number; removed: number };
+    /** Recorded lifted rules no posted part needs. */
+    unusedStyles?: { className: string; css: string }[];
+    cleanupUnusedStyles?(): void;
     /** Call after an export action copied `outputId`. */
     onCopied(outputId: string): void;
     markPosted(): void;

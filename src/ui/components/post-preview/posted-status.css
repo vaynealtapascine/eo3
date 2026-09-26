@@ -25,4 +25,23 @@
         text-decoration: underline;
         cursor: pointer;
     }
+
+    .skin-cleanup {
+        max-width: 30em;
+
+        summary {
+            cursor: pointer;
+        }
+
+        ul {
+            max-height: 14em;
+            overflow: auto;
+            padding-left: 1.4em;
+        }
+
+        pre {
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+        }
+    }
 }

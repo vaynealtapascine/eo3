@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { exportWork } from '../../src/targets/ao3/export';
 import { PartExportInput } from '../../src/targets/types';
+import { diffSkinRules, liftedSkinRules } from '../../src/targets/delivery/skin-record';
+import { renderAo3Content } from '../../src/targets/ao3/render';
 
 const part = (id: string, source: string, css = ''): PartExportInput => ({
     id,
@@ -33,6 +35,9 @@ describe('AO3 export over a work', () => {
         );
         expect(out.parts.get('b')!.get('html')).toBe(
             '<div class="eo3-part-b"><p class="eo3-h66u19">two</p><p class="eo3-lenkkc">again</p></div>'
+        );
+        expect(renderAo3Content(out.parts.get('a')!.get('html')!).html).toBe(
+            out.parts.get('a')!.get('html')
         );
         expect(out.work.get('css')).toBe(
             [
@@ -83,5 +88,64 @@ describe('AO3 export over a work', () => {
         expect(skin.indexOf('.eo3-part-a .pair')).toBeLessThan(skin.indexOf('.all'));
         expect(skin.indexOf('.all')).toBeLessThan(skin.indexOf('.eo3-part-b .only'));
         expect(errors).toEqual(['css-media-flattened']);
+    });
+
+    it('keeps lifted styles still referenced by posted HTML after their source is removed', () => {
+        const original = run([part('a', '<p style="color:red">old</p>')]);
+        const originalCss = original.out.work.get('css')!;
+        const record = liftedSkinRules(originalCss);
+        expect(Object.keys(record)).toEqual(['eo3-h66u19']);
+
+        const posted = {
+            ...part('a', '<p>new</p>'),
+            posted: {
+                at: '2026-09-26',
+                classes: ['eo3-h66u19'],
+                htmlHash: 'old',
+                skinCss: originalCss,
+            },
+        };
+        const retained = exportWork(
+            { parts: [posted], workCss: '', skinRecord: record, config: {} },
+            () => {}
+        );
+        expect(retained.work.get('css')).toBe(originalCss);
+        expect(diffSkinRules(originalCss, retained.work.get('css')!)).toEqual({
+            added: 0,
+            removed: 0,
+        });
+
+        const noLongerPosted = exportWork(
+            { parts: [part('a', '<p>new</p>')], workCss: '', skinRecord: record, config: {} },
+            () => {}
+        );
+        expect(noLongerPosted.work.get('css')).toBe('');
+        expect(diffSkinRules(originalCss, noLongerPosted.work.get('css')!)).toEqual({
+            added: 0,
+            removed: 1,
+        });
+    });
+
+    it('warns when the same selector has different declarations across parts', () => {
+        const parts = [part('a', 'one'), part('b', 'two'), part('c', 'three')];
+        const errors: { id: string; props: any }[] = [];
+        exportWork(
+            {
+                parts,
+                workCss: '',
+                cssSources: [
+                    { id: 'a', css: '.note { color: red; }', partIds: ['a'] },
+                    { id: 'b', css: '.note { color: blue; }', partIds: ['b'] },
+                    { id: 'c', css: '.note { color: red; }', partIds: ['c'] },
+                ],
+                config: {},
+            },
+            (id, props) => errors.push({ id, props })
+        );
+        expect(errors).toContainEqual({
+            id: 'cross-part-css-conflict',
+            props: { selector: '.note', parts: [1, 2] },
+        });
+        expect(errors.filter((e) => e.id === 'cross-part-css-conflict')).toHaveLength(1);
     });
 });

@@ -84,7 +84,10 @@ export function Preview({
                         posted={shownPart.posted}
                         copied={copiedParts.includes(shownPart.id)}
                         onPartCopied={onPartCopied}
-                        onPostedChange={(id, posted) => document.updatePart(id, { posted })}
+                        onPostedChange={(id, posted, rules) =>
+                            document.setPartPosted(id, posted, rules)
+                        }
+                        onCleanupUnusedStyles={() => document.cleanupUnusedSkinRules()}
                         plugin={siteTargetPlugin}
                         config={previewConfig}
                         onConfigChange={onPreviewConfigChange}

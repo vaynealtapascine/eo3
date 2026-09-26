@@ -78,6 +78,14 @@ export const ERRORS = {
             </div>
         );
     },
+    'cross-part-css-conflict'({ selector, parts }: { selector: string; parts: number[] }) {
+        return (
+            <div>
+                Styles for <code>{selector}</code> differ across chapters {parts.join(', ')}. Check
+                the Work Skin before posting those chapters.
+            </div>
+        );
+    },
     'img-load-failed'({ url, isFirstOfType }: { url: string } & ErrProps) {
         return (
             <div>
