@@ -28,6 +28,16 @@ export interface TargetProfile {
     protocols: Record<string, string[]>;
     /** Allowed CSS properties; absent means any property is kept. */
     cssProperties?: string[];
+    /**
+     * Allowed CSS properties in `style` attributes, when the site filters those differently
+     * from stylesheets (wafrn filters attributes but not `<style>` blocks); defaults to
+     * `cssProperties`.
+     */
+    styleAttributeProperties?: string[];
+    /** Advanced: elements removed together with their contents (default: script, style, svg, …). */
+    removeContents?: string[];
+    /** Advanced: elements that get a space either side when unwrapped (default: block elements). */
+    whitespaceElements?: string[];
 }
 
 /** Checks untrusted JSON (an imported profile) and fills defaults; returns an error message instead. */
@@ -52,8 +62,13 @@ export function parseProfile(value: unknown): TargetProfile | string {
     if (v.protocols !== undefined && !stringLists(v.protocols)) {
         return '"protocols" must map "element.attribute" to lists of protocols.';
     }
-    if (v.cssProperties !== undefined && !strings(v.cssProperties)) {
-        return '"cssProperties" must be a list of property names.';
+    for (const key of [
+        'cssProperties',
+        'styleAttributeProperties',
+        'removeContents',
+        'whitespaceElements',
+    ]) {
+        if (v[key] !== undefined && !strings(v[key])) return `"${key}" must be a list of names.`;
     }
     if (
         v.partMaxChars !== undefined &&
@@ -70,10 +85,16 @@ export function parseProfile(value: unknown): TargetProfile | string {
         elements: (v.elements as string[]).map((s) => s.toLowerCase()),
         attributes: (v.attributes as Record<string, string[]>) ?? {},
         protocols: (v.protocols as Record<string, string[]>) ?? {},
-        ...(v.cssProperties
-            ? { cssProperties: (v.cssProperties as string[]).map((s) => s.toLowerCase()) }
-            : {}),
+        ...lowercased(v, 'cssProperties'),
+        ...lowercased(v, 'styleAttributeProperties'),
+        ...lowercased(v, 'removeContents'),
+        ...lowercased(v, 'whitespaceElements'),
     };
+}
+
+/** `{ [key]: lowercased list }` when the optional list is present, else nothing. */
+function lowercased(v: Record<string, unknown>, key: string) {
+    return Array.isArray(v[key]) ? { [key]: (v[key] as string[]).map((s) => s.toLowerCase()) } : {};
 }
 
 /** A starting point for a new profile: common formatting tags, links and images, inline styles. */

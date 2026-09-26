@@ -18,7 +18,7 @@ update it whenever a step lands (what changed, what's next, anything surprising)
 | 4     | Import an existing skin, then existing chapters                                                                | Done  |
 | 5     | Group nodes (shared but detachable); first packaged effects                                                    | Done  |
 | 6     | Size-based splitting; custom target profiles; crossposting                                                     | Done  |
-| 7     | wafrn target (read its sanitizer source first)                                                                 | Next  |
+| 7     | wafrn target (read its sanitizer source first)                                                                 | Done  |
 
 ## Phase 1 — canonical, sorted Work Skin (done)
 
@@ -87,7 +87,7 @@ Landed in four commits, each leaving the app working:
         every part. `SiteTargetProvider` now wraps the whole editor (the left panel needs the
         target's `partLabel`). Tests: `test/document/parts.test.ts` (mocks the plugin
         registry; the real Text plugin needs `matchMedia`).
-        **Not done:** collapsing managed style modules under their part in the graph view.
+        (Collapsing managed style modules into their output node landed in phase 5.)
 -   [x] **2d — posting.** `PostedSnapshot { at, classes, htmlHash }` on `Part` (persisted).
         `SiteTargetPreviewProps.posting: PartPosting` (built in `PostPreview`): marking records
         the date, the `eo3-*` classes in the part's primary output (`class="…"` attributes) and
@@ -217,6 +217,53 @@ module; eo3 never automatically removes its authored rules.
         practice = switching the site selector; each site keeps its own marks, record and diff.
         Tests: "crossposting" in `test/document/parts.test.ts`.
 
+## Phase 7 — wafrn (done)
+
+Read from wafrn's source (codeberg.org/wafrn/wafrn; the GitHub mirror is archived) at `944a5ab`:
+
+-   Readers' browsers run `sanitize-html` (2.17.7) in `PostRenderingService.getPostHtml`
+    (`packages/frontend/src/app/services/post-rendering.service.ts`), then insert the HTML with
+    raw `innerHTML` into a component with `ViewEncapsulation.ShadowDom`. So a post's `<style>`
+    block (allowed via `allowVulnerableTags`) applies to that post only; `class` is allowed on
+    everything; `style` attributes are filtered to ~120 properties; `<style>` content isn't.
+-   No `<div>` (use `<section>`/`<aside>`); `<marquee>`, `<font>`, `<details>`, ruby are allowed.
+-   Images in post text get `src` blanked at display (stored content is unchanged).
+-   Readers with reduced motion get Angular `[innerHTML]` instead, which strips styles. The
+    backend's server-rendered pages (`services/getPostHtml.ts`) allow no `class`/`<style>`/`img`.
+    Other fediverse servers apply their own sanitizers. None of these are modelled.
+-   No practical size limit (50 MB request body), so no `partMaxChars`.
+
+Built as:
+
+-   `src/targets/wafrn/sanitizer-config.json` — wafrn's own settings, extracted (not
+    transcribed) by `test/wafrn-parity/extract.mjs` (`npm run test:wafrn-update`; parses the
+    source as text, never runs it; records the commit and wafrn's locked sanitize-html version).
+-   `src/targets/wafrn/index.tsx` — a profile (`embedded-style` delivery) built from that config
+    via `createProfileTarget`, which gained an extension hook (own id, own ERRORS registry,
+    per-part `finalizePart`, mascot). wafrn's `finalizePart` warns about images. Profiles gained
+    `styleAttributeProperties` (filter for `style` attributes only), `removeContents` and
+    `whitespaceElements` (sanitize-html unwraps without spacing and keeps `<style>`).
+-   `test/wafrn-parity/parity.test.ts` runs the real sanitize-html (pinned to wafrn's version)
+    with the extracted config against eo3's wafrn target over 17 cases, plus a version check.
+    `.github/workflows/wafrn-upstream.yml` re-extracts weekly and opens a PR on change.
+
+## Open follow-ups
+
+Everything in the design's seven phases has landed. Known gaps, roughly by value:
+
+-   **Group any modules (power users).** `Document.createGroup` exists and is tested, but there
+    is no UI: it needs multi-select in the graph. Today groups come only from the effect shelf.
+-   **Break marker in content.** Splitting is offered at 95% of a site's limit and a new part can
+    be added by hand; an author-placed marker ("split here") inside a text isn't supported.
+-   **Profile editor, advanced fields.** `styleAttributeProperties`, `removeContents` and
+    `whitespaceElements` can be set by importing JSON but have no form fields.
+-   **wafrn edge cases** (see phase 7): readers with reduced motion, server-rendered pages and
+    other fediverse servers show posts without styles. Only mentioned in the target description.
+-   **Posting state for deleted profiles.** Marks stored under `profile:<id>` stay in documents
+    after that profile is deleted (harmless, invisible); nothing cleans them up.
+-   **Pushing.** Everything after `06b3f80` (the last push to `origin/main`) is local until
+    someone pushes.
+
 ## Log
 
 -   2026-09-26 — Plan written; phase 1 started.
@@ -244,3 +291,4 @@ module; eo3 never automatically removes its authored rules.
 -   2026-09-26 — Phase 6a (splitting long parts) done. Next: 6b custom target profiles.
 -   2026-09-26 — Phase 6b (custom target profiles) done. Next: 6c crossposting.
 -   2026-09-26 — Phase 6c (crossposting: per-target posting state) done; phase 6 complete. Next: phase 7 (wafrn).
+-   2026-09-26 — Phase 7 (wafrn) done. All planned phases complete; see "Open follow-ups".

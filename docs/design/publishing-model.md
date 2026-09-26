@@ -50,12 +50,12 @@ eo3 today produces exactly one piece of content per project, and each target dec
 
 **Site constraints that shape the design**
 
-| Site                         | Unit                    | Where CSS can live                                  | Does a CSS change affect posted units? | Limits                                                            |
-| ---------------------------- | ----------------------- | --------------------------------------------------- | -------------------------------------- | ----------------------------------------------------------------- |
-| AO3                          | Chapter of a work       | One Work Skin shared by every chapter               | Yes: a skin edit restyles all chapters | 510,000 characters per chapter and per skin; strict CSS validator |
-| cohost (legacy)              | Post, often in a thread | Inline `style` only; classes and `<style>` stripped | No: each post is frozen                | cohost's sanitizer                                                |
-| wafrn                        | Post                    | Not yet verified                                    | Not yet verified                       | Not yet verified                                                  |
-| Static site (e.g. Neocities) | Page                    | Anywhere, including shared stylesheets              | Yes, if pages share a stylesheet       | Host limits only                                                  |
+| Site                         | Unit                    | Where CSS can live                                                                                                              | Does a CSS change affect posted units? | Limits                                                            |
+| ---------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- | ----------------------------------------------------------------- |
+| AO3                          | Chapter of a work       | One Work Skin shared by every chapter                                                                                           | Yes: a skin edit restyles all chapters | 510,000 characters per chapter and per skin; strict CSS validator |
+| cohost (legacy)              | Post, often in a thread | Inline `style` only; classes and `<style>` stripped                                                                             | No: each post is frozen                | cohost's sanitizer                                                |
+| wafrn                        | Post                    | A `<style>` block per post (scoped to the post by a shadow DOM), classes, and filtered `style` attributes (verified in phase 7) | No: each post carries its own styles   | No practical limit                                                |
+| Static site (e.g. Neocities) | Page                    | Anywhere, including shared stylesheets                                                                                          | Yes, if pages share a stylesheet       | Host limits only                                                  |
 
 AO3 limits are from otwarchive's `config.yml` (`CONTENT_MAX: 510000`) and `skin.rb` (`validates :css, length: { maximum: ArchiveConfig.CONTENT_MAX }`). The key consequence: on AO3 every Work Skin rule applies to every chapter, and removing a rule can break a chapter posted months ago.
 

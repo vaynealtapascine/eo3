@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { ComponentType, useRef, useState } from 'react';
 import { DirPopover } from '../../uikit/dir-popover';
 import { CopyToClipboardButton } from '../../ui/components/post-preview/copy-to-clipboard-button';
 import { PostedStatus } from '../../ui/components/post-preview/posted-status';
@@ -17,7 +17,7 @@ import {
     WorkExportInput,
     WorkExportOutput,
 } from '../types';
-import { ERRORS } from './diagnostics';
+import { ERRORS as PROFILE_ERRORS } from './diagnostics';
 import { filterStyleAttributes, filterStylesheet } from './filter-css';
 import { PROFILE_TARGET_PREFIX } from './store';
 import { TargetProfile } from './types';
@@ -29,19 +29,42 @@ const MASCOT =
     'height="40" rx="6" fill="none" stroke="currentColor" stroke-width="4"/><path d="M18 26h28M18 ' +
     '34h28M18 42h16" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>';
 
+/** What a built-in target adds on top of its profile (see targets/wafrn). */
+export interface ProfileTargetExtension {
+    /** The target's id; custom profiles use `profile:<id>`. */
+    id?: string;
+    /** Its own error registry (each target keeps an explicit one); defaults to the profile's. */
+    errors?: Record<string, ComponentType<any>>;
+    /** Site-specific changes to each part's HTML after sanitizing, shown in preview and export. */
+    finalizePart?(root: HTMLElement, pushError: PushError): void;
+    mascot?: { awake: string; asleep: string };
+}
+
 /** Builds a site target from a profile: its sanitizer, its delivery strategy, its limits. */
-export function createProfileTarget(profile: TargetProfile): SiteTargetPlugin<Config> {
+export function createProfileTarget(
+    profile: TargetProfile,
+    extension: ProfileTargetExtension = {}
+): SiteTargetPlugin<Config> {
     // Inline sites never see classes (the inliner removes them), but CSS needs them to match first.
     const sanitizeConfig = toSanitizeConfig(profile, profile.delivery === 'inline');
-    const cssAllowed = profile.cssProperties && new Set(profile.cssProperties);
+    const sheetAllowed = profile.cssProperties && new Set(profile.cssProperties);
+    const attributeList = profile.styleAttributeProperties ?? profile.cssProperties;
+    const attributeAllowed = attributeList && new Set(attributeList);
+    const errors = extension.errors ?? PROFILE_ERRORS;
 
     const render = (content: string, pushError: PushError, lift = false) => {
         const root = document.createElement('div');
         root.innerHTML = content;
         const css = lift ? liftInlineStyles(root, (d) => pushError(d.kind, d)) : '';
         sanitizeFragment(root, sanitizeConfig, (d) => pushError(d.kind, d));
+        // Inline delivery filters after inlining, when the attributes are complete.
+        if (attributeAllowed && profile.delivery !== 'inline') {
+            filterStyleAttributes(root, attributeAllowed, pushError);
+        }
+        extension.finalizePart?.(root, pushError);
         return { root, css };
     };
+    const renderQuietly = (content: string) => render(content, () => {}).root.innerHTML;
 
     const exportActions: SiteTargetExportAction[] = [
         { id: 'copy-html', label: 'Copy HTML', outputId: 'html' },
@@ -52,7 +75,7 @@ export function createProfileTarget(profile: TargetProfile): SiteTargetPlugin<Co
 
     const exportWork = (input: WorkExportInput<Config>, pushError: PushError): WorkExportOutput => {
         const filterSheet = (css: string, report: PushError) =>
-            cssAllowed ? filterStylesheet(css, cssAllowed, report) : css;
+            sheetAllowed ? filterStylesheet(css, sheetAllowed, report) : css;
 
         switch (profile.delivery) {
             case 'shared-stylesheet':
@@ -69,14 +92,14 @@ export function createProfileTarget(profile: TargetProfile): SiteTargetPlugin<Co
                 const output = exportInline(
                     input,
                     pushError,
-                    (source, html) => html ?? render(source, () => {}).root.innerHTML,
+                    (source, html) => html ?? renderQuietly(source),
                     () => {}
                 );
-                if (!cssAllowed) return output;
+                if (!attributeAllowed) return output;
                 for (const outputs of output.parts.values()) {
                     const root = document.createElement('div');
                     root.innerHTML = outputs.get('html') ?? '';
-                    filterStyleAttributes(root, cssAllowed, pushError);
+                    filterStyleAttributes(root, attributeAllowed, pushError);
                     outputs.set('html', root.innerHTML);
                 }
                 return output;
@@ -84,7 +107,7 @@ export function createProfileTarget(profile: TargetProfile): SiteTargetPlugin<Co
             case 'embedded-style': {
                 const parts = new Map(
                     input.parts.map((part) => {
-                        const html = part.html ?? render(part.source, () => {}).root.innerHTML;
+                        const html = part.html ?? renderQuietly(part.source);
                         const css = filterSheet(
                             [input.workCss, part.css].filter(Boolean).join('\n'),
                             pushError
@@ -117,7 +140,7 @@ export function createProfileTarget(profile: TargetProfile): SiteTargetPlugin<Co
     };
 
     return {
-        id: PROFILE_TARGET_PREFIX + profile.id,
+        id: extension.id ?? PROFILE_TARGET_PREFIX + profile.id,
         title: profile.title,
         initialConfig: () => ({}),
         renderFallback: (content, _config, pushError) =>
@@ -134,9 +157,14 @@ export function createProfileTarget(profile: TargetProfile): SiteTargetPlugin<Co
         export: exportWork,
         exportActions,
         PreviewFooter: (props) => (
-            <ProfileFooter {...props} profile={profile} exportActions={exportActions} />
+            <ProfileFooter
+                {...props}
+                profile={profile}
+                exportActions={exportActions}
+                errorRegistry={errors}
+            />
         ),
-        outputMascot: { awake: MASCOT, asleep: MASCOT },
+        outputMascot: extension.mascot ?? { awake: MASCOT, asleep: MASCOT },
     };
 }
 
@@ -153,6 +181,10 @@ function toSanitizeConfig(profile: TargetProfile, keepClasses: boolean): Sanitiz
         allAttributes: keepClasses ? [...all, 'class'] : all,
         attributesByTag: byTag,
         protocols,
+        ...(profile.removeContents ? { removeContents: new Set(profile.removeContents) } : {}),
+        ...(profile.whitespaceElements
+            ? { whitespaceElements: new Set(profile.whitespaceElements) }
+            : {}),
     });
 }
 
@@ -166,9 +198,11 @@ function ProfileFooter({
     asyncErrors,
     profile,
     exportActions,
+    errorRegistry,
 }: SiteTargetPreviewProps<Config> & {
     profile: TargetProfile;
     exportActions: SiteTargetExportAction[];
+    errorRegistry: Record<string, ComponentType<any>>;
 }) {
     const errorButton = useRef<HTMLButtonElement>(null);
     const [errorsOpen, setErrorsOpen] = useState(false);
@@ -205,19 +239,25 @@ function ProfileFooter({
                     open={errorsOpen}
                     onClose={() => setErrorsOpen(false)}
                 >
-                    <ErrorList errors={errors} />
+                    <ErrorList errors={errors} registry={errorRegistry} />
                 </DirPopover>
             </div>
         </>
     );
 }
 
-function ErrorList({ errors }: { errors: ErrorMessage[] }) {
+function ErrorList({
+    errors,
+    registry,
+}: {
+    errors: ErrorMessage[];
+    registry: Record<string, ComponentType<any>>;
+}) {
     const seenTypes = new Set<string>();
     return (
         <ul className="i-errors">
             {errors.map(({ id, props }, i) => {
-                const Component = (ERRORS as Record<string, any>)[id];
+                const Component = registry[id];
                 if (!Component) return null;
                 const isFirstOfType = !seenTypes.has(id);
                 seenTypes.add(id);

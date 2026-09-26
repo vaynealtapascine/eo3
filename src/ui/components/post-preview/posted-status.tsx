@@ -108,7 +108,7 @@ export function PostedStatus({ posting, partName }: { posting: PartPosting; part
             {copiedUnmarked && (
                 <span className="i-note is-warning">
                     You copied {partName} but haven’t marked it as posted. Mark it once it’s up, so
-                    its styles are kept in the Work Skin.
+                    eo3 can tell you when it changes and keep the styles it uses.
                 </span>
             )}
             <button className="button-appearance" onClick={posting.markPosted}>

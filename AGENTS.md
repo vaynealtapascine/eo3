@@ -11,6 +11,7 @@ npm run typecheck        # tsc --noEmit — the only type check; the build strip
 npm test                 # Vitest (jsdom): AO3 parity tests
 npm run build            # production build (Vite 8 / rolldown)
 npm run test:ao3-update  # regenerate AO3 parity expectations (needs Ruby ≥ 3.2 + network)
+npm run test:wafrn-update  # re-extract wafrn's sanitizer settings (needs network)
 ```
 
 Run `typecheck` and `test` before committing; CI runs both plus the build on every push.

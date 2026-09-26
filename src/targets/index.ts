@@ -14,6 +14,12 @@ export const SITE_TARGETS: { [k: string]: SiteTargetDef } = {
             'Renders with a faithful port of AO3’s HTML sanitizer and Work Skin CSS validator.',
         load: lazy(() => import('./ao3')),
     },
+    wafrn: {
+        title: 'wafrn',
+        description:
+            'Renders with wafrn’s own sanitizer settings. Each post can carry a <style> block, scoped to that post. Readers with reduced motion turned on, and other fediverse servers, may show posts without their styles.',
+        load: lazy(() => import('./wafrn')),
+    },
     cohost: {
         title: 'Cohost',
         description:
