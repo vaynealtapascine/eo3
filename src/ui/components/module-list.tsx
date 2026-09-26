@@ -6,7 +6,6 @@ import {
     AnyModule,
     JsonValue,
     NamedSends,
-    MOD_OUTPUT,
     ChangeType,
     ModulePluginProps,
     UserData,
@@ -17,6 +16,7 @@ import { ModulePicker } from './module-picker';
 import './module-list.css';
 import { TextField } from '../../uikit/text-field';
 import { EditIcon } from './icons';
+import { useSiteTarget } from '../../targets/context';
 
 type ModuleSelection = {
     selected: ModuleId | null;
@@ -669,6 +669,7 @@ function ModuleTitle({
 }
 
 function ModuleSends({ document, sends, onChange }: ModuleSends.Props) {
+    const partLabel = useSiteTarget().plugin?.partLabel ?? 'Part';
     const makeModuleSelect = (
         key: string,
         value: ModuleId | null,
@@ -696,7 +697,13 @@ function ModuleSends({ document, sends, onChange }: ModuleSends.Props) {
                         );
                     })
                     .filter((x) => x)}
-                <option value={MOD_OUTPUT}>output</option>
+                {document.parts.map((part, i) => (
+                    <option key={part.id} value={part.outputId}>
+                        {document.parts.length > 1
+                            ? `${partLabel} ${i + 1}${part.title ? `: ${part.title}` : ''}`
+                            : 'output'}
+                    </option>
+                ))}
             </select>
         );
     };

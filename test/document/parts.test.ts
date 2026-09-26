@@ -1,4 +1,21 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+// The real Text plugin pulls in editors that need a full browser; the document only needs its id.
+vi.mock('../../src/plugins', () => ({
+    MODULES: {
+        'source.text': {
+            load: async () => ({
+                id: 'source.text',
+                acceptsInputs: false,
+                acceptsNamedInputs: false,
+                component: () => null,
+                initialData: () => ({ contents: '', language: 'text' }),
+                description: () => 'Text',
+                eval: async () => null,
+            }),
+        },
+    },
+}));
 import {
     CssData,
     Document,
@@ -142,5 +159,30 @@ describe('saving and loading parts', () => {
         const loadedStyles = loaded.findModule(loaded.parts[1].stylesModuleId!)!;
         expect(loadedStyles.data).toEqual({ text: '.two{}' });
         expect(loaded.modules[0].sends).toEqual([MOD_OUTPUT, second.outputId]);
+    });
+});
+
+describe('managed part modules', () => {
+    it('adds a part with a text module wired to it, undone in one step', async () => {
+        const doc = new Document();
+        const part = await doc.addPartWithText('Chapter text');
+        const text = doc.modules.find((m) => m.sends.includes(part.outputId))!;
+        expect(text.title).toBe('Chapter text');
+        doc.undo();
+        expect(doc.parts).toHaveLength(1);
+        expect(doc.modules).toHaveLength(0);
+    });
+
+    it('creates part styles once, wired to the part, and again after detaching', async () => {
+        const doc = new Document();
+        const part = doc.addPart();
+        const first = await doc.partStyles(part.id, 'Chapter styles');
+        expect(await doc.partStyles(part.id, 'Chapter styles')).toBe(first);
+        expect(doc.findModule(first!)!.sends).toEqual([part.outputId]);
+
+        doc.updatePart(part.id, { stylesModuleId: null });
+        const second = await doc.partStyles(part.id, 'Chapter styles');
+        expect(second).not.toBe(first);
+        expect(doc.findModule(first!)).toBeDefined();
     });
 });

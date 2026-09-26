@@ -1,5 +1,12 @@
 import { createRef, lazy, PureComponent, Suspense } from 'react';
-import { ChangeType, Document, MOD_OUTPUT, Module, ModuleId, RenderState } from '../../../document';
+import {
+    ChangeType,
+    Document,
+    Module,
+    ModuleId,
+    RenderState,
+    isPartOutput,
+} from '../../../document';
 import {
     Connection,
     EdgeChange,
@@ -53,9 +60,9 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
 
         let sourceModule = document.findModule(source);
         const targetModule = document.findModule(target);
-        if (!sourceModule || (target !== 'output' && !targetModule)) return;
+        if (!sourceModule || (!isPartOutput(target) && !targetModule)) return;
         if (sourceModule.sends.includes(target)) return;
-        if (target !== 'output' && !targetModule?.plugin?.acceptsInputs) return;
+        if (!isPartOutput(target) && !targetModule?.plugin?.acceptsInputs) return;
 
         sourceModule = sourceModule.shallowClone();
         sourceModule.sends = [...sourceModule.sends];
@@ -174,7 +181,7 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
 
         for (const change of changes) {
             if (change.type === 'select') {
-                if (change.selected && change.id !== MOD_OUTPUT) {
+                if (change.selected && !isPartOutput(change.id)) {
                     newSelected = change.id;
                 } else if (!change.selected && newSelected === change.id) {
                     newSelected = null;
@@ -310,13 +317,20 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
             });
         }
 
-        nodes.push({
-            id: MOD_OUTPUT,
-            position: { x: 0, y: 0 },
-            type: 'modOutput',
-            data: {
-                hasOutput: !!render.output?.work?.parts.some((part) => part.content),
-            },
+        const renderedParts = render.output?.work?.parts;
+        document.parts.forEach((part, i) => {
+            const outputLayout = layout.layouts.get(part.outputId)!;
+            nodes.push({
+                id: part.outputId,
+                position: { x: 0, y: outputLayout.y },
+                type: 'modOutput',
+                data: {
+                    hasOutput: !!renderedParts?.find((p) => p.id === part.id)?.content,
+                    partIndex: i,
+                    partTitle: part.title,
+                    partCount: document.parts.length,
+                },
+            });
         });
 
         const edges = getConnections(document, selected);
@@ -382,7 +396,12 @@ function getConnections(document: Document, selected: ModuleId | EdgeId | null) 
     const connections: any[] = [];
 
     const modDescriptions = new Map<ModuleId, string>();
-    modDescriptions.set(MOD_OUTPUT, 'output');
+    document.parts.forEach((part, i) => {
+        modDescriptions.set(
+            part.outputId,
+            document.parts.length > 1 ? `part ${i + 1} output` : 'output'
+        );
+    });
 
     let modIndex = 1;
     for (const mod of document.modules) {

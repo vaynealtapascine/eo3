@@ -75,10 +75,19 @@ Landed in four commits, each leaving the app working:
         chrome the part's index/count/title (AO3 mockup shows "Chapter N: title"). Part
         selection lives in `Eo3` state (`partId`); `preview.tsx` shows a part selector when
         there's more than one part. Tests: `test/ao3/export.test.ts`.
--   [ ] **2c — UI.** Parts list (labels from the target: Chapter/Post); one output node per part
-        in the graph (`module-graph/index.tsx`, `auto-layout.ts`) and per-part entries in the
-        module list's send menu (`module-list.tsx`); managed "Part styles" CSS module per part,
-        auto-wired, detachable, collapsed under its part in the graph.
+-   [x] **2c — UI.** `src/ui/components/parts-list.tsx` in the left panel: one row per part
+        (select → preview; title; styles; detach; ↑/↓; remove with confirm) and "+ add
+        chapter", which calls `Document.addPartWithText` (new part + a rich-text module wired
+        to it, one undo step). "styles" calls `Document.partStyles`, which creates the part's
+        managed CSS module wired to it on first use (lazy, so single-chapter works stay
+        uncluttered) and returns the same module afterwards; "detach" clears `stylesModuleId`
+        and leaves the module and its wiring alone. Graph: one output node per part
+        (`auto-layout.ts` column 0 in part order; labelled "Chapter N" when there are several;
+        160px apart), `isPartOutput()` replaces `'output'` checks. Module list send menus list
+        every part. `SiteTargetProvider` now wraps the whole editor (the left panel needs the
+        target's `partLabel`). Tests: `test/document/parts.test.ts` (mocks the plugin
+        registry; the real Text plugin needs `matchMedia`).
+        **Not done:** collapsing managed style modules under their part in the graph view.
 -   [ ] **2d — posting.** "Mark as posted" (explicit) recording the part's `eo3-*` classes;
         warnings for copied-but-unmarked parts.
 
@@ -91,3 +100,5 @@ part CSS is simply added to the shared skin unscoped.
 -   2026-09-26 — Phase 1 done (see findings above). Next: phase 2.
 -   2026-09-26 — Phase 2a (data model) done.
 -   2026-09-26 — Phase 2b (targets export the whole work) done.
+-   2026-09-26 — Phase 2c (parts list, graph outputs, part styles) done. Also fixed a pre-existing
+    crash: undo that shortened a code editor's text blanked the app (`codemirror.tsx`).

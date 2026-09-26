@@ -62,11 +62,17 @@ export function OutputNode({ data }: { data: any }) {
         setPointerDown(false);
     };
 
+    const partName =
+        data.partCount > 1
+            ? `${siteTargetPlugin?.partLabel ?? 'Part'} ${data.partIndex + 1}` +
+              (data.partTitle ? `: ${data.partTitle}` : '')
+            : null;
+
     return (
         <div
             ref={node}
             className={'i-output-node' + (isPointerDown ? ' is-patting' : '')}
-            aria-label="Output"
+            aria-label={partName ? `Output for ${partName}` : 'Output'}
             onPointerDown={onDown}
             onPointerMove={onMove}
             onPointerUp={onUp}
@@ -87,6 +93,7 @@ export function OutputNode({ data }: { data: any }) {
                         : '',
                 }}
             ></div>
+            {partName && <div className="i-part-name">{partName}</div>}
         </div>
     );
 }

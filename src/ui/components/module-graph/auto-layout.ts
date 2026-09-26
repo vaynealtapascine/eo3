@@ -1,4 +1,4 @@
-import { Document, ModuleId, AnyModule, MOD_OUTPUT } from '../../../document';
+import { Document, ModuleId, AnyModule } from '../../../document';
 import {
     MOD_HEADER_HEIGHT,
     MOD_INPUT_HEIGHT,
@@ -49,13 +49,16 @@ export type NodeLayout = {
     acceptsInputs: boolean;
     namedInputs: Set<string>;
 };
+/** A laid-out node: a module (ordered by module index) or a part's output (listed first, in part order). */
+type ColumnEntry = { id: ModuleId; order: number };
+
 export type GraphLayout = {
-    columns: (AnyModule | null)[][];
+    columns: ColumnEntry[][];
     layouts: Map<ModuleId, NodeLayout>;
     indices: Map<ModuleId, number>;
 };
 export function layoutNodes(doc: Document): GraphLayout {
-    const columns: (AnyModule | null)[][] = [];
+    const columns: ColumnEntry[][] = [];
     const nodeLayouts = new Map<ModuleId, NodeLayout>();
 
     const indices = new Map();
@@ -69,15 +72,19 @@ export function layoutNodes(doc: Document): GraphLayout {
         outgoingEdges.set(node, edges);
     }
 
-    nodeLayouts.set(MOD_OUTPUT, {
-        column: 0,
-        index: 0,
-        y: 0,
-        height: 64,
-        acceptsInputs: true,
-        namedInputs: new Set(),
+    columns.push([]);
+    doc.parts.forEach((part, i) => {
+        nodeLayouts.set(part.outputId, {
+            column: 0,
+            index: i,
+            y: 0,
+            // room for the mascot and its part label once there are several outputs
+            height: doc.parts.length > 1 ? 160 : 64,
+            acceptsInputs: true,
+            namedInputs: new Set(),
+        });
+        columns[0].push({ id: part.outputId, order: i - doc.parts.length });
     });
-    columns.push([null]);
 
     for (const node of toposortDoc(doc, true)) {
         let column = 0;
@@ -100,19 +107,15 @@ export function layoutNodes(doc: Document): GraphLayout {
             acceptsInputs: node.plugin.acceptsInputs,
             namedInputs: new Set(namedInputs.keys()),
         });
-        columns[column].push(node);
+        columns[column].push({ id: node.id, order: indices.get(node.id) });
     }
 
     let colIndex = 0;
     for (const col of columns) {
-        col.sort((a, b) => {
-            if (!a) return -1;
-            if (!b) return 1;
-            return indices.get(a.id)! - indices.get(b.id)!;
-        });
+        col.sort((a, b) => a.order - b.order);
         let y = 0;
         for (let i = 0; i < col.length; i++) {
-            const layout = nodeLayouts.get(col[i]?.id || MOD_OUTPUT)!;
+            const layout = nodeLayouts.get(col[i].id)!;
             layout.column = columns.length - 1 - colIndex;
             layout.index = i;
             layout.y = y;

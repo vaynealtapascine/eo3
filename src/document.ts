@@ -293,6 +293,51 @@ export class Document extends EventTarget {
         return part;
     }
 
+    /** Adds a part at the end with a rich-text module wired to it, as one undoable step. */
+    async addPartWithText(contentTitle: string): Promise<Part> {
+        const plugin = await MODULES['source.text'].load();
+        const part = newPart();
+        const module = new Module(plugin, { contents: '', language: 'html-contenteditable' });
+        module.title = contentTitle;
+        module.sends = [part.outputId];
+        this.pushHistoryState(
+            {
+                ...this.state,
+                modules: [...this.modules, module],
+                parts: [...this.parts, part],
+            },
+            { type: ChangeType.EditParts }
+        );
+        return part;
+    }
+
+    /**
+     * Returns the part's managed "Part styles" CSS module, creating it (wired to the part) the
+     * first time it's asked for. Detaching it (`updatePart(id, { stylesModuleId: null })`) leaves
+     * the module and its wiring to the user; a new one is made on the next request.
+     */
+    async partStyles(partId: string, title: string): Promise<ModuleId | null> {
+        const existing = this.findPart(partId)?.stylesModuleId;
+        if (existing) return existing;
+        const plugin = await MODULES['source.text'].load();
+        const part = this.findPart(partId);
+        if (!part) return null;
+        const module = new Module(plugin, { contents: '', language: 'css' });
+        module.title = title;
+        module.sends = [part.outputId];
+        this.pushHistoryState(
+            {
+                ...this.state,
+                modules: [...this.modules, module],
+                parts: this.parts.map((p) =>
+                    p.id === partId ? { ...p, stylesModuleId: module.id } : p
+                ),
+            },
+            { type: ChangeType.EditParts }
+        );
+        return module.id;
+    }
+
     updatePart(id: string, changes: Partial<Omit<Part, 'id' | 'outputId'>>) {
         this.pushParts(this.parts.map((part) => (part.id === id ? { ...part, ...changes } : part)));
     }

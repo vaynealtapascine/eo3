@@ -1,6 +1,7 @@
 import { PureComponent } from 'react';
 import { SplitPanel } from './components/split-panel';
 import { ModuleList } from './components/module-list';
+import { PartsList } from './components/parts-list';
 import { ModuleGraph, EdgeId } from './components/module-graph';
 import { Preview } from './components/preview';
 import { Document, ModuleId, RenderOutput, RenderState } from '../document';
@@ -169,20 +170,29 @@ export class Eo3 extends PureComponent<Eo3.Props, Eo3State> {
 
         return (
             <RenderContext.Provider value={this.renderContext}>
-                <div className="eo3">
-                    <SplitPanel
-                        initialPos={Math.min(0.7, Math.max(500 / innerWidth, 1 - 700 / innerWidth))}
-                    >
-                        <div className="eo3-left-panel">
-                            <DocumentSettings doc={doc} />
-                            <ModuleList
-                                document={doc}
-                                selected={this.state.selected}
-                                onSelect={(selected) => this.setState({ selected })}
-                                userData={this.state.render.output?.userData}
-                            />
-                        </div>
-                        <SiteTargetProvider>
+                <SiteTargetProvider>
+                    <div className="eo3">
+                        <SplitPanel
+                            initialPos={Math.min(
+                                0.7,
+                                Math.max(500 / innerWidth, 1 - 700 / innerWidth)
+                            )}
+                        >
+                            <div className="eo3-left-panel">
+                                <DocumentSettings doc={doc} />
+                                <PartsList
+                                    document={doc}
+                                    partId={this.state.partId}
+                                    onSelectPart={(partId) => this.setState({ partId })}
+                                    onSelectModule={(selected) => this.setState({ selected })}
+                                />
+                                <ModuleList
+                                    document={doc}
+                                    selected={this.state.selected}
+                                    onSelect={(selected) => this.setState({ selected })}
+                                    userData={this.state.render.output?.userData}
+                                />
+                            </div>
                             <SplitPanel vertical initialPos={Math.max(0.6, 1 - 300 / innerHeight)}>
                                 <Preview
                                     document={doc}
@@ -225,9 +235,9 @@ export class Eo3 extends PureComponent<Eo3.Props, Eo3State> {
                                     />
                                 ) : null}
                             </SplitPanel>
-                        </SiteTargetProvider>
-                    </SplitPanel>
-                </div>
+                        </SplitPanel>
+                    </div>
+                </SiteTargetProvider>
             </RenderContext.Provider>
         );
     }

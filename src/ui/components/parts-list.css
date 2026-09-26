@@ -1,0 +1,74 @@
+.parts-list {
+    padding: 0.4em 0.6em 0.6em;
+    box-shadow: inset 0 -1px #0004;
+
+    button {
+        font: inherit;
+        color: inherit;
+        background: rgb(var(--P-color-shade) / var(--P-color-shade-opacity));
+        border: none;
+        border-radius: 0.4em;
+        padding: 0.15em 0.45em;
+        margin: 0;
+        cursor: pointer;
+
+        &:disabled {
+            opacity: 0.4;
+            cursor: default;
+        }
+    }
+
+    .i-parts {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+
+    .i-part {
+        display: flex;
+        align-items: center;
+        gap: 0.4em;
+        padding: 0.2em;
+        border-radius: 0.5em;
+
+        &.is-selected {
+            background: rgb(var(--P-color-accent) / 0.12);
+
+            .i-select {
+                background: rgb(var(--P-color-accent));
+                color: rgb(var(--P-color-accent-fg));
+            }
+        }
+    }
+
+    .i-select {
+        flex-shrink: 0;
+        white-space: nowrap;
+    }
+
+    .i-title {
+        flex: 1;
+        min-width: 4em;
+        font: inherit;
+        color: inherit;
+        background: none;
+        border: 1px solid transparent;
+        border-radius: 0.3em;
+        padding: 0.1em 0.3em;
+
+        &:hover,
+        &:focus {
+            border-color: rgb(var(--P-color-soft-outline) / var(--P-color-soft-outline-opacity));
+        }
+    }
+
+    .i-actions {
+        display: flex;
+        gap: 0.2em;
+        flex-shrink: 0;
+    }
+
+    .i-add {
+        margin-top: 0.3em;
+    }
+}
