@@ -54,6 +54,7 @@ export function Preview({
             </div>
         );
     } else if (render.output) {
+        const work = render.output.work;
         if (render.output.target) {
             const data = render.output.outputs.get(render.output.target)!;
 
@@ -63,6 +64,7 @@ export function Preview({
                 </div>
             );
         } else if (
+            work &&
             siteTargetPlugin &&
             previewConfig &&
             previewConfig.target === siteTargetPlugin.id
@@ -72,8 +74,8 @@ export function Preview({
                     <PostPreview
                         renderId={render.id}
                         stale={render.rendering}
-                        markdown={render.output.markdownOutput!}
-                        cssInput={render.output.cssOutput}
+                        markdown={work.parts[0].content}
+                        cssInput={[work.workCss, work.parts[0].css].filter(Boolean).join('\n')}
                         plugin={siteTargetPlugin}
                         config={previewConfig}
                         onConfigChange={onPreviewConfigChange}

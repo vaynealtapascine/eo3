@@ -1,5 +1,14 @@
 import { DBSchema, IDBPDatabase, IDBPTransaction, StoreNames } from 'idb';
-import { Document, Module, JsonValue, UnloadedPlugin, ModuleId } from '../../document';
+import {
+    Document,
+    Module,
+    JsonValue,
+    UnloadedPlugin,
+    ModuleId,
+    MOD_OUTPUT,
+    Part,
+    isPartOutput,
+} from '../../document';
 import { parse as parseON, stringify as stringifyON } from './onv1';
 import {
     parse as parseToml,
@@ -49,8 +58,8 @@ export function serializeV1(doc: Document, format?: string): string {
         const namedSends: Record<string, string[]> = {};
 
         for (const target of module.sends) {
-            if (target === 'output') {
-                sends.push('output');
+            if (isPartOutput(target)) {
+                sends.push(target);
                 continue;
             }
             const targetIndex = moduleIndices.get(target);
@@ -99,6 +108,26 @@ export function serializeV1(doc: Document, format?: string): string {
     const docData: Record<string, any> = { version: 1 };
     if (doc.title) docData.title = doc.title;
     if (doc.titleInPost) docData.titleInPost = doc.titleInPost;
+    // A single untouched part is implied by older files, so it isn't written.
+    const [first] = doc.parts;
+    const trivialParts =
+        doc.parts.length === 1 &&
+        first.outputId === MOD_OUTPUT &&
+        !first.title &&
+        !first.stylesModuleId &&
+        !first.posted;
+    if (!trivialParts) {
+        docData.parts = doc.parts.map((part) => {
+            const partData: Record<string, JsonValue> = { id: part.id, output: part.outputId };
+            if (part.title) partData.title = part.title;
+            const styles = part.stylesModuleId && moduleIndices.get(part.stylesModuleId);
+            if (styles !== undefined && styles !== null) partData.styles = styles;
+            if (part.posted) partData.posted = { ...part.posted };
+            return format === 'toml'
+                ? TomlSection(partData as Record<string, TomlValue>)
+                : partData;
+        });
+    }
     docData.modules = modules;
 
     switch (format) {
@@ -155,8 +184,8 @@ export function deserializeV1(input: string): Document {
         if (moduleData.sends) {
             module.sends = moduleData.sends
                 .map((index: number | string) => {
-                    if (index === 'output') {
-                        return 'output';
+                    if (typeof index === 'string' && isPartOutput(index)) {
+                        return index;
                     } else {
                         return moduleIdAssignments.get(index as number);
                     }
@@ -182,10 +211,22 @@ export function deserializeV1(input: string): Document {
         docModules.push(module);
     }
 
+    const parts: Part[] = (data.parts || []).map((partData: any) => ({
+        id: String(partData.id),
+        title: partData.title || '',
+        outputId: String(partData.output),
+        stylesModuleId:
+            partData.styles !== undefined ? moduleIdAssignments.get(partData.styles) ?? null : null,
+        posted: partData.posted
+            ? { at: String(partData.posted.at), classes: [...(partData.posted.classes || [])] }
+            : null,
+    }));
+
     doc.init({
         title: data.title || '',
         titleInPost: data.titleInPost || false,
         modules: docModules,
+        parts,
     });
 
     return doc;

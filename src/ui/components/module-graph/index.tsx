@@ -315,7 +315,7 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
             position: { x: 0, y: 0 },
             type: 'modOutput',
             data: {
-                hasOutput: !!render.output?.markdownOutput,
+                hasOutput: !!render.output?.work?.parts.some((part) => part.content),
             },
         });
 

@@ -23,6 +23,7 @@ export enum ChangeType {
     UpdateModule = 'update module',
     RearrangeModules = 'rearrange modules',
     SetTitle = 'set title',
+    EditParts = 'edit parts',
 }
 
 type HistoryChangeDesc =
@@ -44,6 +45,9 @@ type HistoryChangeDesc =
       }
     | {
           type: ChangeType.SetTitle;
+      }
+    | {
+          type: ChangeType.EditParts;
       };
 
 const HISTORY_COALESION_TIME_MS = 5000;
@@ -66,21 +70,80 @@ export interface DocumentState {
     title: string;
     titleInPost: boolean;
     modules: AnyModule[];
+    /** The work's parts in publication order (chapters, posts, pages); never empty. */
+    parts: Part[];
+}
+
+/** One unit of the work: a chapter, a post in a thread, a page — whatever the target calls it. */
+export interface Part {
+    /** Stable and never reused, so renaming or reordering parts never changes what refers to them. */
+    id: string;
+    title: string;
+    /** The pseudo-module modules send to for this part. The first part of a work keeps MOD_OUTPUT. */
+    outputId: ModuleId;
+    /** The managed "Part styles" module, or null when there is none (never made, or detached). */
+    stylesModuleId: ModuleId | null;
+    /** Set when the user marks the part as posted. */
+    posted: PostedSnapshot | null;
+}
+
+export interface PostedSnapshot {
+    /** ISO date of marking. */
+    at: string;
+    /** `eo3-*` classes the posted HTML references; they must stay in the shared stylesheet. */
+    classes: string[];
+}
+
+export function isPartOutput(id: ModuleId): boolean {
+    return id === MOD_OUTPUT || id.startsWith(PART_OUTPUT_PREFIX);
+}
+
+const PART_OUTPUT_PREFIX = 'output:';
+
+function newPart(outputId?: ModuleId): Part {
+    const id = Module.genModuleId();
+    return {
+        id,
+        title: '',
+        outputId: outputId ?? PART_OUTPUT_PREFIX + id,
+        stylesModuleId: null,
+        posted: null,
+    };
+}
+
+/** What evaluating the whole work produces, before any target packages it. */
+export interface WorkOutput {
+    parts: PartOutput[];
+    /** CSS from modules that reach every part, in module order. */
+    workCss: string;
+}
+
+export interface PartOutput {
+    id: string;
+    title: string;
+    /** Content (HTML) sent to this part, joined in module order. */
+    content: string;
+    /** CSS that reaches this part but not every part, in module order. */
+    css: string;
 }
 
 export class Document extends EventTarget {
     history: HistoryEntry[] = [
         {
-            state: { title: '', titleInPost: false, modules: [] },
+            state: { title: '', titleInPost: false, modules: [], parts: [newPart(MOD_OUTPUT)] },
             desc: { type: ChangeType.Load },
             time: Date.now(),
         },
     ];
     historyCursor = 0;
 
-    init(state: DocumentState) {
+    /** Sets the initial state; a state without parts (older files) gets one part on MOD_OUTPUT. */
+    init(state: Omit<DocumentState, 'parts'> & { parts?: Part[] }) {
         if (this.history.length > 1) throw new Error('cannot init in this state');
-        this.history[0].state = state;
+        this.history[0].state = {
+            ...state,
+            parts: state.parts?.length ? state.parts : [newPart(MOD_OUTPUT)],
+        };
     }
 
     get state(): Readonly<DocumentState> {
@@ -97,6 +160,14 @@ export class Document extends EventTarget {
 
     get modules(): Readonly<AnyModule[]> {
         return this.state.modules;
+    }
+
+    get parts(): Readonly<Part[]> {
+        return this.state.parts;
+    }
+
+    findPart(id: string) {
+        return this.parts.find((part) => part.id === id);
     }
 
     get canUndo() {
@@ -150,14 +221,7 @@ export class Document extends EventTarget {
     }
 
     pushModulesState(modules: AnyModule[], desc: HistoryChangeDesc) {
-        return this.pushHistoryState(
-            {
-                title: this.title,
-                titleInPost: false,
-                modules,
-            },
-            desc
-        );
+        return this.pushHistoryState({ ...this.state, modules }, desc);
     }
 
     emitChange() {
@@ -197,6 +261,9 @@ export class Document extends EventTarget {
         if (index === -1) return;
 
         modules.splice(index, 1);
+        const parts = this.parts.map((part) =>
+            part.stylesModuleId === moduleId ? { ...part, stylesModuleId: null } : part
+        );
 
         for (let i = 0; i < modules.length; i++) {
             if (modules[i].sends.includes(moduleId) || modules[i].namedSends.has(moduleId)) {
@@ -210,7 +277,54 @@ export class Document extends EventTarget {
             }
         }
 
-        this.pushModulesState(modules, { type: ChangeType.RemoveModule });
+        this.pushHistoryState({ ...this.state, modules, parts }, { type: ChangeType.RemoveModule });
+    }
+
+    private pushParts(parts: Part[], modules = this.modules as AnyModule[]) {
+        this.pushHistoryState({ ...this.state, modules, parts }, { type: ChangeType.EditParts });
+    }
+
+    /** Adds an empty part at the end (or at `index`) and returns it. */
+    addPart(title = '', index = this.parts.length): Part {
+        const part = { ...newPart(), title };
+        const parts = this.parts.slice();
+        parts.splice(index, 0, part);
+        this.pushParts(parts);
+        return part;
+    }
+
+    updatePart(id: string, changes: Partial<Omit<Part, 'id' | 'outputId'>>) {
+        this.pushParts(this.parts.map((part) => (part.id === id ? { ...part, ...changes } : part)));
+    }
+
+    movePart(id: string, index: number) {
+        const parts = this.parts.slice();
+        const from = parts.findIndex((part) => part.id === id);
+        if (from === -1) return;
+        const [part] = parts.splice(from, 1);
+        parts.splice(Math.max(0, Math.min(index, parts.length)), 0, part);
+        this.pushParts(parts);
+    }
+
+    /**
+     * Removes a part and every send to its output. Its managed styles module is removed too;
+     * a detached one is left alone. The last part can't be removed.
+     */
+    removePart(id: string) {
+        const part = this.findPart(id);
+        if (!part || this.parts.length <= 1) return;
+        const modules = this.modules
+            .filter((mod) => mod.id !== part.stylesModuleId)
+            .map((mod) => {
+                if (!mod.sends.includes(part.outputId)) return mod;
+                const clone = mod.shallowClone();
+                clone.sends = mod.sends.filter((target) => target !== part.outputId);
+                return clone;
+            });
+        this.pushParts(
+            this.parts.filter((p) => p.id !== id),
+            modules
+        );
     }
 
     setTitle(title: string) {
@@ -306,64 +420,87 @@ export class Document extends EventTarget {
         return false;
     }
 
-    /** Evaluates the final output of this document. */
-    async evalOutput(): Promise<{
-        inputs: Data[];
+    /**
+     * Evaluates every part with one shared cache, so a module sent to several parts runs once.
+     * CSS is split by reach: a module whose CSS reaches every part is work CSS, the rest belongs to
+     * the parts it reaches. Content and CSS keep module order.
+     */
+    async evalWork(): Promise<{
+        work: WorkOutput;
         nodes: Map<ModuleId, Data>;
         userData: Map<ModuleId, UserData>;
     }> {
-        const cache = new Map();
-        const userData = new Map();
-        const { inputs } = this.evalModuleInputs(MOD_OUTPUT, {
+        const state: DocEvalState = {
             steps: 0,
             asyncCache: new Map(),
-            cache,
-            userData,
-        });
-        return {
-            inputs: await Promise.all(inputs),
-            nodes: cache,
-            userData,
+            cache: new Map(),
+            userData: new Map(),
         };
-    }
+        const pending = this.parts.map((part) =>
+            this.modules.flatMap((mod) =>
+                mod.sends
+                    .filter((target) => target === part.outputId)
+                    .map(() => ({ source: mod.id, data: this.cacheEvalModule(mod, state) }))
+            )
+        );
+        const resolved = await Promise.all(
+            pending.map((inputs) =>
+                Promise.all(inputs.map(async ({ source, data }) => ({ source, data: await data })))
+            )
+        );
 
-    /**
-     * Calls eval() and buckets the terminal inputs by type: CSS inputs are collected into a
-     * single stylesheet, everything else is joined into the content string. Both keep the
-     * order in which their source modules appear in the document (see evalModuleInputs).
-     */
-    async evalMdOutput(): Promise<{
-        markdown: string;
-        css: string;
-        nodes: Map<ModuleId, Data>;
-        userData: Map<ModuleId, UserData>;
-    }> {
-        const { inputs, nodes, userData } = await this.evalOutput();
-
-        const contentParts: string[] = [];
-        const cssParts: string[] = [];
-        inputs.forEach((item, i) => {
-            const cssData = item.into(CssData);
-            if (cssData) {
-                cssParts.push(cssData.contents);
-                return;
+        const cssBySource = new Map<ModuleId, string>();
+        const partsReached = new Map<ModuleId, number>();
+        const contents = resolved.map((inputs, partIndex) => {
+            const contentParts: string[] = [];
+            const cssSources = new Set<ModuleId>();
+            inputs.forEach(({ source, data }, i) => {
+                const cssData = data.into(CssData);
+                if (cssData) {
+                    cssBySource.set(source, cssData.contents);
+                    cssSources.add(source);
+                    return;
+                }
+                const output = data.asMdOutput();
+                if (output === null) {
+                    const where = this.parts.length > 1 ? `, part ${partIndex + 1}` : '';
+                    throw new Error(
+                        'output received data type that could not be converted to markdown: ' +
+                            data.constructor.name +
+                            ` (item ${i + 1}${where})`
+                    );
+                }
+                contentParts.push(output);
+            });
+            for (const source of cssSources) {
+                partsReached.set(source, (partsReached.get(source) ?? 0) + 1);
             }
-            const output = item.asMdOutput();
-            if (output === null) {
-                throw new Error(
-                    'output received data type that could not be converted to markdown: ' +
-                        item.constructor.name +
-                        ` (item ${i + 1})`
-                );
-            }
-            contentParts.push(output);
+            return { content: contentParts.join('\n'), cssSources };
         });
 
+        const inModuleOrder = (sources: Set<ModuleId>) =>
+            this.modules
+                .filter((mod) => sources.has(mod.id))
+                .map((mod) => cssBySource.get(mod.id)!)
+                .join('\n');
+        const workSources = new Set(
+            [...partsReached].filter(([, n]) => n === this.parts.length).map(([id]) => id)
+        );
+
         return {
-            markdown: contentParts.join('\n'),
-            css: cssParts.join('\n'),
-            nodes,
-            userData,
+            work: {
+                workCss: inModuleOrder(workSources),
+                parts: this.parts.map((part, i) => ({
+                    id: part.id,
+                    title: part.title,
+                    content: contents[i].content,
+                    css: inModuleOrder(
+                        new Set([...contents[i].cssSources].filter((id) => !workSources.has(id)))
+                    ),
+                })),
+            },
+            nodes: state.cache,
+            userData: state.userData,
         };
     }
 
@@ -371,12 +508,10 @@ export class Document extends EventTarget {
         try {
             let nodes = new Map();
             let userData = new Map();
-            let mdOutput = null;
-            let cssOutput = '';
+            let work: WorkOutput | null = null;
             if (!target) {
-                const output = await this.evalMdOutput();
-                mdOutput = output.markdown;
-                cssOutput = output.css;
+                const output = await this.evalWork();
+                work = output.work;
                 nodes = output.nodes;
                 userData = output.userData;
             } else {
@@ -394,8 +529,7 @@ export class Document extends EventTarget {
                 type: 'output',
                 target,
                 outputs: nodes,
-                markdownOutput: mdOutput,
-                cssOutput,
+                work,
                 userData,
                 drop() {
                     for (const data of this.outputs.values()) data.drop();
@@ -475,10 +609,8 @@ export interface RenderOutput {
     target: ModuleId | null;
     /** Every module’s output */
     outputs: Map<ModuleId, Data>;
-    /** The final markdown output, if the render target is the output */
-    markdownOutput: string | null;
-    /** Assembled CSS from all CSS-typed inputs to the output, in module order. */
-    cssOutput: string;
+    /** Every part's content and CSS, if the render target is the output. */
+    work: WorkOutput | null;
     /** Evaluated module user data */
     userData: Map<ModuleId, UserData>;
 

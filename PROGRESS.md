@@ -13,7 +13,7 @@ update it whenever a step lands (what changed, what's next, anything surprising)
 | Phase | Scope                                                                                                          | State       |
 | ----- | -------------------------------------------------------------------------------------------------------------- | ----------- |
 | 1     | Canonical, sorted Work Skin; pinned-hash test; collision check                                                 | Done        |
-| 2     | `Work` + parts in the document; migration of saved documents; parts list UI; `export()` over a work            | Next        |
+| 2     | `Work` + parts in the document; migration of saved documents; parts list UI; `export()` over a work            | In progress |
 | 3     | Delivery strategies (`shared-stylesheet`, `inline`); skin record; diff before copy; part-scoped CSS; conflicts | Not started |
 | 4     | Import an existing skin, then existing chapters                                                                | Not started |
 | 5     | Group nodes (shared but detachable); first packaged effects                                                    | Not started |
@@ -44,24 +44,40 @@ Naming-format notes (don't change without a migration):
 Findings:
 
 -   AO3's stored chapter HTML is **not** a fixed point of its sanitizer: re-sanitizing drops the
-    ` ` between block elements (visually identical). Splitting (phase 6) must compare against
+    newline between block elements (visually identical). Splitting (phase 6) must compare against
     AO3's re-sanitized output, not assume identity.
 -   AO3's cleaned Work Skin **is** a fixed point, except `@font-face` (a known divergence).
 
-## Phase 2 — works and parts (next)
+## Phase 2 — works and parts (in progress)
 
-Start by reading `src/document.ts` (single `MOD_OUTPUT`), `src/ui/components/preview.tsx`,
-`src/ui/components/post-preview/index.tsx` and `src/storage/versions/` (migrations). Plan:
+Landed in four commits, each leaving the app working:
 
--   [ ] Document: `Work { parts: Part[] }`, each part with a stable id, title and its own output
-        module; existing documents migrate to one part on `MOD_OUTPUT`.
--   [ ] Per-part managed "Part styles" CSS module, auto-wired and detachable (design doc decision).
--   [ ] Evaluate every part; scope CSS by which parts it reaches (all parts → work style).
--   [ ] `SiteTargetPlugin.export` over a work: per-part outputs + shared outputs (AO3: one skin).
--   [ ] Parts list UI with target-provided labels; preview a chosen part with the whole-work skin.
--   [ ] "Mark as posted" (explicit) with warnings for copied-but-unmarked parts.
+-   [x] **2a — data model.** `DocumentState.parts: Part[]` (never empty) in `src/document.ts`.
+        A part's output is a pseudo-module id: the first part keeps `MOD_OUTPUT` (`'output'`),
+        later parts use `output:<partId>` (`isPartOutput()`). Part ops: `addPart`, `updatePart`,
+        `movePart`, `removePart` (drops sends to it and its managed styles module; never the last
+        part), all undoable (`ChangeType.EditParts`). `removeModule` clears a part's
+        `stylesModuleId`. `evalWork()` evaluates every part with one shared cache and splits CSS
+        by reach: `workCss` = CSS from modules reaching every part, `part.css` = the rest.
+        `RenderOutput.work` replaces `markdownOutput`/`cssOutput`. Saved files stay version 1:
+        an optional `parts` list (omitted for a single untouched part) and sends to
+        `output:<id>`; older files load as one part. Tests: `test/document/parts.test.ts`.
+        The UI still shows only the first part (`preview.tsx`), until 2b.
+-   [ ] **2b — targets.** `SiteTargetPlugin.export` over the work: per-part outputs + shared
+        outputs (AO3: one Work Skin from all parts). Preview a chosen part with the whole-work
+        skin; copy buttons act on the chosen part.
+-   [ ] **2c — UI.** Parts list (labels from the target: Chapter/Post); one output node per part
+        in the graph (`module-graph/index.tsx`, `auto-layout.ts`) and per-part entries in the
+        module list's send menu (`module-list.tsx`); managed "Part styles" CSS module per part,
+        auto-wired, detachable, collapsed under its part in the graph.
+-   [ ] **2d — posting.** "Mark as posted" (explicit) recording the part's `eo3-*` classes;
+        warnings for copied-but-unmarked parts.
+
+Part-scoped CSS (wrapping a part in `eo3-part-<id>` and prefixing its CSS) is phase 3; in 2b
+part CSS is simply added to the shared skin unscoped.
 
 ## Log
 
 -   2026-09-26 — Plan written; phase 1 started.
 -   2026-09-26 — Phase 1 done (see findings above). Next: phase 2.
+-   2026-09-26 — Phase 2a (data model) done.
