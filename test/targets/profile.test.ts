@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createProfileTarget } from '../../src/targets/profile/target';
 import { newProfile, parseProfile, TargetProfile } from '../../src/targets/profile/types';
 import { PartExportInput } from '../../src/targets/types';
+import { fromDraft, toDraft } from '../../src/ui/components/profile-editor';
 
 function run(profile: TargetProfile, source: string, workCss = '') {
     const target = createProfileTarget(profile);
@@ -19,6 +20,24 @@ describe('parseProfile', () => {
         expect(parseProfile({ ...newProfile('x'), delivery: 'fax' })).toMatch(/delivery/);
         expect(parseProfile({ ...newProfile('x'), id: 'has space' })).toMatch(/id/);
         expect(parseProfile({ ...newProfile('x'), elements: 'p' })).toMatch(/elements/);
+    });
+});
+
+describe('profile editor fields', () => {
+    it('preserves advanced settings, including explicit empty lists', () => {
+        const profile: TargetProfile = {
+            ...newProfile('advanced'),
+            cssProperties: [],
+            styleAttributeProperties: ['color'],
+            removeContents: [],
+            whitespaceElements: ['div'],
+        };
+        expect(fromDraft(toDraft(profile))).toEqual(profile);
+    });
+
+    it('keeps omitted advanced settings omitted', () => {
+        const profile = newProfile('ordinary');
+        expect(fromDraft(toDraft(profile))).toEqual(profile);
     });
 });
 

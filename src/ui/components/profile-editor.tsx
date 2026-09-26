@@ -20,7 +20,18 @@ interface Draft {
     attributes: string;
     protocols: string;
     cssProperties: string;
+    cssPropertiesEnabled: boolean;
+    styleAttributeProperties: string;
+    styleAttributePropertiesEnabled: boolean;
+    removeContents: string;
+    removeContentsEnabled: boolean;
+    whitespaceElements: string;
+    whitespaceElementsEnabled: boolean;
 }
+
+type TextField = {
+    [K in keyof Draft]: Draft[K] extends string ? K : never;
+}[keyof Draft];
 
 const names = (text: string) => text.split(/[\s,]+/).filter(Boolean);
 const lines = (map: Record<string, string[]>) =>
@@ -36,7 +47,7 @@ const unlines = (text: string) =>
             .map(([key, list]) => [key.trim(), names(list)])
     );
 
-const toDraft = (p: TargetProfile): Draft => ({
+export const toDraft = (p: TargetProfile): Draft => ({
     id: p.id,
     title: p.title,
     partLabel: p.partLabel,
@@ -46,9 +57,16 @@ const toDraft = (p: TargetProfile): Draft => ({
     attributes: lines(p.attributes),
     protocols: lines(p.protocols),
     cssProperties: p.cssProperties?.join(' ') ?? '',
+    cssPropertiesEnabled: p.cssProperties !== undefined,
+    styleAttributeProperties: p.styleAttributeProperties?.join(' ') ?? '',
+    styleAttributePropertiesEnabled: p.styleAttributeProperties !== undefined,
+    removeContents: p.removeContents?.join(' ') ?? '',
+    removeContentsEnabled: p.removeContents !== undefined,
+    whitespaceElements: p.whitespaceElements?.join(' ') ?? '',
+    whitespaceElementsEnabled: p.whitespaceElements !== undefined,
 });
 
-const fromDraft = (d: Draft) =>
+export const fromDraft = (d: Draft) =>
     parseProfile({
         id: d.id,
         title: d.title,
@@ -58,7 +76,12 @@ const fromDraft = (d: Draft) =>
         elements: names(d.elements),
         attributes: unlines(d.attributes),
         protocols: unlines(d.protocols),
-        ...(d.cssProperties.trim() ? { cssProperties: names(d.cssProperties) } : {}),
+        ...(d.cssPropertiesEnabled ? { cssProperties: names(d.cssProperties) } : {}),
+        ...(d.styleAttributePropertiesEnabled
+            ? { styleAttributeProperties: names(d.styleAttributeProperties) }
+            : {}),
+        ...(d.removeContentsEnabled ? { removeContents: names(d.removeContents) } : {}),
+        ...(d.whitespaceElementsEnabled ? { whitespaceElements: names(d.whitespaceElements) } : {}),
     });
 
 /** Create, edit, import, export and delete custom site profiles. */
@@ -91,7 +114,7 @@ export function ProfileEditor({
         setIsNew(fresh);
         setMessage(null);
     };
-    const field = (key: keyof Draft) => ({
+    const field = (key: TextField) => ({
         value: draft![key],
         onChange: (e: { target: { value: string } }) =>
             setDraft({ ...draft!, [key]: e.target.value }),
@@ -99,14 +122,19 @@ export function ProfileEditor({
 
     const save = () => {
         const result = fromDraft(draft!);
-        if (typeof result === 'string') return setMessage(result);
+        if (typeof result === 'string') {
+            setMessage(result);
+            return null;
+        }
         if (isNew && profiles.some((p) => p.id === result.id)) {
-            return setMessage(`A profile with the id "${result.id}" already exists.`);
+            setMessage(`A profile with the id "${result.id}" already exists.`);
+            return null;
         }
         saveProfile(result);
         setProfiles(listProfiles());
         setIsNew(false);
         setMessage('Saved.');
+        return result;
     };
 
     const importProfile = () => {
@@ -209,10 +237,86 @@ export function ProfileEditor({
                             <code>relative</code> allows links without one)
                             <textarea rows={3} {...field('protocols')} />
                         </label>
-                        <label>
-                            Allowed CSS properties (leave empty to allow any)
-                            <textarea rows={2} {...field('cssProperties')} />
+                        <label className="i-check">
+                            <input
+                                type="checkbox"
+                                checked={draft.cssPropertiesEnabled}
+                                onChange={(e) =>
+                                    setDraft({ ...draft, cssPropertiesEnabled: e.target.checked })
+                                }
+                            />
+                            Restrict stylesheet CSS properties
                         </label>
+                        {draft.cssPropertiesEnabled && (
+                            <label>
+                                Allowed stylesheet CSS properties (empty means none)
+                                <textarea rows={2} {...field('cssProperties')} />
+                            </label>
+                        )}
+                        <details className="i-advanced">
+                            <summary>Advanced sanitizer settings</summary>
+                            <p className="i-help">
+                                Leave a setting unchecked to use the default. Check it and leave its
+                                list empty to use an empty list.
+                            </p>
+                            <label className="i-check">
+                                <input
+                                    type="checkbox"
+                                    checked={draft.styleAttributePropertiesEnabled}
+                                    onChange={(e) =>
+                                        setDraft({
+                                            ...draft,
+                                            styleAttributePropertiesEnabled: e.target.checked,
+                                        })
+                                    }
+                                />
+                                Set separate CSS properties for style attributes
+                            </label>
+                            {draft.styleAttributePropertiesEnabled && (
+                                <label>
+                                    Allowed style attribute properties (empty means none)
+                                    <textarea rows={2} {...field('styleAttributeProperties')} />
+                                </label>
+                            )}
+                            <label className="i-check">
+                                <input
+                                    type="checkbox"
+                                    checked={draft.removeContentsEnabled}
+                                    onChange={(e) =>
+                                        setDraft({
+                                            ...draft,
+                                            removeContentsEnabled: e.target.checked,
+                                        })
+                                    }
+                                />
+                                Set tags removed with their contents
+                            </label>
+                            {draft.removeContentsEnabled && (
+                                <label>
+                                    Tags removed with their contents (empty means none)
+                                    <textarea rows={2} {...field('removeContents')} />
+                                </label>
+                            )}
+                            <label className="i-check">
+                                <input
+                                    type="checkbox"
+                                    checked={draft.whitespaceElementsEnabled}
+                                    onChange={(e) =>
+                                        setDraft({
+                                            ...draft,
+                                            whitespaceElementsEnabled: e.target.checked,
+                                        })
+                                    }
+                                />
+                                Set tags that add spaces when unwrapped
+                            </label>
+                            {draft.whitespaceElementsEnabled && (
+                                <label>
+                                    Tags that add spaces when unwrapped (empty means none)
+                                    <textarea rows={2} {...field('whitespaceElements')} />
+                                </label>
+                            )}
+                        </details>
                         {message && <p className="i-message">{message}</p>}
                         <div className="i-buttons">
                             <button onClick={save}>save</button>
@@ -220,8 +324,8 @@ export function ProfileEditor({
                                 <>
                                     <button
                                         onClick={() => {
-                                            save();
-                                            onUse(draft.id);
+                                            const saved = save();
+                                            if (saved) onUse(saved.id);
                                         }}
                                     >
                                         save and preview with it

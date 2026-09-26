@@ -84,6 +84,30 @@
             font: inherit;
             padding: 0.2em 0.4em;
         }
+
+        .i-check {
+            flex-direction: row;
+            align-items: center;
+        }
+
+        .i-advanced {
+            border-top: 1px solid rgb(var(--P-color-shade) / var(--P-color-shade-opacity));
+            padding-top: 0.4em;
+
+            summary {
+                cursor: pointer;
+            }
+
+            .i-help {
+                margin: 0.4em 0;
+                font-size: 0.9em;
+                opacity: 0.8;
+            }
+
+            label {
+                margin-top: 0.6em;
+            }
+        }
     }
 
     .i-message {
