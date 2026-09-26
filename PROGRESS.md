@@ -260,6 +260,9 @@ done. Smaller known limits:
 
 -   Custom site profiles live in the browser (localStorage), not in the document; share them as
     JSON.
+-   `npm audit` still reports one moderate advisory for the Svelte 3/4 compiler aliases used to
+    support older Svelte modules. Its suggested forced fix replaces them with Svelte 5 and would
+    break that compatibility; review a migration separately.
 
 ## Log
 
@@ -315,3 +318,7 @@ done. Smaller known limits:
     translation and leaves other groups untouched. A component test checks the controlled drag
     position and undo. The local browser preview was blocked by this environment, so a manual
     drag check remains useful.
+-   2026-09-27 — Updated direct SVGO and PostCSS dependencies to patched releases and refreshed
+    compatible transitive packages after GitHub reported dependency advisories. The full audit
+    dropped from 9 findings (4 high) to 1 moderate in the legacy Svelte aliases. Typecheck, tests
+    and production build pass with the updated lockfile.
