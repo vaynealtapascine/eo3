@@ -61,6 +61,23 @@ export const ERRORS = {
             </div>
         );
     },
+    'class-collision'({ className, styles }: { className: string; styles: [string, string] }) {
+        return (
+            <div>
+                Two different inline styles got the same class name <code>{className}</code>. One
+                was renamed, so its name may change later. Changing either style slightly avoids
+                this:
+                <ul>
+                    <li>
+                        <code>{styles[0]}</code>
+                    </li>
+                    <li>
+                        <code>{styles[1]}</code>
+                    </li>
+                </ul>
+            </div>
+        );
+    },
     'img-load-failed'({ url, isFirstOfType }: { url: string } & ErrProps) {
         return (
             <div>

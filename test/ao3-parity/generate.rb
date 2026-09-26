@@ -132,12 +132,23 @@ end
 html = cases["html"].transform_values do |input|
   run_case { sanitizer.sanitize_value(:content, input) }
 end
+# AO3 sanitizing its own output again, i.e. pasting back a chapter it already stored.
+html_reclean = html.reject { |_, out| out.is_a?(Hash) }.transform_values do |out|
+  run_case { sanitizer.sanitize_value(:content, out) }
+end
+def clean_work_skin(css)
+  skin = WorkSkin.new
+  skin.css = css
+  skin.clean_css
+  { "css" => skin.css.to_s, "errors" => skin.errors.keys.sort }
+end
+
+# "reclean" = AO3 cleaning its own output again, i.e. pasting back a skin it already stored.
 css = cases["css"].transform_values do |input|
   run_case do
-    skin = WorkSkin.new
-    skin.css = input
-    skin.clean_css
-    { "css" => skin.css.to_s, "errors" => skin.errors.keys.sort }
+    cleaned = clean_work_skin(input)
+    cleaned["reclean"] = clean_work_skin(cleaned["css"]) unless cleaned["css"].strip.empty?
+    cleaned
   end
 end
 
@@ -146,6 +157,7 @@ File.write(expected_path, JSON.pretty_generate(
   "sources" => blobs,
   "gems" => gems,
   "html" => html,
+  "htmlReclean" => html_reclean,
   "css" => css
 ) + "\n")
 puts "Wrote #{html.size} html + #{css.size} css results from #{REPO}@#{commit[0, 7]}."

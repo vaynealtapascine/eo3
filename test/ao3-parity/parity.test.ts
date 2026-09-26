@@ -8,7 +8,8 @@ import cases from './cases.json';
 import expected from './expected.json';
 
 type Raises = { raises: string };
-type CssExpected = { css: string; errors: string[] } | Raises;
+type CssResult = { css: string; errors: string[] };
+type CssExpected = (CssResult & { reclean?: CssResult }) | Raises;
 
 /** Intentional differences from AO3, by case name, with the reason. */
 const KNOWN_DIVERGENCES: { html: Record<string, string>; css: Record<string, string> } = {
@@ -44,12 +45,26 @@ function withoutLiftedClasses(html: string): string {
     });
 }
 
+/** The port's Work Skin cleaning, reported the way generate.rb records AO3's. */
+function cleanLikeWorkSkin(input: string): CssResult {
+    const errors: string[] = [];
+    const css = cleanWorkskinCss(input, {
+        prefix: '#workskin',
+        onDiagnostic: (d) => {
+            const key = RUBY_ERROR_KEY[d.kind];
+            if (key) errors.push(key);
+        },
+    });
+    return { css, errors: errors.sort() };
+}
+
 const isRaises = (v: unknown): v is Raises => typeof v === 'object' && v !== null && 'raises' in v;
 
 describe(`AO3 HTML sanitizer (otwarchive@${expected.commit.slice(0, 7)})`, () => {
     for (const [name, input] of Object.entries(cases.html)) {
         const want = (expected.html as Record<string, string | Raises>)[name];
-        const skip = KNOWN_DIVERGENCES.html[name] ?? (isRaises(want) && `AO3 raises ${want.raises}`);
+        const skip =
+            KNOWN_DIVERGENCES.html[name] ?? (isRaises(want) && `AO3 raises ${want.raises}`);
         it.skipIf(!!skip || want === undefined)(name, () => {
             expect(withoutLiftedClasses(renderAo3Content(input).html)).toBe(want);
         });
@@ -61,15 +76,24 @@ describe(`AO3 Work Skin validator (otwarchive@${expected.commit.slice(0, 7)})`, 
         const want = (expected.css as Record<string, CssExpected>)[name];
         const skip = KNOWN_DIVERGENCES.css[name] ?? (isRaises(want) && `AO3 raises ${want.raises}`);
         it.skipIf(!!skip || want === undefined)(name, () => {
-            const errors: string[] = [];
-            const css = cleanWorkskinCss(input, {
-                prefix: '#workskin',
-                onDiagnostic: (d) => {
-                    const key = RUBY_ERROR_KEY[d.kind];
-                    if (key) errors.push(key);
-                },
-            });
-            expect({ css, errors: errors.sort() }).toEqual(want);
+            const { reclean, ...result } = want as CssResult & { reclean?: CssResult };
+            expect(cleanLikeWorkSkin(input)).toEqual(result);
+        });
+    }
+});
+
+// Pasting back what AO3 already stored: the import and diff features rely on these matching.
+describe('AO3 round trip: re-processing its own output', () => {
+    for (const [name, reclean] of Object.entries(expected.htmlReclean as Record<string, string>)) {
+        it.skipIf(!!KNOWN_DIVERGENCES.html[name])(`html: ${name}`, () => {
+            const stored = (expected.html as Record<string, string | Raises>)[name] as string;
+            expect(withoutLiftedClasses(renderAo3Content(stored).html)).toBe(reclean);
+        });
+    }
+    for (const [name, want] of Object.entries(expected.css as Record<string, CssExpected>)) {
+        if (isRaises(want) || !want.reclean) continue;
+        it.skipIf(!!KNOWN_DIVERGENCES.css[name])(`css: ${name}`, () => {
+            expect(cleanLikeWorkSkin(want.css)).toEqual(want.reclean);
         });
     }
 });

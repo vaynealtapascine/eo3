@@ -3,14 +3,17 @@
  * HTML goes through `HtmlCleaner#sanitize_value` (strip → fix_bad_characters → ParagraphMaker
  * → Sanitize with the CSS_ALLOWED allowlist + transformers), and a Work Skin's CSS goes through
  * `CssCleaner#clean_css_code` with `WorkSkin#clean_css`'s extra checks. Both are ported here and
- * verified against the real Ruby (see the harness recipe in the project memory).
+ * verified against the real Ruby by test/ao3-parity.
  */
 import { fixBadCharacters } from './fix-bad-characters';
 import { processParagraphs } from './paragraph-maker';
-import { liftInlineStyles } from './lift-styles';
-import { sanitizeFragment, Ao3Diagnostic, Ao3DiagnosticSink } from './sanitize';
+import { liftInlineStyles, ClassCollision } from './lift-styles';
+import { sanitizeFragment, Ao3Diagnostic } from './sanitize';
 import { buildContentConfig } from './transformers';
 import { rubyStrip } from './ruby-str';
+
+/** What the render reports: everything the sanitizer drops, plus lifted-class collisions. */
+export type Ao3RenderDiagnostic = Ao3Diagnostic | ClassCollision;
 
 export interface Ao3RenderResult {
     /** AO3-ready HTML: paragraphs applied, inline styles lifted to `eo3-*` classes, sanitized. */
@@ -34,10 +37,10 @@ const UNSUITABLE_CHARS =
  */
 export function renderAo3Content(
     content: string,
-    onDiagnostic?: Ao3DiagnosticSink
+    onDiagnostic?: (diagnostic: Ao3RenderDiagnostic) => void
 ): Ao3RenderResult {
     if (lastRun?.content !== content) {
-        const diagnostics: Ao3Diagnostic[] = [];
+        const diagnostics: Ao3RenderDiagnostic[] = [];
         const result = runPipeline(content, (d) => diagnostics.push(d));
         lastRun = { content, result, diagnostics };
     }
@@ -45,17 +48,23 @@ export function renderAo3Content(
     return lastRun.result;
 }
 
-let lastRun: { content: string; result: Ao3RenderResult; diagnostics: Ao3Diagnostic[] } | null =
-    null;
+let lastRun: {
+    content: string;
+    result: Ao3RenderResult;
+    diagnostics: Ao3RenderDiagnostic[];
+} | null = null;
 
-function runPipeline(content: string, onDiagnostic: Ao3DiagnosticSink): Ao3RenderResult {
+function runPipeline(
+    content: string,
+    onDiagnostic: (diagnostic: Ao3RenderDiagnostic) => void
+): Ao3RenderResult {
     const root = document.createElement('myroot');
     root.innerHTML = fixBadCharacters(rubyStrip(content)).replace(UNSUITABLE_CHARS, '');
     processParagraphs(root);
     // AO3 serializes after ParagraphMaker and Sanitize re-parses; that round trip can restructure
     // (e.g. a <p> inside raw-text <title> becomes text), so do the same.
     root.innerHTML = root.innerHTML;
-    const css = liftInlineStyles(root);
+    const css = liftInlineStyles(root, onDiagnostic);
     sanitizeFragment(root, buildContentConfig(onDiagnostic), onDiagnostic);
     // sanitize_value turns &nbsp; entities into literal U+00A0, so the output equals what AO3 stores.
     return { html: root.innerHTML.replace(/&nbsp;/g, ' '), css };

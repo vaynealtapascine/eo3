@@ -115,6 +115,99 @@
     "text-then-block": "<p>intro text</p><div><p>block</p></div><p>outro</p>",
     "inline-across-paragraphs": "<p><i>italic start</i></p>\n<p><i>italic continues</i></p>"
   },
+  "htmlReclean": {
+    "plain-text": "<p>Hello world</p>",
+    "two-paragraphs": "<p>First paragraph.</p><p>Second paragraph.</p>",
+    "single-newline-br": "<p>Line one<br>\nLine two</p>",
+    "triple-newline": "<p>One</p><p> </p><p>Two</p>",
+    "leading-trailing-space": "<p>padded text</p>",
+    "crlf": "<p>One</p><p>Two<br>\nThree</p>",
+    "heart-emoticon": "<p>I &lt;3 this</p>",
+    "spacer": "<p>ab</p>",
+    "nbsp-entity": "<p>a b</p>",
+    "entities": "<p>Tom &amp; Jerry &lt;3 © — ☃</p>",
+    "unicode": "<p>日本語 — ‘quotes’ “double” 🎉</p>",
+    "control-chars": "<p>abcde</p>",
+    "noncharacters": "<p>xyz</p>",
+    "empty": "",
+    "whitespace-only": "",
+    "comment": "<p>before</p><p>after</p>",
+    "inline-tags": "<p><b>b</b> <i>i</i> <em>em</em> <strong>strong</strong> <u>u</u> <s>s</s> <strike>st</strike> <del>d</del> <ins>ins</ins> <sub>sub</sub> <sup>sup</sup> <small>sm</small> <big>big</big> <tt>tt</tt> <code>c</code> <kbd>k</kbd> <samp>sa</samp> <var>v</var> <cite>ci</cite> <dfn>df</dfn> <abbr title=\"x\">ab</abbr> <acronym>ac</acronym> <q cite=\"https://x.com\">q</q></p>",
+    "misnested": "<p><b><i>bold italic</i></b><i> italic?</i></p>",
+    "unclosed": "<p>one</p><p>two<b>bold</b></p>",
+    "ruby": "<p><ruby>漢<rp>(</rp><rt>kan</rt><rp>)</rp></ruby></p>",
+    "headings": "<h1>H1</h1><h2>H2</h2><h3>H3</h3><h4>H4</h4><h5>H5</h5><h6>H6</h6>",
+    "div-with-text": "<div><p>text in div</p><p>second para in div</p></div>",
+    "nested-divs": "<div class=\"outer\"><div class=\"inner\"><p>x</p></div></div>",
+    "blockquote": "<blockquote cite=\"https://example.com\"><p>quoted</p><p>text</p></blockquote>",
+    "center": "<center><p>centered</p></center>",
+    "hr": "<p>above</p><hr align=\"center\" width=\"50%\"><p>below</p>",
+    "pre": "<pre>line1\n\nline2\n  indented</pre>",
+    "pre-leading-newline": "<pre>first</pre>",
+    "lists": "<ul type=\"square\"><li>a</li><li>b\n\nc</li></ul><ol start=\"3\" type=\"i\"><li>x</li></ol>",
+    "definition-list": "<dl><dt>term</dt><dd>def</dd></dl>",
+    "details-open": "<details open=\"open\"><summary>Sum</summary><p>body</p></details>",
+    "details-closed": "<details><summary>Sum</summary><p>body</p></details>",
+    "figure": "<figure><img src=\"https://example.com/a.png\" alt=\"a\"><figcaption>cap</figcaption></figure>",
+    "table": "<table border=\"1\" summary=\"s\" width=\"100%\"><caption>cap</caption><colgroup span=\"2\"><col width=\"10\"></colgroup><thead><tr><th scope=\"col\">h</th></tr></thead><tbody><tr><td colspan=\"2\" rowspan=\"1\" abbr=\"a\">d</td></tr></tbody><tfoot><tr><td>f</td></tr></tfoot></table>",
+    "table-text-between-cells": "<table>\n<tbody><tr>\n<td>a</td>\n\n<td>b</td>\n</tr>\n</tbody></table>",
+    "p-inside-p-text": "<p>text</p><p>explicit</p><p>more</p>",
+    "br-variants": "<p>a<br>b<br>c<br>d</p>",
+    "multiple-brs": "<p>a</p><p> </p><p>b</p>",
+    "global-attrs": "<p align=\"center\" dir=\"rtl\" lang=\"he\" title=\"t\">x</p>",
+    "id-stripped": "<p>x</p>",
+    "valid-classes": "<p><span class=\"alpha beta-2 gamma_3\">x</span></p>",
+    "invalid-classes": "<p><span class=\"ok\">x</span></p>",
+    "empty-class": "<p><span class=\"\">x</span></p>",
+    "link-absolute": "<p><a href=\"https://example.com/page?x=1&amp;y=2\" rel=\"nofollow\">link</a></p>",
+    "link-relative": "<p><a href=\"/works/123\" rel=\"nofollow\">rel</a></p>",
+    "link-anchor": "<p><a href=\"#ch2\" name=\"top\" rel=\"nofollow\">anchor</a></p>",
+    "link-mailto": "<p><a href=\"mailto:me@example.com\" rel=\"nofollow\">mail</a></p>",
+    "link-ftp": "<p><a href=\"ftp://example.com/f\" rel=\"nofollow\">ftp</a></p>",
+    "link-javascript": "<p><a rel=\"nofollow\">js</a></p>",
+    "link-javascript-entity": "<p><a rel=\"nofollow\">js</a></p>",
+    "link-data": "<p><a rel=\"nofollow\">d</a></p>",
+    "link-with-spaces": "<p><a href=\"https://example.com/a%20b%22c\" rel=\"nofollow\">sp</a></p>",
+    "link-target": "<p><a href=\"https://x.com\" rel=\"nofollow\">t</a></p>",
+    "img-absolute": "<p><img src=\"https://example.com/a.png\" alt=\"alt\" width=\"10\" height=\"20\" border=\"0\" align=\"left\"></p>",
+    "img-relative": "<p><img src=\"https://archiveofourown.org/images/a.png\"></p>",
+    "img-root-relative": "<p><img src=\"https://archiveofourown.org/images/a.png\"></p>",
+    "img-data-uri": "<p><img></p>",
+    "img-javascript": "<p><img></p>",
+    "img-http": "<p><img src=\"http://example.com/a.gif\"></p>",
+    "blockquote-cite-js": "<blockquote><p>q</p></blockquote>",
+    "script": "<p>a</p><p>b</p>",
+    "style-tag": "<p>text</p>",
+    "svg": "<p>after</p>",
+    "math": "<p>after</p>",
+    "noscript": "<p>after</p>",
+    "form-controls": "<p>goot</p>",
+    "font-tag": "<p>red</p>",
+    "unknown-inline": "<p>scroll</p><p> and </p><p>blink</p>",
+    "custom-element": "<p>inner <b>b</b></p>",
+    "semantic-unwrap": "<p>one</p><p>two</p><p>three</p><p>four</p>",
+    "whitespace-elements": "<p>a</p><address>addr</address><p>b</p><p>art</p><p>c</p>",
+    "head-body": "<p>&lt;p&gt;t&lt;/p&gt;</p><p>body text</p>",
+    "meta-link": "<p>text</p>",
+    "iframe-unknown": "<p>after</p>",
+    "iframe-youtube": "<iframe width=\"560\" height=\"315\" src=\"https://www.youtube.com/embed/dQw4w9WgXcQ\" frameborder=\"0\" allowfullscreen=\"\"></iframe>",
+    "iframe-youtube-http": "<iframe src=\"https://www.youtube.com/embed/abc\"></iframe>",
+    "iframe-vimeo": "<iframe src=\"https://player.vimeo.com/video/123\" width=\"640\" height=\"360\"></iframe>",
+    "iframe-soundcloud": "<iframe src=\"https://w.soundcloud.com/player/?url=x\"></iframe>",
+    "iframe-spotify": "<iframe src=\"https://open.spotify.com/embed/track/1\"></iframe>",
+    "iframe-archiveorg": "<iframe src=\"https://archive.org/embed/foo\"></iframe>",
+    "audio": "<audio controls=\"controls\" src=\"https://example.com/a.mp3\" crossorigin=\"anonymous\" preload=\"metadata\">fallback</audio>",
+    "audio-sources": "<audio controls=\"controls\" crossorigin=\"anonymous\" preload=\"metadata\"><source src=\"https://example.com/a.ogg\" type=\"audio/ogg\"><source src=\"https://example.com/a.mp3\" type=\"audio/mpeg\"></audio>",
+    "video": "<video controls=\"controls\" width=\"250\" poster=\"https://example.com/p.jpg\" crossorigin=\"anonymous\" preload=\"metadata\" loop=\"loop\" muted=\"muted\" playsinline=\"playsinline\"><source src=\"https://example.com/v.mp4\" type=\"video/mp4\"><track kind=\"captions\" src=\"https://example.com/c.vtt\" srclang=\"en\" label=\"English\" default=\"default\"></video>",
+    "audio-relative": "<audio controls=\"controls\" crossorigin=\"anonymous\" preload=\"metadata\"></audio>",
+    "style-attr": "<p>red</p>",
+    "style-attr-with-class": "<p><span class=\"note\">x</span></p>",
+    "style-dedup": "<p><span>a</span><span>b</span></p>",
+    "chapter": "<p align=\"center\">* * *</p><p>\"Hello,\" she said.</p><p>He didn't answer.<br>Not at first.</p><blockquote><p><i>A letter,</i></p><p>it read.</p></blockquote><hr><p>The end.</p>",
+    "p-with-br-newlines": "<p>a<br>\nb</p>",
+    "text-then-block": "<p>intro text</p><div><p>block</p></div><p>outro</p>",
+    "inline-across-paragraphs": "<p><i>italic start</i></p><p><i>italic continues</i></p>"
+  },
   "css": {
     "empty": {
       "css": "",
@@ -126,39 +219,75 @@
     },
     "simple": {
       "css": "#workskin .note {\n  color: red;\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .note {\n  color: red;\n}\n\n",
+        "errors": []
+      }
     },
     "multiple-rules": {
       "css": "#workskin p {\n  margin: 0 auto;\n}\n\n#workskin .big {\n  font-size: 2em;\n  font-weight: bold;\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin p {\n  margin: 0 auto;\n}\n\n#workskin .big {\n  font-size: 2em;\n  font-weight: bold;\n}\n\n",
+        "errors": []
+      }
     },
     "multi-selector": {
       "css": "#workskin h1,\n#workskin h2,\n#workskin .x > .y {\n  color: #333;\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin h1,\n#workskin h2,\n#workskin .x > .y {\n  color: #333;\n}\n\n",
+        "errors": []
+      }
     },
     "already-prefixed": {
       "css": "#workskin .a {\n  color: blue;\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .a {\n  color: blue;\n}\n\n",
+        "errors": []
+      }
     },
     "prefixed-lookalike": {
       "css": "#workskin-note {\n  color: blue;\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin-note {\n  color: blue;\n}\n\n",
+        "errors": []
+      }
     },
     "child-combinator": {
       "css": "#workskin .a > .b {\n  padding: 1px 2px 3px 4px;\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .a > .b {\n  padding: 1px 2px 3px 4px;\n}\n\n",
+        "errors": []
+      }
     },
     "comment": {
       "css": "#workskin .a {\n  color: red;\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .a {\n  color: red;\n}\n\n",
+        "errors": []
+      }
     },
     "uppercase-property": {
       "css": "#workskin .a {\n  color: Red;\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .a {\n  color: Red;\n}\n\n",
+        "errors": []
+      }
     },
     "important": {
       "css": "#workskin .a {\n  color: red !important;\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .a {\n  color: red !important;\n}\n\n",
+        "errors": []
+      }
     },
     "important-space": {
       "css": "",
@@ -169,15 +298,27 @@
     },
     "duplicate-property": {
       "css": "#workskin .a {\n  color: blue;\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .a {\n  color: blue;\n}\n\n",
+        "errors": []
+      }
     },
     "hex-colors": {
       "css": "#workskin .a {\n  color: #abc;\n  background-color: #aabbcc;\n  border-color: #abcd;\n  outline-color: #aabbccdd;\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .a {\n  color: #abc;\n  background-color: #aabbcc;\n  border-color: #abcd;\n  outline-color: #aabbccdd;\n}\n\n",
+        "errors": []
+      }
     },
     "rgb-hsl": {
       "css": "#workskin .a {\n  color: rgb(1, 2, 3);\n  background-color: rgba(1,2,3,0.5);\n  border-color: hsl(10, 20%, 30%);\n  outline-color: hsla(10,20%,30%,.5);\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .a {\n  color: rgb(1, 2, 3);\n  background-color: rgba(1,2,3,0.5);\n  border-color: hsl(10, 20%, 30%);\n  outline-color: hsla(10,20%,30%,.5);\n}\n\n",
+        "errors": []
+      }
     },
     "modern-rgb": {
       "css": "",
@@ -195,7 +336,11 @@
     },
     "named-color": {
       "css": "#workskin .a {\n  color: rebeccapurple;\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .a {\n  color: rebeccapurple;\n}\n\n",
+        "errors": []
+      }
     },
     "calc": {
       "css": "",
@@ -229,17 +374,29 @@
       "css": "#workskin .a {\n  top: 0;\n}\n\n",
       "errors": [
         "work_skin_banned_value_for_property"
-      ]
+      ],
+      "reclean": {
+        "css": "#workskin .a {\n  top: 0;\n}\n\n",
+        "errors": []
+      }
     },
     "position-absolute": {
       "css": "#workskin .a {\n  position: absolute;\n  top: 0;\n  left: 10px;\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .a {\n  position: absolute;\n  top: 0;\n  left: 10px;\n}\n\n",
+        "errors": []
+      }
     },
     "gap": {
       "css": "#workskin .a {\n  display: flex;\n}\n\n",
       "errors": [
         "banned_property"
-      ]
+      ],
+      "reclean": {
+        "css": "#workskin .a {\n  display: flex;\n}\n\n",
+        "errors": []
+      }
     },
     "inset": {
       "css": "",
@@ -270,11 +427,19 @@
     },
     "media": {
       "css": "#workskin .a {\n  color: red;\n}\n\n#workskin .b {\n  color: blue;\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .a {\n  color: red;\n}\n\n#workskin .b {\n  color: blue;\n}\n\n",
+        "errors": []
+      }
     },
     "media-screen": {
       "css": "#workskin .a {\n  font-size: 1.2em;\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .a {\n  font-size: 1.2em;\n}\n\n",
+        "errors": []
+      }
     },
     "supports": {
       "css": "",
@@ -284,22 +449,40 @@
     },
     "import": {
       "css": "#workskin .a {\n  color: red;\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .a {\n  color: red;\n}\n\n",
+        "errors": []
+      }
     },
     "charset": {
       "css": "#workskin .a {\n  color: red;\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .a {\n  color: red;\n}\n\n",
+        "errors": []
+      }
     },
     "font-face": {
       "css": " {\n  font-family: X;\n}\n\n",
       "errors": [
         "banned_property",
         "font_face"
-      ]
+      ],
+      "reclean": {
+        "css": " {\n  font-family: X;\n}\n\n",
+        "errors": [
+          "no_valid_css"
+        ]
+      }
     },
     "font-shorthand": {
       "css": "#workskin .a {\n  font: bold 12px Georgia, serif;\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .a {\n  font: bold 12px Georgia, serif;\n}\n\n",
+        "errors": []
+      }
     },
     "font-shorthand-slash": {
       "css": "",
@@ -310,15 +493,27 @@
     },
     "font-family-quoted": {
       "css": "#workskin .a {\n  font-family: 'Times New Roman', \"Georgia\", serif;\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .a {\n  font-family: 'Times New Roman', \"Georgia\", serif;\n}\n\n",
+        "errors": []
+      }
     },
     "background-url-png": {
       "css": "#workskin .a {\n  background: url(https://example.com/bg.png) no-repeat;\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .a {\n  background: url(https://example.com/bg.png) no-repeat;\n}\n\n",
+        "errors": []
+      }
     },
     "background-url-quoted": {
       "css": "#workskin .a {\n  background-image: url('https://i.imgur.com/abc.jpg');\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .a {\n  background-image: url('https://i.imgur.com/abc.jpg');\n}\n\n",
+        "errors": []
+      }
     },
     "background-url-svg": {
       "css": "",
@@ -343,7 +538,11 @@
     },
     "background-url-relative": {
       "css": "#workskin .a {\n  background-image: url(/images/x.png);\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .a {\n  background-image: url(/images/x.png);\n}\n\n",
+        "errors": []
+      }
     },
     "url-on-color": {
       "css": "",
@@ -361,19 +560,35 @@
     },
     "gradient": {
       "css": "#workskin .a {\n  background-image: linear-gradient(to right, #fff 0%, rgba(0,0,0,0.5) 100%);\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .a {\n  background-image: linear-gradient(to right, #fff 0%, rgba(0,0,0,0.5) 100%);\n}\n\n",
+        "errors": []
+      }
     },
     "radial-gradient": {
       "css": "#workskin .a {\n  background: radial-gradient(circle, red, blue);\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .a {\n  background: radial-gradient(circle, red, blue);\n}\n\n",
+        "errors": []
+      }
     },
     "webkit-gradient": {
       "css": "#workskin .a {\n  background: -webkit-linear-gradient(top, #fff, #000);\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .a {\n  background: -webkit-linear-gradient(top, #fff, #000);\n}\n\n",
+        "errors": []
+      }
     },
     "transform": {
       "css": "#workskin .a {\n  transform: rotate(45deg) scale(1.5) translateX(10px);\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .a {\n  transform: rotate(45deg) scale(1.5) translateX(10px);\n}\n\n",
+        "errors": []
+      }
     },
     "transform-3d": {
       "css": "",
@@ -384,15 +599,27 @@
     },
     "filter": {
       "css": "#workskin .a {\n  filter: blur(2px) grayscale(50%);\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .a {\n  filter: blur(2px) grayscale(50%);\n}\n\n",
+        "errors": []
+      }
     },
     "filter-drop-shadow": {
       "css": "#workskin .a {\n  filter: drop-shadow(2px 2px 2px black);\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .a {\n  filter: drop-shadow(2px 2px 2px black);\n}\n\n",
+        "errors": []
+      }
     },
     "vendor-prefixed": {
       "css": "#workskin .a {\n  -webkit-border-radius: 5px;\n  -moz-box-shadow: 1px 1px 1px #000;\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .a {\n  -webkit-border-radius: 5px;\n  -moz-box-shadow: 1px 1px 1px #000;\n}\n\n",
+        "errors": []
+      }
     },
     "unknown-vendor-prefixed": {
       "css": "",
@@ -403,11 +630,19 @@
     },
     "shorthands": {
       "css": "#workskin .a {\n  margin: 1em 2em;\n  padding: 0;\n  border: 1px solid #ccc;\n  border-radius: 5px 10px;\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .a {\n  margin: 1em 2em;\n  padding: 0;\n  border: 1px solid #ccc;\n  border-radius: 5px 10px;\n}\n\n",
+        "errors": []
+      }
     },
     "content-string": {
       "css": "#workskin .a:before {\n  content: \"» \";\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .a:before {\n  content: \"» \";\n}\n\n",
+        "errors": []
+      }
     },
     "content-attr": {
       "css": "",
@@ -425,63 +660,123 @@
     },
     "pseudo-classes": {
       "css": "#workskin .a:hover,\n#workskin .a:first-child,\n#workskin p:nth-child(2n+1) {\n  color: red;\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .a:hover,\n#workskin .a:first-child,\n#workskin p:nth-child(2n+1) {\n  color: red;\n}\n\n",
+        "errors": []
+      }
     },
     "attribute-selector": {
       "css": "#workskin a[href^=\"http\"] {\n  color: red;\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin a[href^=\"http\"] {\n  color: red;\n}\n\n",
+        "errors": []
+      }
     },
     "units": {
       "css": "#workskin .a {\n  width: 10px;\n  height: 2.5em;\n  margin: 3ex 1in 2cm 4mm;\n  padding: 1pt 1pc;\n  line-height: 1.5;\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .a {\n  width: 10px;\n  height: 2.5em;\n  margin: 3ex 1in 2cm 4mm;\n  padding: 1pt 1pc;\n  line-height: 1.5;\n}\n\n",
+        "errors": []
+      }
     },
     "percent": {
       "css": "#workskin .a {\n  width: 50%;\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .a {\n  width: 50%;\n}\n\n",
+        "errors": []
+      }
     },
     "rem-vw": {
       "css": "#workskin .a {\n  width: 10rem;\n  height: 50vh;\n  font-size: 3vw;\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .a {\n  width: 10rem;\n  height: 50vh;\n  font-size: 3vw;\n}\n\n",
+        "errors": []
+      }
     },
     "negative": {
       "css": "#workskin .a {\n  margin-left: -1.5em;\n  z-index: -1;\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .a {\n  margin-left: -1.5em;\n  z-index: -1;\n}\n\n",
+        "errors": []
+      }
     },
     "long-number": {
       "css": "#workskin .a {\n  width: 123456789012345678901234px;\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .a {\n  width: 123456789012345678901234px;\n}\n\n",
+        "errors": []
+      }
     },
     "decimal-precision": {
       "css": "#workskin .a {\n  opacity: 0.12345;\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .a {\n  opacity: 0.12345;\n}\n\n",
+        "errors": []
+      }
     },
     "text-shadow": {
       "css": "#workskin .a {\n  text-shadow: 1px 1px 2px #000, 0 0 1em red;\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .a {\n  text-shadow: 1px 1px 2px #000, 0 0 1em red;\n}\n\n",
+        "errors": []
+      }
     },
     "box-shadow-inset": {
       "css": "#workskin .a {\n  box-shadow: inset 0 0 5px rgba(0,0,0,.5);\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .a {\n  box-shadow: inset 0 0 5px rgba(0,0,0,.5);\n}\n\n",
+        "errors": []
+      }
     },
     "display-values": {
       "css": "#workskin .a {\n  display: inline-block;\n}\n\n#workskin .b {\n  display: flex;\n}\n\n#workskin .c {\n  display: grid;\n}\n\n#workskin .d {\n  display: none;\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .a {\n  display: inline-block;\n}\n\n#workskin .b {\n  display: flex;\n}\n\n#workskin .c {\n  display: grid;\n}\n\n#workskin .d {\n  display: none;\n}\n\n",
+        "errors": []
+      }
     },
     "flex-props": {
       "css": "#workskin .a {\n  flex-direction: column;\n  justify-content: center;\n  align-items: stretch;\n  flex: 1 1 auto;\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .a {\n  flex-direction: column;\n  justify-content: center;\n  align-items: stretch;\n  flex: 1 1 auto;\n}\n\n",
+        "errors": []
+      }
     },
     "grid-props": {
       "css": "#workskin .a {\n  grid-template-columns: 1fr 1fr;\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .a {\n  grid-template-columns: 1fr 1fr;\n}\n\n",
+        "errors": []
+      }
     },
     "transition": {
       "css": "#workskin .a {\n  transition: color 0.3s ease-in;\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .a {\n  transition: color 0.3s ease-in;\n}\n\n",
+        "errors": []
+      }
     },
     "cursor": {
       "css": "#workskin .a {\n  cursor: pointer;\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .a {\n  cursor: pointer;\n}\n\n",
+        "errors": []
+      }
     },
     "empty-rule": {
       "css": "",
@@ -510,19 +805,35 @@
     },
     "unclosed-brace": {
       "css": "#workskin .a {\n  color: red;\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .a {\n  color: red;\n}\n\n",
+        "errors": []
+      }
     },
     "stray-brace": {
       "css": "#workskin .a {\n  color: red;\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .a {\n  color: red;\n}\n\n",
+        "errors": []
+      }
     },
     "html-in-css": {
       "css": "#workskin <style>.a {\n  color: red;\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin <style>.a {\n  color: red;\n}\n\n",
+        "errors": []
+      }
     },
     "gt-entity": {
       "css": "#workskin .a > .b {\n  color: red;\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .a > .b {\n  color: red;\n}\n\n",
+        "errors": []
+      }
     },
     "all-banned": {
       "css": "",
@@ -536,7 +847,11 @@
       "css": "#workskin .a {\n  color: red;\n}\n\n",
       "errors": [
         "banned_property"
-      ]
+      ],
+      "reclean": {
+        "css": "#workskin .a {\n  color: red;\n}\n\n",
+        "errors": []
+      }
     },
     "expression": {
       "css": "",
@@ -561,39 +876,75 @@
     },
     "workskin-classes": {
       "css": "#workskin .chapter p {\n  text-indent: 2em;\n}\n\n#workskin .userstuff {\n  font-family: Georgia;\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .chapter p {\n  text-indent: 2em;\n}\n\n#workskin .userstuff {\n  font-family: Georgia;\n}\n\n",
+        "errors": []
+      }
     },
     "lifted-style-rules": {
       "css": "#workskin .eo3-abc123 {\n  color: red;\n  font-size: 2em;\n}\n\n#workskin .eo3-def456 {\n  display: inline-flex;\n  vertical-align: middle;\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .eo3-abc123 {\n  color: red;\n  font-size: 2em;\n}\n\n#workskin .eo3-def456 {\n  display: inline-flex;\n  vertical-align: middle;\n}\n\n",
+        "errors": []
+      }
     },
     "multiline-selectors": {
       "css": "#workskin .a,\n#workskin .b,\n#workskin .c {\n  color: red;\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .a,\n#workskin .b,\n#workskin .c {\n  color: red;\n}\n\n",
+        "errors": []
+      }
     },
     "column-props": {
       "css": "#workskin .a {\n  column-count: 2;\n  column-gap: 1em;\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .a {\n  column-count: 2;\n  column-gap: 1em;\n}\n\n",
+        "errors": []
+      }
     },
     "writing-mode": {
       "css": "#workskin .a {\n  writing-mode: vertical-rl;\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .a {\n  writing-mode: vertical-rl;\n}\n\n",
+        "errors": []
+      }
     },
     "list-style-image": {
       "css": "#workskin .a {\n  list-style-image: url(https://example.com/b.gif);\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .a {\n  list-style-image: url(https://example.com/b.gif);\n}\n\n",
+        "errors": []
+      }
     },
     "border-image": {
       "css": "#workskin .a {\n  border-image: url(https://example.com/b.png) 30 round;\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .a {\n  border-image: url(https://example.com/b.png) 30 round;\n}\n\n",
+        "errors": []
+      }
     },
     "clip": {
       "css": "#workskin .a {\n  clip: rect(0px, 10px, 10px, 0px);\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .a {\n  clip: rect(0px, 10px, 10px, 0px);\n}\n\n",
+        "errors": []
+      }
     },
     "text-decoration": {
       "css": "#workskin .a {\n  text-decoration: underline dotted red;\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .a {\n  text-decoration: underline dotted red;\n}\n\n",
+        "errors": []
+      }
     },
     "important-banned": {
       "css": "",
@@ -631,7 +982,11 @@
     },
     "backtracking-drop-shadow": {
       "css": "#workskin .a {\n  filter: drop-shadow(1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red x);\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .a {\n  filter: drop-shadow(1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red 1px red x);\n}\n\n",
+        "errors": []
+      }
     },
     "unclosed-matrix": {
       "css": "",
@@ -641,7 +996,11 @@
     },
     "multiline-value": {
       "css": "#workskin .a {\n  font-family: garbage!!\nserif;\n}\n\n",
-      "errors": []
+      "errors": [],
+      "reclean": {
+        "css": "#workskin .a {\n  font-family: garbage!!\nserif;\n}\n\n",
+        "errors": []
+      }
     },
     "double-comma": {
       "css": "",
