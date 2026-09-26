@@ -16,7 +16,7 @@ import {
     OnConnectStartParams,
     ReactFlowInstance,
 } from 'reactflow';
-import { collapsedStyles, layoutNodes } from './auto-layout';
+import { collapsedStyles, getNodeHeight, GROUP_HEADER_HEIGHT, layoutNodes } from './auto-layout';
 import {
     connectionId,
     groupCards,
@@ -24,13 +24,15 @@ import {
     routeEdge,
     translateGroupMembers,
 } from './group-cards';
-import { GRID_SIZE, MIN_COL_GAP, MOD_BASE_WIDTH } from './consts';
+import { GRID_SIZE, MIN_COL_GAP, MIN_ROW_GAP, MOD_BASE_WIDTH } from './consts';
 import { ModulePicker } from '../module-picker';
 import 'reactflow/dist/style.css';
 import './index.css';
 import { Button } from '../../../uikit/button';
 
 export type EdgeId = string;
+
+const GROUP_FRAME_PADDING = 8;
 
 const ReactFlow = lazy(() => import('./reactflow'));
 
@@ -397,19 +399,23 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
 
     render() {
         const { document, selected, render } = this.props;
-        const layout = layoutNodes(document);
         const hidden = collapsedStyles(document);
+        const groups = groupCards(document, hidden, this.state.expandedGroups);
+        const { cards, collapsedInto } = groups;
+        const layout = layoutNodes(document, groups);
         const nodes: any[] = [];
         const groupablePart = document.groupablePart(this.state.groupSelection);
 
         const colStride = Math.ceil((MOD_BASE_WIDTH + MIN_COL_GAP) / GRID_SIZE) * GRID_SIZE;
         const maxLayoutX = (layout.columns.length - 1) * colStride;
-
-        const { cards, collapsedInto } = groupCards(document, hidden, this.state.expandedGroups);
+        const autoLayoutPos = (id: string) => {
+            const nodeLayout = layout.layouts.get(id)!;
+            return { x: nodeLayout.column * colStride - maxLayoutX, y: nodeLayout.y };
+        };
         const positions = new Map<ModuleId, { x: number; y: number }>();
 
         for (const module of document.modules) {
-            if (hidden.has(module.id)) continue;
+            if (hidden.has(module.id) || collapsedInto.has(module.id)) continue;
             const nodeLayout = layout.layouts.get(module.id)!;
             const output = render?.output ? render.output.outputs.get(module.id) || null : null;
             const error =
@@ -417,19 +423,15 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
             const selected =
                 this.state.groupSelection.includes(module.id) || module.id === this.props.selected;
 
-            const autoLayoutPos = {
-                x: nodeLayout.column * colStride - maxLayoutX,
-                y: nodeLayout.y,
-            };
-            if (module.graphPos?.x === autoLayoutPos.x && module.graphPos?.y === autoLayoutPos.y) {
+            const autoPos = autoLayoutPos(module.id);
+            if (module.graphPos?.x === autoPos.x && module.graphPos?.y === autoPos.y) {
                 module.graphPos = null;
             }
-            positions.set(module.id, module.graphPos || autoLayoutPos);
-            if (collapsedInto.has(module.id)) continue;
+            positions.set(module.id, module.graphPos || autoPos);
 
             nodes.push({
                 id: module.id,
-                position: module.graphPos || autoLayoutPos,
+                position: module.graphPos || autoPos,
                 type: 'module',
                 selected,
                 data: {
@@ -442,35 +444,68 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
                 },
             });
         }
-        this.modulePositions = positions;
 
-        // A collapsed card sits at its last member, which usually feeds the part.
-        for (const { instanceId, members, nodeId, expanded, title } of cards) {
-            const anchor = expanded
-                ? members.reduce((a, b) => (positions.get(b)!.y < positions.get(a)!.y ? b : a))
-                : members[members.length - 1];
-            const { x, y } = positions.get(anchor)!;
+        for (const card of cards) {
+            const { instanceId, members, nodeId, title } = card;
+            const onToggle = () => this.toggleGroup(instanceId);
+
+            if (card.expanded) {
+                // A frame around the members, with its header in the room layout left above them.
+                const boxes = members.map((id) => ({
+                    ...positions.get(id)!,
+                    bottom: positions.get(id)!.y + layout.layouts.get(id)!.height,
+                }));
+                const left = Math.min(...boxes.map((b) => b.x)) - GROUP_FRAME_PADDING;
+                const top = Math.min(...boxes.map((b) => b.y)) - GROUP_HEADER_HEIGHT;
+                const right =
+                    Math.max(...boxes.map((b) => b.x)) + MOD_BASE_WIDTH + GROUP_FRAME_PADDING;
+                const bottom = Math.max(...boxes.map((b) => b.bottom)) + GROUP_FRAME_PADDING;
+                nodes.push({
+                    id: nodeId,
+                    position: { x: left, y: top },
+                    type: 'groupFrame',
+                    zIndex: -1,
+                    draggable: false,
+                    selectable: false,
+                    deletable: false,
+                    data: { title, width: right - left, height: bottom - top, onToggle },
+                });
+                continue;
+            }
+
+            // The card sits where its first member is, so dragging it moves them all together.
+            const anchor = document.findModule(members[0])!;
+            const cardPos = anchor.graphPos ?? autoLayoutPos(nodeId);
+            let memberY = cardPos.y;
+            for (const id of members) {
+                const module = document.findModule(id)!;
+                positions.set(id, module.graphPos ?? { x: cardPos.x, y: memberY });
+                memberY += getNodeHeight(document, module) + MIN_ROW_GAP;
+            }
             const transient = this.state.groupDragPosition;
+            const outputData = new Map(
+                members.flatMap((id) => {
+                    const data = render?.output?.outputs.get(id);
+                    return data ? [[id, data] as const] : [];
+                })
+            );
             nodes.push({
                 id: nodeId,
-                position:
-                    transient?.nodeId === nodeId
-                        ? transient.position
-                        : expanded
-                        ? { x, y: y - GRID_SIZE * 2 }
-                        : { x, y },
+                position: transient?.nodeId === nodeId ? transient.position : cardPos,
                 type: 'group',
-                draggable: !expanded,
                 deletable: false,
                 data: {
                     title,
                     memberCount: members.length,
-                    expanded,
+                    inputs: card.inputs,
+                    outputs: card.outputs,
+                    outputData,
                     selected: !!selected && members.includes(selected),
-                    onToggle: () => this.toggleGroup(instanceId),
+                    onToggle,
                 },
             });
         }
+        this.modulePositions = positions;
 
         const renderedParts = render.output?.work?.parts;
         document.parts.forEach((part, i) => {

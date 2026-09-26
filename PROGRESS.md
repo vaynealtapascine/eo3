@@ -322,3 +322,9 @@ done. Smaller known limits:
     compatible transitive packages after GitHub reported dependency advisories. The full audit
     dropped from 9 findings (4 high) to 1 moderate in the legacy Svelte aliases. Typecheck, tests
     and production build pass with the updated lockfile.
+-   2026-09-27 — Redesigned group cards after review ("out of place", "breaks position", unclear
+    inputs/outputs). A collapsed group is now a regular module card whose rows are the links
+    crossing the group's edge: one input row per member fed from outside, one output row per
+    member sending out (with its type), each with its own handle. Auto layout places the card as
+    one node, keeps expanded members adjacent, and leaves room for a framed "▾ title" header.
+    Needs a visual check in a visible window (the Claude pane can't draw while hidden).

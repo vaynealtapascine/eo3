@@ -183,27 +183,58 @@
         }
     }
 
-    /* A collapsed group: a card with a second card peeking out behind it. */
-    .i-module-item.is-group {
-        cursor: grab;
-        box-shadow: var(--shading), 4px 4px 0 -1px var(--P-graph-node-bg),
-            4px 4px 0 0 var(--P-graph-connection);
+    .i-group-toggle {
+        appearance: none;
+        border: none;
+        background: none;
+        color: inherit;
+        font: inherit;
+        padding: 0;
+        width: 1.2em;
+        margin-right: 0.2em;
+        border-radius: 0.25em;
+        cursor: pointer;
 
-        &.is-selected {
-            box-shadow: var(--shading), 0 0 0 2px var(--selected), 4px 4px 0 1px var(--selected);
+        &:hover,
+        &:focus-visible {
+            background: var(--P-separator);
         }
     }
 
-    .i-group-toggle {
-        cursor: pointer;
-        font-size: 0.75em;
+    .i-module-item.is-group .i-output.is-empty {
+        opacity: 0.6;
+
+        &::before {
+            display: none;
+        }
     }
 
-    .i-group-label {
-        width: 160px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+    /* An expanded group: an outline behind its members; only the header takes clicks. */
+    .react-flow__node-groupFrame {
+        pointer-events: none;
+    }
+
+    .i-group-frame {
+        border: 1px solid var(--P-separator);
+        border-radius: 0.75em;
+
+        .i-group-header {
+            display: flex;
+            align-items: center;
+            height: 24px;
+            padding: 0 0.3em;
+            font-size: smaller;
+            white-space: nowrap;
+            overflow: hidden;
+            pointer-events: auto;
+            width: fit-content;
+            max-width: 100%;
+
+            .i-label {
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+        }
     }
 
     .i-output-node {

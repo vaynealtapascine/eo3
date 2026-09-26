@@ -7,6 +7,7 @@ import {
     MIN_ROW_GAP,
     GRID_SIZE,
 } from './consts';
+import { GroupCard, groupCardHeight } from './group-cards';
 
 export function collapsedStyles(doc: Document): Set<ModuleId> {
     return new Set(
@@ -22,42 +23,34 @@ export function collapsedStyles(doc: Document): Set<ModuleId> {
     );
 }
 
-function toposortDoc(
-    doc: Document,
-    hidden: Set<ModuleId>,
-    backwards: boolean = false
-): AnyModule[] {
-    const indexedNodes = new Map();
-    for (const node of doc.modules.filter((node) => !hidden.has(node.id)))
-        indexedNodes.set(node.id, node);
-    const unmarkedNodes = new Set(indexedNodes.values());
-    const tmpMarkedNodes = new Set();
-    const sorted: AnyModule[] = [];
+/** Something auto layout places: a module, a collapsed group card, or a part's output. */
+interface LayoutItem {
+    id: string;
+    targets: string[];
+    order: number;
+    height: number;
+    acceptsInputs: boolean;
+    namedInputs: Set<string>;
+    /** The expanded group this module belongs to, kept together under a frame header. */
+    group?: string;
+}
 
-    const visit = (node: AnyModule) => {
-        if (!unmarkedNodes.has(node)) return;
-        if (tmpMarkedNodes.has(node)) return;
-        tmpMarkedNodes.add(node);
-        for (const targetId of node.sends) {
-            visit(indexedNodes.get(targetId));
-        }
-        for (const targetId of node.namedSends.keys()) {
-            visit(indexedNodes.get(targetId));
-        }
-        tmpMarkedNodes.delete(node);
-        unmarkedNodes.delete(node);
-        sorted.unshift(node);
+/** Items ordered so everything an item sends to comes before it. */
+function toposort(items: Map<string, LayoutItem>): LayoutItem[] {
+    const unmarked = new Set(items.values());
+    const tmpMarked = new Set<LayoutItem>();
+    const sorted: LayoutItem[] = [];
+
+    const visit = (item: LayoutItem | undefined) => {
+        if (!item || !unmarked.has(item) || tmpMarked.has(item)) return;
+        tmpMarked.add(item);
+        for (const target of item.targets) visit(items.get(target));
+        tmpMarked.delete(item);
+        unmarked.delete(item);
+        sorted.unshift(item);
     };
-
-    while (unmarkedNodes.size) {
-        if (backwards) {
-            visit([...unmarkedNodes][0]);
-        } else {
-            visit([...unmarkedNodes].pop()!);
-        }
-    }
-
-    return backwards ? sorted.reverse() : sorted;
+    while (unmarked.size) visit([...unmarked][0]);
+    return sorted.reverse();
 }
 
 export type NodeLayout = {
@@ -69,28 +62,83 @@ export type NodeLayout = {
     namedInputs: Set<string>;
 };
 /** A laid-out node: a module (ordered by module index) or a part's output (listed first, in part order). */
-type ColumnEntry = { id: ModuleId; order: number };
+type ColumnEntry = { id: string; order: number; group?: string };
 
 export type GraphLayout = {
     columns: ColumnEntry[][];
-    layouts: Map<ModuleId, NodeLayout>;
+    layouts: Map<string, NodeLayout>;
     indices: Map<ModuleId, number>;
 };
-export function layoutNodes(doc: Document): GraphLayout {
-    const hidden = collapsedStyles(doc);
-    const columns: ColumnEntry[][] = [];
-    const nodeLayouts = new Map<ModuleId, NodeLayout>();
 
-    const indices = new Map();
-    const indexedNodes = new Map();
-    const outgoingEdges = new Map();
-    for (let i = 0; i < doc.modules.length; i++) {
-        const node = doc.modules[i];
-        if (hidden.has(node.id)) continue;
-        indices.set(node.id, i);
-        indexedNodes.set(node.id, node);
-        const edges = new Set([...node.sends, ...node.namedSends.keys()]);
-        outgoingEdges.set(node, edges);
+/** Room above an expanded group's first member for its frame header. */
+export const GROUP_HEADER_HEIGHT = GRID_SIZE;
+
+/**
+ * Lays out the graph in columns by distance from the outputs. A collapsed group is placed as
+ * its one card; an expanded group's members stay next to each other in their columns.
+ */
+export function layoutNodes(
+    doc: Document,
+    groups: { cards: GroupCard[]; collapsedInto: Map<ModuleId, string> } = {
+        cards: [],
+        collapsedInto: new Map(),
+    }
+): GraphLayout {
+    const hidden = collapsedStyles(doc);
+    const { collapsedInto } = groups;
+    const columns: ColumnEntry[][] = [];
+    const nodeLayouts = new Map<string, NodeLayout>();
+    const indices = new Map<ModuleId, number>();
+    const items = new Map<string, LayoutItem>();
+
+    const groupOrder = new Map<ModuleId, { order: number; group?: string }>();
+    for (const card of groups.cards) {
+        const first = Math.min(
+            ...card.members.map((id) => doc.modules.findIndex((m) => m.id === id))
+        );
+        card.members.forEach((id, i) =>
+            groupOrder.set(id, {
+                order: first + i / card.members.length,
+                group: card.expanded ? card.nodeId : undefined,
+            })
+        );
+    }
+    const targetsOf = (ids: ModuleId[], self: string) => {
+        const targets = new Set<string>();
+        for (const mod of ids.map((id) => doc.findModule(id)!)) {
+            for (const target of [...mod.sends, ...mod.namedSends.keys()]) {
+                if (hidden.has(target)) continue;
+                const mapped = collapsedInto.get(target) ?? target;
+                if (mapped !== self) targets.add(mapped);
+            }
+        }
+        return [...targets];
+    };
+
+    doc.modules.forEach((mod, i) => {
+        if (hidden.has(mod.id)) return;
+        indices.set(mod.id, i);
+        if (collapsedInto.has(mod.id)) return;
+        items.set(mod.id, {
+            id: mod.id,
+            targets: targetsOf([mod.id], mod.id),
+            order: groupOrder.get(mod.id)?.order ?? i,
+            group: groupOrder.get(mod.id)?.group,
+            height: getNodeHeight(doc, mod),
+            acceptsInputs: mod.plugin.acceptsInputs,
+            namedInputs: new Set(doc.findModuleInputIds(mod.id).namedInputs.keys()),
+        });
+    });
+    for (const card of groups.cards) {
+        if (card.expanded) continue;
+        items.set(card.nodeId, {
+            id: card.nodeId,
+            targets: targetsOf(card.members, card.nodeId),
+            order: groupOrder.get(card.members[0])!.order,
+            height: groupCardHeight(card),
+            acceptsInputs: card.inputs.length > 0,
+            namedInputs: new Set(),
+        });
     }
 
     columns.push([]);
@@ -107,28 +155,23 @@ export function layoutNodes(doc: Document): GraphLayout {
         columns[0].push({ id: part.outputId, order: i - doc.parts.length });
     });
 
-    for (const node of toposortDoc(doc, hidden, true)) {
+    for (const item of toposort(items)) {
         let column = 0;
-        for (const otherNodeId of outgoingEdges.get(node)) {
-            const otherLoc = nodeLayouts.get(otherNodeId)!;
-            if (otherLoc) {
-                column = Math.max(column, otherLoc.column + 1);
-            }
+        for (const target of item.targets) {
+            const otherLoc = nodeLayouts.get(target);
+            if (otherLoc) column = Math.max(column, otherLoc.column + 1);
         }
 
-        const { namedInputs } = doc.findModuleInputIds(node.id);
-
         while (!columns[column]) columns.push([]);
-        const index = columns[column].length;
-        nodeLayouts.set(node.id, {
+        nodeLayouts.set(item.id, {
             column,
-            index,
+            index: columns[column].length,
             y: 0,
-            height: getNodeHeight(doc, node),
-            acceptsInputs: node.plugin.acceptsInputs,
-            namedInputs: new Set(namedInputs.keys()),
+            height: item.height,
+            acceptsInputs: item.acceptsInputs,
+            namedInputs: item.namedInputs,
         });
-        columns[column].push({ id: node.id, order: indices.get(node.id) });
+        columns[column].push({ id: item.id, order: item.order, group: item.group });
     }
 
     let colIndex = 0;
@@ -137,6 +180,7 @@ export function layoutNodes(doc: Document): GraphLayout {
         let y = 0;
         for (let i = 0; i < col.length; i++) {
             const layout = nodeLayouts.get(col[i].id)!;
+            if (col[i].group && col[i].group !== col[i - 1]?.group) y += GROUP_HEADER_HEIGHT;
             layout.column = columns.length - 1 - colIndex;
             layout.index = i;
             layout.y = y;
@@ -154,7 +198,7 @@ export function layoutNodes(doc: Document): GraphLayout {
     };
 }
 
-function getNodeHeight(doc: Document, mod: AnyModule) {
+export function getNodeHeight(doc: Document, mod: AnyModule) {
     let height = MOD_HEADER_HEIGHT;
     if (mod.plugin.acceptsInputs) height += MOD_INPUT_HEIGHT;
     height += MOD_OUTPUT_HEIGHT;

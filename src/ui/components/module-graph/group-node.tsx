@@ -1,40 +1,73 @@
-import { Handle, Position } from 'reactflow';
-import { MOD_BASE_WIDTH, MOD_HEADER_HEIGHT, MOD_OUTPUT_HEIGHT } from './consts';
+import { useEffect } from 'react';
+import { Handle, Position, useUpdateNodeInternals } from 'reactflow';
+import { Data } from '../../../document';
+import { MOD_BASE_WIDTH, MOD_HEADER_HEIGHT, MOD_INPUT_HEIGHT, MOD_OUTPUT_HEIGHT } from './consts';
+import { GroupPort } from './group-cards';
 const HEIGHT_PROP = '--height' as any;
 
-/** A group instance: one card while collapsed, or a label above its members while expanded. */
-export function GroupNode({ data }: { data: GroupNode.NodeData }) {
-    const { title, memberCount, expanded, selected, onToggle } = data;
-    const toggle = (
-        <button
-            className="i-group-toggle nodrag"
-            aria-expanded={expanded}
-            onPointerDown={(event) => event.stopPropagation()}
-            onClick={(event) => {
-                event.stopPropagation();
-                onToggle();
-            }}
-        >
-            {expanded ? `▾ ${title}` : `show ${memberCount} nodes`}
-        </button>
-    );
-
-    if (expanded) return <div className="i-group-label">{toggle}</div>;
+/** A collapsed group, drawn like a module: its rows are the links crossing the group's edge. */
+export function GroupNode({ id, data }: { id: string; data: GroupNode.NodeData }) {
+    const { title, memberCount, inputs, outputs, outputData, selected, onToggle } = data;
+    const updateNodeInternals = useUpdateNodeInternals();
+    const handles = [...inputs, ...outputs].map((port) => port.handle).join(' ');
+    useEffect(() => updateNodeInternals(id), [handles]);
 
     return (
         <div
             className={'i-module-item is-group' + (selected ? ' is-selected' : '')}
-            aria-label={`${title}, group of ${memberCount} nodes` + (selected ? ', selected' : '')}
+            aria-label={
+                `${title}, group of ${memberCount} modules` + (selected ? ', selected' : '')
+            }
             style={{ width: MOD_BASE_WIDTH }}
         >
             <div className="i-header" style={{ [HEIGHT_PROP]: MOD_HEADER_HEIGHT }}>
+                <GroupToggle title={title} expanded={false} onToggle={onToggle} />
                 <span className="i-label">{title}</span>
             </div>
-            <Handle id="in" type="target" position={Position.Left} isConnectable={false} />
-            <div className="i-output" style={{ [HEIGHT_PROP]: MOD_OUTPUT_HEIGHT }}>
-                {toggle}
-                <Handle id="out" type="source" position={Position.Right} isConnectable={false} />
-            </div>
+            {inputs.map((port) => (
+                <div
+                    key={port.handle}
+                    className="i-input"
+                    style={{ [HEIGHT_PROP]: MOD_INPUT_HEIGHT }}
+                    title={`Input to ${port.label}`}
+                >
+                    <span className="i-label">{port.label}</span>
+                    <Handle
+                        id={port.handle}
+                        type="target"
+                        position={Position.Left}
+                        isConnectable={false}
+                    />
+                </div>
+            ))}
+            {outputs.map((port) => {
+                const type = outputData.get(port.memberId)?.typeDescription();
+                const label =
+                    type && type.toLowerCase() !== port.label.toLowerCase()
+                        ? `${port.label} · ${type}`
+                        : port.label;
+                return (
+                    <div
+                        key={port.handle}
+                        className="i-output"
+                        style={{ [HEIGHT_PROP]: MOD_OUTPUT_HEIGHT }}
+                        title={`Output of ${port.label}`}
+                    >
+                        <span className="i-label">{label}</span>
+                        <Handle
+                            id={port.handle}
+                            type="source"
+                            position={Position.Right}
+                            isConnectable={false}
+                        />
+                    </div>
+                );
+            })}
+            {!outputs.length && (
+                <div className="i-output is-empty" style={{ [HEIGHT_PROP]: MOD_OUTPUT_HEIGHT }}>
+                    <span className="i-label">not connected</span>
+                </div>
+            )}
         </div>
     );
 }
@@ -42,8 +75,57 @@ export namespace GroupNode {
     export interface NodeData {
         title: string;
         memberCount: number;
-        expanded: boolean;
+        inputs: GroupPort[];
+        outputs: GroupPort[];
+        outputData: Map<string, Data>;
         selected: boolean;
         onToggle(): void;
     }
+}
+
+/** An expanded group: a frame behind its members, with a header to collapse it again. */
+export function GroupFrame({ data }: { data: GroupFrame.NodeData }) {
+    const { title, width, height, onToggle } = data;
+    return (
+        <div className="i-group-frame" style={{ width, height }}>
+            <div className="i-group-header">
+                <GroupToggle title={title} expanded onToggle={onToggle} />
+                <span className="i-label">{title}</span>
+            </div>
+        </div>
+    );
+}
+export namespace GroupFrame {
+    export interface NodeData {
+        title: string;
+        width: number;
+        height: number;
+        onToggle(): void;
+    }
+}
+
+function GroupToggle({
+    title,
+    expanded,
+    onToggle,
+}: {
+    title: string;
+    expanded: boolean;
+    onToggle(): void;
+}) {
+    return (
+        <button
+            className="i-group-toggle nodrag"
+            aria-expanded={expanded}
+            aria-label={expanded ? `Collapse ${title}` : `Show the modules in ${title}`}
+            title={expanded ? 'Collapse into one card' : 'Show the modules inside'}
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={(event) => {
+                event.stopPropagation();
+                onToggle();
+            }}
+        >
+            {expanded ? '▾' : '▸'}
+        </button>
+    );
 }
