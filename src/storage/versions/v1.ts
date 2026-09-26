@@ -113,6 +113,15 @@ export function serializeV1(doc: Document, format?: string): string {
     if (doc.skinBaseline !== null) docData.skinBaseline = doc.skinBaseline;
     const importedSkin = doc.importedSkinModuleId && moduleIndices.get(doc.importedSkinModuleId);
     if (importedSkin !== undefined && importedSkin !== null) docData.importedSkin = importedSkin;
+    if (doc.groupDefinitions.length) docData.groupDefinitions = doc.groupDefinitions;
+    if (doc.groupInstances.length) {
+        docData.groupInstances = doc.groupInstances.map((instance) => ({
+            id: instance.id,
+            definitionId: instance.definitionId,
+            partId: instance.partId,
+            modules: instance.moduleIds.map((id) => moduleIndices.get(id)),
+        }));
+    }
     // A single untouched part is implied by older files, so it isn't written.
     const [first] = doc.parts;
     const trivialParts =
@@ -246,6 +255,26 @@ export function deserializeV1(input: string): Document {
             data.importedSkin !== undefined
                 ? moduleIdAssignments.get(data.importedSkin) ?? null
                 : null,
+        groupDefinitions: (data.groupDefinitions || []).map((definition: any) => ({
+            id: String(definition.id),
+            title: String(definition.title),
+            ...(definition.shelfKey ? { shelfKey: String(definition.shelfKey) } : {}),
+        })),
+        groupInstances: (data.groupInstances || [])
+            .map((instance: any) => {
+                const moduleIds = (instance.modules || []).map((index: number) =>
+                    moduleIdAssignments.get(index)
+                );
+                if (!moduleIds.length || moduleIds.some((id: ModuleId | undefined) => !id))
+                    return null;
+                return {
+                    id: String(instance.id),
+                    definitionId: String(instance.definitionId),
+                    partId: String(instance.partId),
+                    moduleIds,
+                };
+            })
+            .filter(Boolean),
     });
 
     return doc;

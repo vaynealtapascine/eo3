@@ -16,8 +16,8 @@ update it whenever a step lands (what changed, what's next, anything surprising)
 | 2     | `Work` + parts in the document; migration of saved documents; parts list UI; `export()` over a work            | Done        |
 | 3     | Delivery strategies (`shared-stylesheet`, `inline`); skin record; diff before copy; part-scoped CSS; conflicts | Done        |
 | 4     | Import an existing skin, then existing chapters                                                                | Done        |
-| 5     | Group nodes (shared but detachable); first packaged effects                                                    | Next        |
-| 6     | Size-based splitting; custom target profiles; crossposting                                                     | Not started |
+| 5     | Group nodes (shared but detachable); first packaged effects                                                    | Done        |
+| 6     | Size-based splitting; custom target profiles; crossposting                                                     | Next        |
 | 7     | wafrn target (read its sanitizer source first)                                                                 | Not started |
 
 ## Phase 1 — canonical, sorted Work Skin (done)
@@ -147,6 +147,29 @@ newlines on a second pass. Imported chapter HTML stays unchanged in its source m
 export may have that visually identical normalization. Imported CSS is preserved as an editable
 module; eo3 never automatically removes its authored rules.
 
+## Phase 5 — groups and packaged effects (done)
+
+-   [x] **Groups** (`src/document.ts`): a `GroupDefinition` is shared by `GroupInstance`s; an
+        instance is a list of ordinary modules in one part (`moduleIds`, in matching order across
+        instances). Evaluation is untouched. Editing a module's data or title in an instance
+        (`insertModule`) copies it to the module in the same slot of every sibling instance;
+        wiring stays per instance. `detachGroup` gives an instance its own definition.
+        `duplicateGroup` clones an instance into a part, remapping internal links and the part
+        output. `createGroup` (modules must only send within the group or to the part's output)
+        exists but has **no UI yet** — it needs multi-select in the graph. Removing a part or any
+        module of an instance forgets that instance (the modules stay, unwired from the part).
+        Persisted in document version 1 (`groupDefinitions`, `groupInstances` by module index).
+-   [x] **Effect shelf** (`src/effects.ts`, parts list): Text message thread, Letter, Chat log,
+        each added as an HTML + CSS module pair wired to the selected part; adding the same effect
+        again reuses its definition (shared). Effect classes use the `fx-` prefix — `eo3-` is
+        reserved for generated classes (posting records every `eo3-*` class as generated).
+        The parts list shows the part's groups with "copy here" and "detach".
+-   [x] **Graph**: a part's managed styles module is hidden from the graph while it is only wired
+        to its part (`collapsedStyles` in `auto-layout.ts`); the output node has "+ styles" /
+        "edit styles". A styles module that isn't sent anywhere (e.g. detached, then its part
+        removed) is listed under the parts with a link to it.
+-   Tests: `test/document/groups.test.ts`.
+
 ## Log
 
 -   2026-09-26 — Plan written; phase 1 started.
@@ -168,3 +191,6 @@ module; eo3 never automatically removes its authored rules.
 -   2026-09-26 — Phase 4 retention follow-up complete. Imported generated rules seed the skin
     record, remain protected for unimported chapters, and can be pruned only after a rule review.
     Canonical unchanged Work Skin export is byte-for-byte stable. Next: phase 5.
+-   2026-09-26 — Design doc copied into the repo (`docs/design/publishing-model.md`).
+-   2026-09-26 — Phase 5 done (continued from Sol's uncommitted work): effect classes renamed to
+    `fx-`, styles-module naming and unsent-styles warning added, tests. Next: phase 6.

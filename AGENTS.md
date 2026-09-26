@@ -51,6 +51,9 @@ compares the port's output against it.
 -   Commit messages: conventional style (`feat(ao3): …`, `fix: …`, `test: …`) with a body saying
     why. Ignore the older `ADD:`/`FIX:` style in the history.
 -   Don't modify `src/ui/examples*` for now; they come from upstream prechoster.
+-   The `eo3-` class prefix is reserved for classes eo3 generates (lifted styles `eo3-<hash>`,
+    part wrappers `eo3-part-<id>`). Authored or packaged CSS must use another prefix (effects use
+    `fx-`).
 -   Keep `@property` rules top-level with literal `initial-value`s (nested ones break CSS minify;
     `var()` makes the registration invalid).
 -   Line endings: the repo uses `core.autocrlf`; check formatting with

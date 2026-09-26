@@ -94,6 +94,17 @@ export function OutputNode({ data }: { data: any }) {
                 }}
             ></div>
             {partName && <div className="i-part-name">{partName}</div>}
+            <button
+                className="i-part-styles nodrag"
+                title="Edit styles for this part"
+                onPointerDown={(event) => event.stopPropagation()}
+                onClick={(event) => {
+                    event.stopPropagation();
+                    data.openStyles(`${siteTargetPlugin?.partLabel ?? 'Part'} styles`);
+                }}
+            >
+                {data.hasStyles ? 'edit styles' : '+ styles'}
+            </button>
         </div>
     );
 }

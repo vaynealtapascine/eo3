@@ -186,6 +186,13 @@
     .i-output-node {
         cursor: grab;
 
+        .i-part-styles {
+            display: block;
+            margin: 4px auto 0;
+            cursor: pointer;
+            font-size: 0.75em;
+        }
+
         .i-part-name {
             max-width: 160px;
             font-size: 0.8em;

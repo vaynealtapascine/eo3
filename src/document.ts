@@ -1,5 +1,6 @@
 import { Component, FunctionComponent } from 'react';
 import { MODULES } from './plugins';
+import { EFFECTS, EffectKey } from './effects';
 
 export type JsonValue = null | boolean | number | string | JsonValue[] | { [k: string]: JsonValue };
 
@@ -80,6 +81,24 @@ export interface DocumentState {
     protectedSkinClasses: string[];
     /** Latest imported or marked-posted Work Skin for the diff shown before copying. */
     skinBaseline: string | null;
+    /** Named reusable groups; each instance contains ordinary modules in the graph. */
+    groupDefinitions: GroupDefinition[];
+    groupInstances: GroupInstance[];
+}
+
+export interface GroupDefinition {
+    id: string;
+    title: string;
+    /** Built-in shelf entry, when this definition came from one. */
+    shelfKey?: string;
+}
+
+export interface GroupInstance {
+    id: string;
+    definitionId: string;
+    partId: string;
+    /** Module IDs in corresponding order across instances of a definition. */
+    moduleIds: ModuleId[];
 }
 
 /** One unit of the work: a chapter, a post in a thread, a page — whatever the target calls it. */
@@ -163,6 +182,8 @@ export class Document extends EventTarget {
                 importedSkinModuleId: null,
                 protectedSkinClasses: [],
                 skinBaseline: null,
+                groupDefinitions: [],
+                groupInstances: [],
             },
             desc: { type: ChangeType.Load },
             time: Date.now(),
@@ -179,12 +200,16 @@ export class Document extends EventTarget {
             | 'importedSkinModuleId'
             | 'protectedSkinClasses'
             | 'skinBaseline'
+            | 'groupDefinitions'
+            | 'groupInstances'
         > & {
             parts?: Part[];
             skinRecord?: Record<string, string>;
             importedSkinModuleId?: ModuleId | null;
             protectedSkinClasses?: string[];
             skinBaseline?: string | null;
+            groupDefinitions?: GroupDefinition[];
+            groupInstances?: GroupInstance[];
         }
     ) {
         if (this.history.length > 1) throw new Error('cannot init in this state');
@@ -195,6 +220,8 @@ export class Document extends EventTarget {
             importedSkinModuleId: state.importedSkinModuleId ?? null,
             protectedSkinClasses: state.protectedSkinClasses ?? [],
             skinBaseline: state.skinBaseline ?? null,
+            groupDefinitions: state.groupDefinitions ?? [],
+            groupInstances: state.groupInstances ?? [],
         };
     }
 
@@ -232,6 +259,14 @@ export class Document extends EventTarget {
 
     get skinBaseline(): string | null {
         return this.state.skinBaseline;
+    }
+
+    get groupDefinitions(): Readonly<GroupDefinition[]> {
+        return this.state.groupDefinitions;
+    }
+
+    get groupInstances(): Readonly<GroupInstance[]> {
+        return this.state.groupInstances;
     }
 
     findPart(id: string) {
@@ -316,6 +351,24 @@ export class Document extends EventTarget {
         } else {
             const newModules = this.modules.slice();
             newModules[index] = module;
+            const instance = this.groupInstances.find((group) =>
+                group.moduleIds.includes(module.id)
+            );
+            if (instance) {
+                const slot = instance.moduleIds.indexOf(module.id);
+                const siblings = new Set(
+                    this.groupInstances
+                        .filter((group) => group.definitionId === instance.definitionId)
+                        .map((group) => group.moduleIds[slot])
+                );
+                for (let i = 0; i < newModules.length; i++) {
+                    if (newModules[i].id === module.id || !siblings.has(newModules[i].id)) continue;
+                    const copy = newModules[i].shallowClone();
+                    copy.data = structuredClone(module.data);
+                    copy.title = module.title;
+                    newModules[i] = copy;
+                }
+            }
             this.pushModulesState(newModules, {
                 type: ChangeType.UpdateModule,
                 module: module.id,
@@ -352,6 +405,9 @@ export class Document extends EventTarget {
                 parts,
                 importedSkinModuleId:
                     this.importedSkinModuleId === moduleId ? null : this.importedSkinModuleId,
+                groupInstances: this.groupInstances.filter(
+                    (instance) => !instance.moduleIds.includes(moduleId)
+                ),
             },
             { type: ChangeType.RemoveModule }
         );
@@ -359,6 +415,149 @@ export class Document extends EventTarget {
 
     private pushParts(parts: Part[], modules = this.modules as AnyModule[]) {
         this.pushHistoryState({ ...this.state, modules, parts }, { type: ChangeType.EditParts });
+    }
+
+    /** Turn modules wired within one part into a reusable shared definition. */
+    createGroup(title: string, partId: string, moduleIds: ModuleId[], shelfKey?: string) {
+        const part = this.findPart(partId);
+        const ids = new Set(moduleIds);
+        if (!part || !ids.size || ids.size !== moduleIds.length) return null;
+        if (this.groupInstances.some((instance) => instance.moduleIds.some((id) => ids.has(id))))
+            return null;
+        const modules = moduleIds.map((id) => this.findModule(id));
+        if (modules.some((mod) => !mod)) return null;
+        for (const mod of modules as AnyModule[]) {
+            if (mod.sends.some((target) => !ids.has(target) && target !== part.outputId))
+                return null;
+            if ([...mod.namedSends.keys()].some((target) => !ids.has(target))) return null;
+        }
+        const definition: GroupDefinition = {
+            id: Module.genModuleId(),
+            title,
+            ...(shelfKey ? { shelfKey } : {}),
+        };
+        const instance: GroupInstance = {
+            id: Module.genModuleId(),
+            definitionId: definition.id,
+            partId,
+            moduleIds,
+        };
+        this.pushHistoryState(
+            {
+                ...this.state,
+                groupDefinitions: [...this.groupDefinitions, definition],
+                groupInstances: [...this.groupInstances, instance],
+            },
+            { type: ChangeType.EditParts }
+        );
+        return instance;
+    }
+
+    /** Clone a group's ordinary graph modules, remapping its internal links and part output. */
+    duplicateGroup(instanceId: string, targetPartId: string): GroupInstance | null {
+        const source = this.groupInstances.find((instance) => instance.id === instanceId);
+        const fromPart = source && this.findPart(source.partId);
+        const toPart = this.findPart(targetPartId);
+        if (!source || !fromPart || !toPart) return null;
+        const originals = source.moduleIds.map((id) => this.findModule(id));
+        if (originals.some((mod) => !mod)) return null;
+        const copies = (originals as AnyModule[]).map((mod) => {
+            const copy = new Module(mod.plugin, structuredClone(mod.data));
+            copy.title = mod.title;
+            return copy;
+        });
+        const remap = new Map(source.moduleIds.map((id, i) => [id, copies[i].id]));
+        for (let i = 0; i < copies.length; i++) {
+            const original = originals[i]!;
+            copies[i].sends = original.sends.map((target) =>
+                target === fromPart.outputId ? toPart.outputId : remap.get(target) ?? target
+            );
+            copies[i].namedSends = new Map(
+                [...original.namedSends].map(([target, names]) => [
+                    remap.get(target) ?? target,
+                    new Set(names),
+                ])
+            );
+        }
+        const instance: GroupInstance = {
+            id: Module.genModuleId(),
+            definitionId: source.definitionId,
+            partId: targetPartId,
+            moduleIds: copies.map((mod) => mod.id),
+        };
+        this.pushHistoryState(
+            {
+                ...this.state,
+                modules: [...this.modules, ...copies],
+                groupInstances: [...this.groupInstances, instance],
+            },
+            { type: ChangeType.EditParts }
+        );
+        return instance;
+    }
+
+    /** Give one instance its own definition; subsequent edits no longer change its siblings. */
+    detachGroup(instanceId: string) {
+        const instance = this.groupInstances.find((group) => group.id === instanceId);
+        const definition = this.groupDefinitions.find(
+            (group) => group.id === instance?.definitionId
+        );
+        if (!instance || !definition) return;
+        const copy: GroupDefinition = {
+            id: Module.genModuleId(),
+            title: `${definition.title} copy`,
+        };
+        this.pushHistoryState(
+            {
+                ...this.state,
+                groupDefinitions: [...this.groupDefinitions, copy],
+                groupInstances: this.groupInstances.map((group) =>
+                    group.id === instanceId ? { ...group, definitionId: copy.id } : group
+                ),
+            },
+            { type: ChangeType.EditParts }
+        );
+    }
+
+    /** Add a shelf effect as a group of ordinary HTML and CSS modules. */
+    async addPackagedEffect(key: EffectKey, partId: string): Promise<GroupInstance | null> {
+        const part = this.findPart(partId);
+        if (!part) return null;
+        const existing = this.groupDefinitions.find((definition) => definition.shelfKey === key);
+        const source =
+            existing &&
+            this.groupInstances.find((instance) => instance.definitionId === existing.id);
+        if (source) return this.duplicateGroup(source.id, partId);
+
+        const plugin = await MODULES['source.text'].load();
+        const effect = EFFECTS[key];
+        const html = new Module(plugin, { contents: effect.html, language: 'html' });
+        html.title = `${effect.title} HTML`;
+        html.sends = [part.outputId];
+        const css = new Module(plugin, { contents: effect.css, language: 'css' });
+        css.title = `${effect.title} styles`;
+        css.sends = [part.outputId];
+        const definition: GroupDefinition = {
+            id: Module.genModuleId(),
+            title: effect.title,
+            shelfKey: key,
+        };
+        const instance: GroupInstance = {
+            id: Module.genModuleId(),
+            definitionId: definition.id,
+            partId,
+            moduleIds: [html.id, css.id],
+        };
+        this.pushHistoryState(
+            {
+                ...this.state,
+                modules: [...this.modules, html, css],
+                groupDefinitions: [...this.groupDefinitions, definition],
+                groupInstances: [...this.groupInstances, instance],
+            },
+            { type: ChangeType.EditParts }
+        );
+        return instance;
     }
 
     /** Keep the imported Work Skin shared when a new part is added. */
@@ -575,9 +774,14 @@ export class Document extends EventTarget {
                 clone.sends = mod.sends.filter((target) => target !== part.outputId);
                 return clone;
             });
-        this.pushParts(
-            this.parts.filter((p) => p.id !== id),
-            modules
+        this.pushHistoryState(
+            {
+                ...this.state,
+                parts: this.parts.filter((p) => p.id !== id),
+                modules,
+                groupInstances: this.groupInstances.filter((instance) => instance.partId !== id),
+            },
+            { type: ChangeType.EditParts }
         );
     }
 

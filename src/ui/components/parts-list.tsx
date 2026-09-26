@@ -1,6 +1,7 @@
 import { Document, ModuleId } from '../../document';
 import { useSiteTarget } from '../../targets/context';
 import { Ao3Import } from './ao3-import';
+import { EFFECTS, EffectKey } from '../../effects';
 import './parts-list.css';
 
 /**
@@ -17,7 +18,14 @@ export function PartsList({
     const target = useSiteTarget();
     const label = target.plugin?.partLabel ?? 'Part';
     const parts = document.parts;
-    const selectedId = parts.some((p) => p.id === partId) ? partId : parts[0].id;
+    const selectedId = parts.find((p) => p.id === partId)?.id ?? parts[0].id;
+    // e.g. a detached part-styles module whose part was removed
+    const unsentStyles = document.modules.filter(
+        (mod) =>
+            (mod.data as { language?: unknown } | null)?.language === 'css' &&
+            !mod.sends.length &&
+            !mod.namedSends.size
+    );
 
     const addPart = async () => {
         const part = await document.addPartWithText(`${label} text`);
@@ -119,9 +127,76 @@ export function PartsList({
                     </li>
                 ))}
             </ol>
+            {unsentStyles.length > 0 && (
+                <p className="i-unsent">
+                    {unsentStyles.length === 1
+                        ? `A styles module isn’t connected to any ${label.toLowerCase()}, so it does nothing:`
+                        : `${
+                              unsentStyles.length
+                          } styles modules aren’t connected to any ${label.toLowerCase()}, so they do nothing:`}{' '}
+                    {unsentStyles.map((mod) => (
+                        <button key={mod.id} onClick={() => onSelectModule(mod.id)}>
+                            {mod.title || 'CSS'}
+                        </button>
+                    ))}
+                </p>
+            )}
             <button className="i-add" onClick={addPart}>
                 + add {label.toLowerCase()}
             </button>
+            <details className="i-effect-shelf">
+                <summary>effect shelf</summary>
+                <p>Add an editable effect to this {label.toLowerCase()}.</p>
+                {Object.entries(EFFECTS).map(([key, effect]) => (
+                    <button
+                        key={key}
+                        onClick={async () => {
+                            const instance = await document.addPackagedEffect(
+                                key as EffectKey,
+                                selectedId
+                            );
+                            if (instance) onSelectModule(instance.moduleIds[0]);
+                        }}
+                    >
+                        + {effect.title}
+                    </button>
+                ))}
+            </details>
+            {document.groupInstances.some((instance) => instance.partId === selectedId) && (
+                <section className="i-groups" aria-label="Effect groups in this part">
+                    <h3>groups in this {label.toLowerCase()}</h3>
+                    {document.groupInstances
+                        .filter((instance) => instance.partId === selectedId)
+                        .map((instance) => {
+                            const definition = document.groupDefinitions.find(
+                                (item) => item.id === instance.definitionId
+                            );
+                            const count = document.groupInstances.filter(
+                                (item) => item.definitionId === instance.definitionId
+                            ).length;
+                            return (
+                                <div key={instance.id} className="i-group">
+                                    <button onClick={() => onSelectModule(instance.moduleIds[0])}>
+                                        {definition?.title ?? 'Group'}
+                                    </button>
+                                    <span>{count > 1 ? `shared by ${count}` : 'one instance'}</span>
+                                    <button
+                                        onClick={() =>
+                                            document.duplicateGroup(instance.id, selectedId)
+                                        }
+                                    >
+                                        copy here
+                                    </button>
+                                    {count > 1 && (
+                                        <button onClick={() => document.detachGroup(instance.id)}>
+                                            detach
+                                        </button>
+                                    )}
+                                </div>
+                            );
+                        })}
+                </section>
+            )}
             {target.id === 'ao3' && (
                 <Ao3Import
                     document={document}

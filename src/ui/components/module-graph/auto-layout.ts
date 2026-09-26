@@ -8,10 +8,29 @@ import {
     GRID_SIZE,
 } from './consts';
 
-function toposortDoc(doc: Document, backwards: boolean = false): AnyModule[] {
+export function collapsedStyles(doc: Document): Set<ModuleId> {
+    return new Set(
+        doc.parts.flatMap((part) => {
+            const id = part.stylesModuleId;
+            const mod = id && doc.findModule(id);
+            if (!mod || mod.sends.length !== 1 || mod.sends[0] !== part.outputId) return [];
+            const incoming = doc.findModuleInputIds(id);
+            if (mod.namedSends.size || incoming.inputs.length || incoming.namedInputs.size)
+                return [];
+            return [id];
+        })
+    );
+}
+
+function toposortDoc(
+    doc: Document,
+    hidden: Set<ModuleId>,
+    backwards: boolean = false
+): AnyModule[] {
     const indexedNodes = new Map();
-    for (const node of doc.modules) indexedNodes.set(node.id, node);
-    const unmarkedNodes = new Set(doc.modules);
+    for (const node of doc.modules.filter((node) => !hidden.has(node.id)))
+        indexedNodes.set(node.id, node);
+    const unmarkedNodes = new Set(indexedNodes.values());
     const tmpMarkedNodes = new Set();
     const sorted: AnyModule[] = [];
 
@@ -58,6 +77,7 @@ export type GraphLayout = {
     indices: Map<ModuleId, number>;
 };
 export function layoutNodes(doc: Document): GraphLayout {
+    const hidden = collapsedStyles(doc);
     const columns: ColumnEntry[][] = [];
     const nodeLayouts = new Map<ModuleId, NodeLayout>();
 
@@ -66,6 +86,7 @@ export function layoutNodes(doc: Document): GraphLayout {
     const outgoingEdges = new Map();
     for (let i = 0; i < doc.modules.length; i++) {
         const node = doc.modules[i];
+        if (hidden.has(node.id)) continue;
         indices.set(node.id, i);
         indexedNodes.set(node.id, node);
         const edges = new Set([...node.sends, ...node.namedSends.keys()]);
@@ -78,15 +99,15 @@ export function layoutNodes(doc: Document): GraphLayout {
             column: 0,
             index: i,
             y: 0,
-            // room for the mascot and its part label once there are several outputs
-            height: doc.parts.length > 1 ? 160 : 64,
+            // Room for the mascot, part label, and managed styles control.
+            height: doc.parts.length > 1 ? 190 : 165,
             acceptsInputs: true,
             namedInputs: new Set(),
         });
         columns[0].push({ id: part.outputId, order: i - doc.parts.length });
     });
 
-    for (const node of toposortDoc(doc, true)) {
+    for (const node of toposortDoc(doc, hidden, true)) {
         let column = 0;
         for (const otherNodeId of outgoingEdges.get(node)) {
             const otherLoc = nodeLayouts.get(otherNodeId)!;

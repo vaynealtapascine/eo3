@@ -16,7 +16,7 @@ import {
     OnConnectStartParams,
     ReactFlowInstance,
 } from 'reactflow';
-import { layoutNodes } from './auto-layout';
+import { collapsedStyles, layoutNodes } from './auto-layout';
 import { GRID_SIZE, MIN_COL_GAP, MOD_BASE_WIDTH } from './consts';
 import { ModulePicker } from '../module-picker';
 import 'reactflow/dist/style.css';
@@ -281,12 +281,14 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
     render() {
         const { document, selected, render } = this.props;
         const layout = layoutNodes(document);
+        const hidden = collapsedStyles(document);
         const nodes: any[] = [];
 
         const colStride = Math.ceil((MOD_BASE_WIDTH + MIN_COL_GAP) / GRID_SIZE) * GRID_SIZE;
         const maxLayoutX = (layout.columns.length - 1) * colStride;
 
         for (const module of document.modules) {
+            if (hidden.has(module.id)) continue;
             const nodeLayout = layout.layouts.get(module.id)!;
             const output = render?.output ? render.output.outputs.get(module.id) || null : null;
             const error =
@@ -329,11 +331,18 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
                     partIndex: i,
                     partTitle: part.title,
                     partCount: document.parts.length,
+                    hasStyles: !!part.stylesModuleId,
+                    openStyles: async (title: string) => {
+                        const id = await document.partStyles(part.id, title);
+                        if (id) this.props.onSelect(id);
+                    },
                 },
             });
         });
 
-        const edges = getConnections(document, selected);
+        const edges = getConnections(document, selected).filter(
+            (edge) => !hidden.has(edge.source) && !hidden.has(edge.target)
+        );
 
         return (
             <div
