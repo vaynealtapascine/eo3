@@ -149,7 +149,7 @@ describe('saving and loading parts', () => {
         doc.insertModule(styles);
         doc.updatePart(second.id, {
             stylesModuleId: styles.id,
-            posted: { at: '2026-09-26', classes: ['eo3-h66u19'] },
+            posted: { at: '2026-09-26', classes: ['eo3-h66u19'], htmlHash: 'abc123' },
         });
 
         const loaded = deserializeV1(serializeV1(doc, format));

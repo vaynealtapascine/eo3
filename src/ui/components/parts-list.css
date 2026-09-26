@@ -62,6 +62,19 @@
         }
     }
 
+    .i-badge {
+        flex-shrink: 0;
+        font-size: 0.8em;
+        padding: 0.05em 0.4em;
+        border-radius: 1em;
+        background: rgb(var(--P-color-shade) / var(--P-color-shade-opacity));
+
+        &.is-warning {
+            background: rgb(var(--P-color-warning) / 0.2);
+            color: rgb(var(--P-color-warning));
+        }
+    }
+
     .i-actions {
         display: flex;
         gap: 0.2em;

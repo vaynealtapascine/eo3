@@ -7,10 +7,12 @@ export function CopyToClipboardButton({
     action,
     exportOutput,
     disabled,
+    onCopied,
 }: {
     action: SiteTargetExportAction;
     exportOutput: SiteTargetExportOutput;
     disabled?: boolean;
+    onCopied?: (outputId: string) => void;
 }) {
     const [copied, setCopied] = useState(false);
     const [warnings, setWarnings] = useState<string[]>([]);
@@ -21,6 +23,7 @@ export function CopyToClipboardButton({
     const copy = () => {
         try {
             navigator.clipboard.writeText(getData());
+            onCopied?.(action.outputId);
             setCopied(true);
             setTimeout(() => {
                 setCopied(false);

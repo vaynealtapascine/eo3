@@ -21,12 +21,15 @@ export function Preview({
     render,
     partId,
     onPartChange,
+    copiedParts,
+    onPartCopied,
     clickToRender,
     onTargetChange,
     onLiveChange,
     onRender,
 }: Preview.Props) {
     let contents = null;
+    const shownPart = document.findPart(partId ?? '') ?? document.parts[0];
     const { id: siteTargetId, plugin: siteTargetPlugin, setId: setSiteTargetId } = useSiteTarget();
     const [previewConfig, onPreviewConfigChange] = useState<PreviewConfig | null>(null);
     const [readMore, setReadMore] = useState(false);
@@ -77,7 +80,11 @@ export function Preview({
                         renderId={render.id}
                         stale={render.rendering}
                         work={work}
-                        partId={partId}
+                        partId={shownPart.id}
+                        posted={shownPart.posted}
+                        copied={copiedParts.includes(shownPart.id)}
+                        onPartCopied={onPartCopied}
+                        onPostedChange={(id, posted) => document.updatePart(id, { posted })}
                         plugin={siteTargetPlugin}
                         config={previewConfig}
                         onConfigChange={onPreviewConfigChange}
@@ -228,6 +235,9 @@ namespace Preview {
         /** The part shown in the post preview; null = the first part. */
         partId: string | null;
         onPartChange: (partId: string) => void;
+        /** Parts whose output was copied this session. */
+        copiedParts: string[];
+        onPartCopied: (partId: string) => void;
         clickToRender: (() => void) | null;
         onTargetChange: (target: RenderTarget) => void;
         onLiveChange: (live: boolean) => void;

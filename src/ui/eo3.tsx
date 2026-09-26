@@ -17,6 +17,8 @@ interface Eo3State {
     selected: ModuleId | EdgeId | null;
     /** The part shown in the post preview; null = the first part. */
     partId: string | null;
+    /** Parts whose output was copied this session; unmarked ones get a reminder. */
+    copiedParts: string[];
 }
 
 export class Eo3 extends PureComponent<Eo3.Props, Eo3State> {
@@ -32,6 +34,7 @@ export class Eo3 extends PureComponent<Eo3.Props, Eo3State> {
         clickToRender: false,
         selected: null,
         partId: null,
+        copiedParts: [] as string[],
     };
 
     componentDidMount() {
@@ -184,6 +187,7 @@ export class Eo3 extends PureComponent<Eo3.Props, Eo3State> {
                                     document={doc}
                                     partId={this.state.partId}
                                     onSelectPart={(partId) => this.setState({ partId })}
+                                    copiedParts={this.state.copiedParts}
                                     onSelectModule={(selected) => this.setState({ selected })}
                                 />
                                 <ModuleList
@@ -199,6 +203,15 @@ export class Eo3 extends PureComponent<Eo3.Props, Eo3State> {
                                     render={render}
                                     partId={this.state.partId}
                                     onPartChange={(partId) => this.setState({ partId })}
+                                    copiedParts={this.state.copiedParts}
+                                    onPartCopied={(id) =>
+                                        this.setState({
+                                            copiedParts: [
+                                                ...this.state.copiedParts.filter((p) => p !== id),
+                                                id,
+                                            ],
+                                        })
+                                    }
                                     clickToRender={
                                         this.state.clickToRender
                                             ? () => {

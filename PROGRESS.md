@@ -13,8 +13,8 @@ update it whenever a step lands (what changed, what's next, anything surprising)
 | Phase | Scope                                                                                                          | State       |
 | ----- | -------------------------------------------------------------------------------------------------------------- | ----------- |
 | 1     | Canonical, sorted Work Skin; pinned-hash test; collision check                                                 | Done        |
-| 2     | `Work` + parts in the document; migration of saved documents; parts list UI; `export()` over a work            | In progress |
-| 3     | Delivery strategies (`shared-stylesheet`, `inline`); skin record; diff before copy; part-scoped CSS; conflicts | Not started |
+| 2     | `Work` + parts in the document; migration of saved documents; parts list UI; `export()` over a work            | Done        |
+| 3     | Delivery strategies (`shared-stylesheet`, `inline`); skin record; diff before copy; part-scoped CSS; conflicts | Next        |
 | 4     | Import an existing skin, then existing chapters                                                                | Not started |
 | 5     | Group nodes (shared but detachable); first packaged effects                                                    | Not started |
 | 6     | Size-based splitting; custom target profiles; crossposting                                                     | Not started |
@@ -48,7 +48,7 @@ Findings:
     AO3's re-sanitized output, not assume identity.
 -   AO3's cleaned Work Skin **is** a fixed point, except `@font-face` (a known divergence).
 
-## Phase 2 — works and parts (in progress)
+## Phase 2 — works and parts (done)
 
 Landed in four commits, each leaving the app working:
 
@@ -88,11 +88,34 @@ Landed in four commits, each leaving the app working:
         target's `partLabel`). Tests: `test/document/parts.test.ts` (mocks the plugin
         registry; the real Text plugin needs `matchMedia`).
         **Not done:** collapsing managed style modules under their part in the graph view.
--   [ ] **2d — posting.** "Mark as posted" (explicit) recording the part's `eo3-*` classes;
-        warnings for copied-but-unmarked parts.
+-   [x] **2d — posting.** `PostedSnapshot { at, classes, htmlHash }` on `Part` (persisted).
+        `SiteTargetPreviewProps.posting: PartPosting` (built in `PostPreview`): marking records
+        the date, the `eo3-*` classes in the part's primary output (`class="…"` attributes) and
+        `fnv1a36` of that output (`src/util/hash.ts`, also used by lift-styles). Shared control
+        `post-preview/posted-status.tsx` next to the copy buttons (AO3 chrome, cohost footer):
+        "mark as posted"; reminder after copying an unmarked part; "changed since you marked it
+        posted" when the output hash differs; "unmark". `CopyToClipboardButton` has
+        `onCopied`; copies of 'part'-scoped outputs are tracked per session in `Eo3` state
+        (`copiedParts`, not persisted). Parts list shows "posted" / "not marked posted" badges.
 
-Part-scoped CSS (wrapping a part in `eo3-part-<id>` and prefixing its CSS) is phase 3; in 2b
-part CSS is simply added to the shared skin unscoped.
+## Phase 3 — delivery strategies and the skin record (next)
+
+Plan, in order:
+
+-   [ ] Extract `src/targets/delivery/shared-stylesheet.ts` from `ao3/export.ts` (lift merge,
+        sort, canonicalize callback) and `delivery/inline.ts` from `cohost/export.ts`; targets
+        call them. Pure refactor; parity + export tests must pass unchanged.
+-   [ ] Part-scoped CSS: on shared-stylesheet targets wrap a part's HTML in
+        `<div class="eo3-part-<partId>">` and prefix CSS that reaches only some parts with that
+        class for each part it reaches (scope follows reach). Work CSS stays unscoped. Needs the
+        reach per CSS module, not just per part: extend `evalWork` to return, per CSS source,
+        the set of parts it reaches.
+-   [ ] Skin record: keep a rule while any posted snapshot references its class, even if no
+        current part does; "clean up unused styles" drops the rest after showing them.
+-   [ ] Diff before copy: compare the new Work Skin with the one last marked posted (store the
+        skin text or its rule set when a part is marked posted) — "N styles added, M removed".
+-   [ ] Cross-part conflict warning: the same selector with different declarations in CSS
+        that reaches different parts.
 
 ## Log
 
@@ -102,3 +125,4 @@ part CSS is simply added to the shared skin unscoped.
 -   2026-09-26 — Phase 2b (targets export the whole work) done.
 -   2026-09-26 — Phase 2c (parts list, graph outputs, part styles) done. Also fixed a pre-existing
     crash: undo that shortened a code editor's text blanked the app (`codemirror.tsx`).
+-   2026-09-26 — Phase 2d (mark as posted) done; phase 2 complete. Next: phase 3.

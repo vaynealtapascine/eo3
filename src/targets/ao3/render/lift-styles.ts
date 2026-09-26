@@ -1,12 +1,4 @@
-/** FNV-1a 32-bit → base36: cheap, synchronous, and deterministic across renders and sessions. */
-function hashString(s: string): string {
-    let h = 0x811c9dc5;
-    for (let i = 0; i < s.length; i++) {
-        h ^= s.charCodeAt(i);
-        h = Math.imul(h, 0x01000193);
-    }
-    return (h >>> 0).toString(36);
-}
+import { fnv1a36 as hashString } from '../../../util/hash';
 
 /**
  * Canonical declarations of a `style` value: property names lowercased, whitespace collapsed, a

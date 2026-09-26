@@ -1,5 +1,5 @@
 import { ComponentType, ReactNode } from 'react';
-import { JsonValue } from '../document';
+import { JsonValue, PostedSnapshot } from '../document';
 
 export type SiteTargetId = string;
 
@@ -106,6 +106,18 @@ export function makeDefaultPreviewConfig(plugin: SiteTargetPlugin<any>): Preview
     };
 }
 
+export interface PartPosting {
+    posted: PostedSnapshot | null;
+    /** The part's output was copied this session but the part isn't marked as posted. */
+    copiedUnmarked: boolean;
+    /** The part is marked as posted but its output has changed since. */
+    changedSincePosted: boolean;
+    /** Call after an export action copied `outputId`. */
+    onCopied(outputId: string): void;
+    markPosted(): void;
+    unmarkPosted(): void;
+}
+
 export interface SiteTargetPreviewProps<Config extends JsonValue> {
     plugin: SiteTargetPlugin<Config>;
     markdown: string;
@@ -117,6 +129,8 @@ export interface SiteTargetPreviewProps<Config extends JsonValue> {
     exportOutput: SiteTargetExportOutput;
     /** The part on screen: its position (0-based) and how many parts the work has. */
     part: { index: number; count: number; title: string };
+    /** Posted state of the part on screen; chrome shows it next to its copy buttons. */
+    posting: PartPosting;
     config: Config;
     previewConfig: PreviewConfig;
     onPreviewConfigChange: (c: PreviewConfig) => void;

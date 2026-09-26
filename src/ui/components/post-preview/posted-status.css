@@ -1,0 +1,28 @@
+.posted-status {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4em;
+    margin: 0 0.4em;
+
+    .i-note {
+        font-size: 0.9em;
+        opacity: 0.8;
+
+        &.is-warning {
+            opacity: 1;
+            color: rgb(var(--P-color-warning));
+        }
+    }
+
+    .i-link {
+        font: inherit;
+        font-size: 0.9em;
+        background: none;
+        border: none;
+        padding: 0;
+        color: inherit;
+        text-decoration: underline;
+        cursor: pointer;
+    }
+}

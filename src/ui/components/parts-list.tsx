@@ -6,7 +6,13 @@ import './parts-list.css';
  * The work's parts (chapters, posts) in order. Selecting a part shows it in the preview; each
  * part links to its styles module, which is created and wired on first use.
  */
-export function PartsList({ document, partId, onSelectPart, onSelectModule }: PartsList.Props) {
+export function PartsList({
+    document,
+    partId,
+    copiedParts,
+    onSelectPart,
+    onSelectModule,
+}: PartsList.Props) {
     const label = useSiteTarget().plugin?.partLabel ?? 'Part';
     const parts = document.parts;
     const selectedId = parts.some((p) => p.id === partId) ? partId : parts[0].id;
@@ -54,6 +60,21 @@ export function PartsList({ document, partId, onSelectPart, onSelectModule }: Pa
                                 document.updatePart(part.id, { title: e.target.value })
                             }
                         />
+                        {part.posted ? (
+                            <span
+                                className="i-badge"
+                                title={`Marked as posted on ${part.posted.at}`}
+                            >
+                                posted
+                            </span>
+                        ) : copiedParts.includes(part.id) ? (
+                            <span
+                                className="i-badge is-warning"
+                                title="Copied but not marked as posted; mark it in the preview once it's up"
+                            >
+                                not marked posted
+                            </span>
+                        ) : null}
                         <span className="i-actions">
                             <button
                                 onClick={() => openStyles(part.id)}
@@ -107,6 +128,8 @@ namespace PartsList {
     export interface Props {
         document: Document;
         partId: string | null;
+        /** Parts copied this session; unposted ones get a reminder badge. */
+        copiedParts: string[];
         onSelectPart: (partId: string) => void;
         onSelectModule: (moduleId: ModuleId) => void;
     }

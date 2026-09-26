@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import parse from 'html-react-parser';
 import { DirPopover } from '../../uikit/dir-popover';
 import { CopyToClipboardButton } from '../../ui/components/post-preview/copy-to-clipboard-button';
+import { PostedStatus } from '../../ui/components/post-preview/posted-status';
 import { SiteTargetPreviewProps, ErrorMessage as GenericErrorMessage } from '../types';
 import { RenderConfig } from './config';
 import { ERRORS, AO3_APPROX_MAX_PAYLOAD_SIZE } from './diagnostics';
@@ -66,6 +67,7 @@ function PostSize({ size }: { size: number }) {
 export function Ao3PreviewHeader({
     exportOutput,
     part,
+    posting,
     error,
     renderErrors,
     asyncErrors,
@@ -656,8 +658,13 @@ export function Ao3PreviewHeader({
                                             action={action}
                                             exportOutput={exportOutput}
                                             disabled={!!error}
+                                            onCopied={posting.onCopied}
                                         />
                                     ))}
+                                    <PostedStatus
+                                        posting={posting}
+                                        partName={`Chapter ${part.index + 1}`}
+                                    />
                                 </div>
 
                                 <div id="kudos_message"></div>

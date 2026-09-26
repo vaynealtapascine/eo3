@@ -92,6 +92,8 @@ export interface PostedSnapshot {
     at: string;
     /** `eo3-*` classes the posted HTML references; they must stay in the shared stylesheet. */
     classes: string[];
+    /** fnv1a36 of the posted HTML, to tell when the part has changed since. */
+    htmlHash: string;
 }
 
 export function isPartOutput(id: ModuleId): boolean {

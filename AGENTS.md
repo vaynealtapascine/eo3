@@ -16,7 +16,8 @@ Run `typecheck` and `test` before committing; CI runs both plus the build on eve
 
 ## Layout
 
--   `src/document.ts` — the module graph (modules, sends, evaluation).
+-   `src/document.ts` — the module graph (modules, sends, evaluation) and the work's parts
+    (chapters/posts), each with its own output; `evalWork()` evaluates them all.
 -   `src/plugins/` — module plugins (sources and transforms), each lazy-loaded via `plugins/index.ts`.
 -   `src/targets/` — site targets (`SiteTargetPlugin` in `types.ts`): how output is previewed and
     exported for a site. `ao3/` and `cohost/` are self-contained; each keeps its own explicit

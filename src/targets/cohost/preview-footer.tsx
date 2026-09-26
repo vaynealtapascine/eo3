@@ -1,4 +1,5 @@
 import { CopyToClipboardButton } from '../../ui/components/post-preview/copy-to-clipboard-button';
+import { PostedStatus } from '../../ui/components/post-preview/posted-status';
 import { SiteTargetPreviewProps } from '../types';
 import { RenderConfig } from './config';
 import { COHOST_APPROX_MAX_PAYLOAD_SIZE } from './fallback-renderer';
@@ -41,7 +42,12 @@ function PostSize({ size }: { size: number }) {
     );
 }
 
-export function CohostPreviewFooter({ exportOutput, error }: SiteTargetPreviewProps<RenderConfig>) {
+export function CohostPreviewFooter({
+    exportOutput,
+    error,
+    part,
+    posting,
+}: SiteTargetPreviewProps<RenderConfig>) {
     const html = exportOutput.get('html') ?? '';
     return (
         <>
@@ -54,8 +60,10 @@ export function CohostPreviewFooter({ exportOutput, error }: SiteTargetPreviewPr
                         action={action}
                         exportOutput={exportOutput}
                         disabled={!!error}
+                        onCopied={posting.onCopied}
                     />
                 ))}
+                <PostedStatus posting={posting} partName={`Post ${part.index + 1}`} />
             </div>
         </>
     );

@@ -6,10 +6,12 @@ import { PreviewRenderIcon } from '../icons';
 import './index.scss';
 import { createPortal } from 'react-dom';
 import { DirPopover } from '../../../uikit/dir-popover';
-import { JsonValue, WorkOutput } from '../../../document';
+import { JsonValue, PostedSnapshot, WorkOutput } from '../../../document';
+import { fnv1a36 } from '../../../util/hash';
 import {
     ErrorMessage,
     LiveRenderFn,
+    PartPosting,
     PreviewConfig,
     PushError,
     RenderResult,
@@ -215,6 +217,10 @@ export function PostPreview({
     readMore,
     onReadMoreChange,
     errorPortal,
+    posted,
+    copied,
+    onPartCopied,
+    onPostedChange,
 }: PostPreview.Props) {
     const partIndex = Math.max(
         0,
@@ -321,11 +327,32 @@ export function PostPreview({
     const siteDarkTheme = supports('siteDarkTheme') && config.siteDarkTheme;
     const reducedMotion = supports('prefersReducedMotion') && config.prefersReducedMotion;
 
+    const postedHtml = exportOutput.get(plugin.outputs[0].id) ?? '';
+    const postedHtmlHash = fnv1a36(postedHtml);
+    const posting: PartPosting = {
+        posted,
+        copiedUnmarked: copied && !posted,
+        changedSincePosted: !!posted && !exportResult.error && posted.htmlHash !== postedHtmlHash,
+        onCopied: (outputId) => {
+            if (plugin.outputs.find((o) => o.id === outputId)?.scope === 'part') {
+                onPartCopied(part.id);
+            }
+        },
+        markPosted: () =>
+            onPostedChange(part.id, {
+                at: new Date().toLocaleDateString('en-CA'), // YYYY-MM-DD, local
+                classes: liftedClasses(postedHtml),
+                htmlHash: postedHtmlHash,
+            }),
+        unmarkPosted: () => onPostedChange(part.id, null),
+    };
+
     const previewProps: SiteTargetPreviewProps<any> = {
         plugin,
         markdown,
         exportOutput,
         part: { index: partIndex, count: work.parts.length, title: part.title },
+        posting,
         config: config.targetConfig,
         previewConfig: config,
         onPreviewConfigChange: onConfigChange,
@@ -403,7 +430,22 @@ namespace PostPreview {
         readMore: boolean;
         onReadMoreChange: (b: boolean) => void;
         errorPortal: HTMLDivElement | null;
+        /** Posted state of the part on screen. */
+        posted: PostedSnapshot | null;
+        /** Whether the part on screen was copied this session. */
+        copied: boolean;
+        onPartCopied: (partId: string) => void;
+        onPostedChange: (partId: string, posted: PostedSnapshot | null) => void;
     }
+}
+
+/** The `eo3-*` classes an exported part's HTML references, sorted. */
+function liftedClasses(html: string): string[] {
+    const classes = new Set<string>();
+    for (const [, value] of html.matchAll(/ class="([^"]*)"/g)) {
+        for (const name of value.split(/\s+/)) if (name.startsWith('eo3-')) classes.add(name);
+    }
+    return [...classes].sort();
 }
 
 type UnifiedConfigItem = SiteTargetConfigItem<PreviewConfig>;

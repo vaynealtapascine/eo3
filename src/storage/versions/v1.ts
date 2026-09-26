@@ -218,7 +218,11 @@ export function deserializeV1(input: string): Document {
         stylesModuleId:
             partData.styles !== undefined ? moduleIdAssignments.get(partData.styles) ?? null : null,
         posted: partData.posted
-            ? { at: String(partData.posted.at), classes: [...(partData.posted.classes || [])] }
+            ? {
+                  at: String(partData.posted.at),
+                  classes: [...(partData.posted.classes || [])],
+                  htmlHash: String(partData.posted.htmlHash ?? ''),
+              }
             : null,
     }));
 
