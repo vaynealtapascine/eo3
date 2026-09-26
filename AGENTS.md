@@ -8,7 +8,7 @@ Notes for anyone (human or AI) working on eo3. See README.md for what the app is
 
 ```sh
 npm run typecheck        # tsc --noEmit — the only type check; the build strips types unchecked
-npm test                 # Vitest (jsdom): AO3 parity tests
+npm test                 # Vitest (jsdom): parity, document, target and UI logic tests
 npm run build            # production build (Vite 8 / rolldown)
 npm run test:ao3-update  # regenerate AO3 parity expectations (needs Ruby ≥ 3.2 + network)
 npm run test:wafrn-update  # re-extract wafrn's sanitizer settings (needs network)
@@ -22,11 +22,14 @@ Run `typecheck` and `test` before committing; CI runs both plus the build on eve
     (chapters/posts), each with its own output; `evalWork()` evaluates them all.
 -   `src/plugins/` — module plugins (sources and transforms), each lazy-loaded via `plugins/index.ts`.
 -   `src/targets/` — site targets (`SiteTargetPlugin` in `types.ts`): how output is previewed and
-    exported for a site. `ao3/` and `cohost/` are self-contained; each keeps its own explicit
-    `ERRORS` registry on purpose — don't consolidate them.
+    exported for a site. `ao3/` and `cohost/` are self-contained; `profile/` builds a target from
+    a declarative site profile (custom sites, and `wafrn/`); `delivery/` holds the ways styles
+    reach a site. Each target keeps its own explicit `ERRORS` registry on purpose — don't
+    consolidate them.
 -   `src/targets/ao3/render/` — a port of AO3's (otwarchive) chapter HTML sanitizer and Work Skin CSS
     validator. AO3 uses no Markdown. Preview and export both run it.
--   `test/ao3-parity/` — checks that port against AO3's real Ruby code.
+-   `test/ao3-parity/` — checks that port against AO3's real Ruby code; `test/wafrn-parity/` checks
+    the wafrn target against wafrn's own sanitizer settings and `sanitize-html` version.
 
 ## AO3 parity tests
 

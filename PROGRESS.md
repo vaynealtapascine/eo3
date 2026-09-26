@@ -255,15 +255,12 @@ Built as:
 
 ## Open follow-ups
 
-Everything in the design's seven phases has landed. Known gaps, roughly by value:
+Everything in the design's seven phases has landed, and the follow-ups found along the way are
+done. Smaller known limits:
 
--   **Group any modules (power users).** Ctrl/Cmd-click two or more graph nodes and use "group
-    nodes". The selection must be self-contained and feed one part; incoming links from outside
-    the selection are rejected because a copied group cannot recreate them. The disabled group
-    action explains that constraint. Grouped members remain separate graph cards rather than one
-    collapsible card.
--   **Pushing.** Everything after `06b3f80` (the last push to `origin/main`) is local until
-    someone pushes.
+-   A collapsed group card can't be dragged; expand it to move its members.
+-   Custom site profiles live in the browser (localStorage), not in the document; share them as
+    JSON.
 
 ## Log
 
@@ -311,3 +308,6 @@ Everything in the design's seven phases has landed. Known gaps, roughly by value
 -   2026-09-26 — wafrn previews of styled posts now note that reduced-motion readers,
     server-rendered pages and other fediverse servers show the post unstyled. Profile targets
     take an optional `footerNote` for site-specific notes like this.
+-   2026-09-26 — Groups now show in the graph as one card (collapsed by default) that expands to
+    its members. Edges to hidden members are drawn to the card with their own ids and mapped back
+    when selected or removed (`module-graph/group-cards.ts`, tested in `test/ui/`).
