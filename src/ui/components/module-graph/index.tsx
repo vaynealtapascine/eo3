@@ -17,7 +17,13 @@ import {
     ReactFlowInstance,
 } from 'reactflow';
 import { collapsedStyles, layoutNodes } from './auto-layout';
-import { connectionId, groupCards, isGroupNode, routeEdge } from './group-cards';
+import {
+    connectionId,
+    groupCards,
+    isGroupNode,
+    routeEdge,
+    translateGroupMembers,
+} from './group-cards';
 import { GRID_SIZE, MIN_COL_GAP, MOD_BASE_WIDTH } from './consts';
 import { ModulePicker } from '../module-picker';
 import 'reactflow/dist/style.css';
@@ -34,6 +40,10 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
         addingModule: false,
         modulePickerAnchor: null,
         groupSelection: [] as ModuleId[],
+        groupDragPosition: null as {
+            nodeId: string;
+            position: { x: number; y: number };
+        } | null,
         /** Group instances shown as their member nodes; the rest are one card each. */
         expandedGroups: [] as string[],
     };
@@ -63,6 +73,58 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
     containerNode = createRef<HTMLDivElement>();
     addModuleButton = createRef<Button>();
     reactFlow: ReactFlowInstance | null = null;
+    modulePositions = new Map<ModuleId, { x: number; y: number }>();
+    groupDrag: {
+        nodeId: string;
+        origin: { x: number; y: number };
+        members: ModuleId[];
+        positions: Map<ModuleId, { x: number; y: number }>;
+    } | null = null;
+
+    onNodeDragStart = (node: { id: string; position: { x: number; y: number } }) => {
+        if (isGroupNode(node.id)) {
+            const hidden = collapsedStyles(this.props.document);
+            const { cards } = groupCards(this.props.document, hidden, this.state.expandedGroups);
+            const card = cards.find((item) => item.nodeId === node.id);
+            if (card && !card.expanded) {
+                this.groupDrag = {
+                    nodeId: node.id,
+                    origin: { ...node.position },
+                    members: card.members,
+                    positions: new Map(this.modulePositions),
+                };
+            }
+        }
+        this.setState({
+            draggingNode: true,
+            groupDragPosition: this.groupDrag
+                ? { nodeId: node.id, position: { ...node.position } }
+                : null,
+        });
+    };
+
+    onNodeDragStop = (node: { id: string; position: { x: number; y: number } }) => {
+        const drag = this.groupDrag;
+        this.groupDrag = null;
+        if (drag?.nodeId === node.id) {
+            const delta = {
+                x: node.position.x - drag.origin.x,
+                y: node.position.y - drag.origin.y,
+            };
+            if (delta.x || delta.y) {
+                this.props.document.pushModulesState(
+                    translateGroupMembers(
+                        this.props.document.modules,
+                        drag.members,
+                        drag.positions,
+                        delta
+                    ),
+                    { type: ChangeType.RearrangeModules }
+                );
+            }
+        }
+        this.setState({ draggingNode: false, groupDragPosition: null });
+    };
 
     onReactFlowInit = (instance: ReactFlowInstance) => {
         this.reactFlow = instance;
@@ -208,7 +270,18 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
         const nodeRemoveChanges: NodeRemoveChange[] = [];
 
         for (const change of changes) {
-            if ('id' in change && isGroupNode(change.id)) continue;
+            if ('id' in change && isGroupNode(change.id)) {
+                if (
+                    change.type === 'position' &&
+                    change.position &&
+                    this.groupDrag?.nodeId === change.id
+                ) {
+                    this.setState({
+                        groupDragPosition: { nodeId: change.id, position: change.position },
+                    });
+                }
+                continue;
+            }
             if (change.type === 'select') {
                 if (change.selected && !isPartOutput(change.id)) {
                     newSelected = change.id;
@@ -369,6 +442,7 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
                 },
             });
         }
+        this.modulePositions = positions;
 
         // A collapsed card sits at its last member, which usually feeds the part.
         for (const { instanceId, members, nodeId, expanded, title } of cards) {
@@ -376,11 +450,17 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
                 ? members.reduce((a, b) => (positions.get(b)!.y < positions.get(a)!.y ? b : a))
                 : members[members.length - 1];
             const { x, y } = positions.get(anchor)!;
+            const transient = this.state.groupDragPosition;
             nodes.push({
                 id: nodeId,
-                position: expanded ? { x, y: y - GRID_SIZE * 2 } : { x, y },
+                position:
+                    transient?.nodeId === nodeId
+                        ? transient.position
+                        : expanded
+                        ? { x, y: y - GRID_SIZE * 2 }
+                        : { x, y },
                 type: 'group',
-                draggable: false,
+                draggable: !expanded,
                 deletable: false,
                 data: {
                     title,
@@ -439,8 +519,8 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
                         onConnect={this.onConnect}
                         onConnectStart={this.onConnectStart}
                         onConnectEnd={this.onConnectEnd}
-                        onNodeDragStart={() => this.setState({ draggingNode: true })}
-                        onNodeDragStop={() => this.setState({ draggingNode: false })}
+                        onNodeDragStart={(_event, node) => this.onNodeDragStart(node)}
+                        onNodeDragStop={(_event, node) => this.onNodeDragStop(node)}
                         multiSelectionKeyCode={['Meta', 'Control']}
                     />
                 </Suspense>

@@ -4,6 +4,7 @@ import {
     connectionId,
     groupCards,
     routeEdge,
+    translateGroupMembers,
 } from '../../src/ui/components/module-graph/group-cards';
 
 // The real Text plugin pulls in editors that need a full browser; the document only needs its id.
@@ -70,5 +71,32 @@ describe('group cards in the graph', () => {
         expect(connectionId(incoming.id)).toBe('x->a');
         // A fresh id, so the expanded member edge is a new edge to React Flow.
         expect(incoming.id).not.toBe('x->a');
+    });
+
+    it('moves every member by one drag offset without changing another group', async () => {
+        const doc = new Document();
+        const first = (await doc.addPackagedEffect('letter', doc.parts[0].id))!;
+        const other = (await doc.addPackagedEffect('letter', doc.parts[0].id))!;
+        const positions = new Map([
+            [first.moduleIds[0], { x: 10, y: 20 }],
+            [first.moduleIds[1], { x: 30, y: 40 }],
+        ]);
+        const moved = translateGroupMembers(doc.modules, first.moduleIds, positions, {
+            x: 100,
+            y: -10,
+        });
+
+        expect(moved.find((mod) => mod.id === first.moduleIds[0])!.graphPos).toEqual({
+            x: 110,
+            y: 10,
+        });
+        expect(moved.find((mod) => mod.id === first.moduleIds[1])!.graphPos).toEqual({
+            x: 130,
+            y: 30,
+        });
+        expect(moved.find((mod) => mod.id === other.moduleIds[0])).toBe(
+            doc.findModule(other.moduleIds[0])
+        );
+        expect(doc.findModule(first.moduleIds[0])!.graphPos).toBeNull();
     });
 });

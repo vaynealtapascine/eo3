@@ -185,6 +185,7 @@
 
     /* A collapsed group: a card with a second card peeking out behind it. */
     .i-module-item.is-group {
+        cursor: grab;
         box-shadow: var(--shading), 4px 4px 0 -1px var(--P-graph-node-bg),
             4px 4px 0 0 var(--P-graph-connection);
 

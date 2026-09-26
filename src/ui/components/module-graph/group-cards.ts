@@ -1,4 +1,4 @@
-import { Document, ModuleId } from '../../../document';
+import { AnyModule, Document, ModuleId } from '../../../document';
 
 const GROUP_NODE_PREFIX = 'group:';
 export const isGroupNode = (id: string) => id.startsWith(GROUP_NODE_PREFIX);
@@ -35,6 +35,23 @@ export function groupCards(doc: Document, hidden: Set<ModuleId>, expanded: reado
         return [card];
     });
     return { cards, collapsedInto };
+}
+
+/** Commit a dragged card by giving every member the same offset from its visible position. */
+export function translateGroupMembers(
+    modules: readonly AnyModule[],
+    members: readonly ModuleId[],
+    positions: ReadonlyMap<ModuleId, { x: number; y: number }>,
+    delta: { x: number; y: number }
+): AnyModule[] {
+    const memberIds = new Set(members);
+    return modules.map((module) => {
+        const position = memberIds.has(module.id) ? positions.get(module.id) : null;
+        if (!position) return module;
+        const moved = module.shallowClone();
+        moved.graphPos = { x: position.x + delta.x, y: position.y + delta.y };
+        return moved;
+    });
 }
 
 interface Edge {

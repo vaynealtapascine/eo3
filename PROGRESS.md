@@ -258,7 +258,6 @@ Built as:
 Everything in the design's seven phases has landed, and the follow-ups found along the way are
 done. Smaller known limits:
 
--   A collapsed group card can't be dragged; expand it to move its members.
 -   Custom site profiles live in the browser (localStorage), not in the document; share them as
     JSON.
 
@@ -311,3 +310,8 @@ done. Smaller known limits:
 -   2026-09-26 — Groups now show in the graph as one card (collapsed by default) that expands to
     its members. Edges to hidden members are drawn to the card with their own ids and mapped back
     when selected or removed (`module-graph/group-cards.ts`, tested in `test/ui/`).
+-   2026-09-27 — Collapsed group cards can now be dragged. One undoable layout change translates
+    every member by the same offset, preserving their relative positions; a graph test covers the
+    translation and leaves other groups untouched. A component test checks the controlled drag
+    position and undo. The local browser preview was blocked by this environment, so a manual
+    drag check remains useful.
