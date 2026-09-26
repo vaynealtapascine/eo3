@@ -313,6 +313,38 @@ describe('crossposting', () => {
         expect(Object.keys(doc.parts[0].postedTo)).toEqual(['profile:site']);
     });
 
+    it('forgets a removed site in one undo step without touching another site', () => {
+        const doc = new Document();
+        doc.init({
+            ...doc.state,
+            protectedSkinClasses: { 'profile:retired': ['eo3-protected'] },
+        });
+        const id = doc.parts[0].id;
+        const snapshot = (skinCss: string) => ({
+            at: '2026-09-26',
+            classes: ['eo3-a'],
+            htmlHash: 'h',
+            skinCss,
+        });
+        doc.setPartPosted('ao3', id, snapshot('ao3 css'), { 'eo3-a': '.eo3-a {}' });
+        doc.setPartPosted('profile:retired', id, snapshot('profile css'), {
+            'eo3-a': '.eo3-a { color: red; }',
+        });
+
+        doc.forgetTargetPostingState('profile:retired');
+        expect(doc.parts[0].postedTo).toHaveProperty('ao3');
+        expect(doc.parts[0].postedTo).not.toHaveProperty('profile:retired');
+        expect(doc.state.skinRecords).not.toHaveProperty('profile:retired');
+        expect(doc.state.skinBaselines).not.toHaveProperty('profile:retired');
+        expect(doc.state.protectedSkinClasses).not.toHaveProperty('profile:retired');
+        expect(doc.skinRecordFor('ao3')).toEqual({ 'eo3-a': '.eo3-a {}' });
+
+        doc.undo();
+        expect(doc.parts[0].postedTo).toHaveProperty('profile:retired');
+        expect(doc.skinBaselineFor('profile:retired')).toBe('profile css');
+        expect(doc.protectedClassesFor('profile:retired')).toEqual(['eo3-protected']);
+    });
+
     it('reads files from before crossposting as posted to AO3', () => {
         const doc = deserializeV1(
             JSON.stringify({

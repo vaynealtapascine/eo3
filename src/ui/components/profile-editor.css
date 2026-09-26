@@ -67,6 +67,23 @@
         box-sizing: border-box;
     }
 
+    .i-retired {
+        margin-top: 0.7em;
+
+        summary {
+            cursor: pointer;
+        }
+
+        p {
+            margin: 0.4em 0;
+            font-size: 0.9em;
+        }
+
+        div {
+            margin: 0.4em 0;
+        }
+    }
+
     .i-form {
         display: flex;
         flex-direction: column;

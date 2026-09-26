@@ -264,8 +264,6 @@ Everything in the design's seven phases has landed. Known gaps, roughly by value
     collapsible card.
 -   **wafrn edge cases** (see phase 7): readers with reduced motion, server-rendered pages and
     other fediverse servers show posts without styles. Only mentioned in the target description.
--   **Posting state for deleted profiles.** Marks stored under `profile:<id>` stay in documents
-    after that profile is deleted (harmless, invisible); nothing cleans them up.
 -   **Pushing.** Everything after `06b3f80` (the last push to `origin/main`) is local until
     someone pushes.
 
@@ -308,3 +306,7 @@ Everything in the design's seven phases has landed. Known gaps, roughly by value
     removed with their contents, and whitespace when unwrapping. Each optional list has an
     explicit override checkbox, preserving the difference between omitted and empty arrays when
     editing an imported profile. Saving and previewing now switches sites only after a valid save.
+-   2026-09-26 — The custom-site dialog now lists posting history for removed profiles in the
+    open work. Authors can explicitly forget a retired site's marks, skin record, baseline, and
+    protected classes in one undoable change. History in unopened works stays available until
+    each work is opened and reviewed.

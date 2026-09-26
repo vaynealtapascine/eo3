@@ -7,6 +7,7 @@ import {
     TargetProfile,
 } from '../../targets/profile/types';
 import { deleteProfile, listProfiles, saveProfile } from '../../targets/profile/store';
+import { Document } from '../../document';
 import './profile-editor.css';
 
 /** Form state: lists are edited as text ("a: href title" lines, space-separated names). */
@@ -87,10 +88,12 @@ export const fromDraft = (d: Draft) =>
 /** Create, edit, import, export and delete custom site profiles. */
 export function ProfileEditor({
     open,
+    document,
     onClose,
     onUse,
 }: {
     open: boolean;
+    document: Document;
     onClose: () => void;
     /** Switch the preview to the given profile's target. */
     onUse: (profileId: string) => void;
@@ -101,6 +104,15 @@ export function ProfileEditor({
     const [isNew, setIsNew] = useState(false);
     const [message, setMessage] = useState<string | null>(null);
     const [importText, setImportText] = useState('');
+    const activeTargetIds = new Set(profiles.map((profile) => `profile:${profile.id}`));
+    const retiredTargetIds = [
+        ...new Set([
+            ...document.parts.flatMap((part) => Object.keys(part.postedTo)),
+            ...Object.keys(document.state.skinRecords),
+            ...Object.keys(document.state.skinBaselines),
+            ...Object.keys(document.state.protectedSkinClasses),
+        ]),
+    ].filter((id) => id.startsWith('profile:') && !activeTargetIds.has(id));
 
     useEffect(() => {
         if (open && !dialog.current?.open) {
@@ -197,6 +209,30 @@ export function ProfileEditor({
                             import
                         </button>
                     </details>
+                    {retiredTargetIds.length > 0 && (
+                        <details className="i-retired">
+                            <summary>History for removed sites ({retiredTargetIds.length})</summary>
+                            <p>These marks belong to sites no longer in your list.</p>
+                            {retiredTargetIds.map((id) => (
+                                <div key={id}>
+                                    <code>{id.slice('profile:'.length)}</code>{' '}
+                                    <button
+                                        onClick={() => {
+                                            if (
+                                                window.confirm(
+                                                    `Forget this work’s posting marks and saved styles for ${id}? You can undo this change.`
+                                                )
+                                            ) {
+                                                document.forgetTargetPostingState(id);
+                                            }
+                                        }}
+                                    >
+                                        forget in this work
+                                    </button>
+                                </div>
+                            ))}
+                        </details>
+                    )}
                 </nav>
                 {draft ? (
                     <form className="i-form" onSubmit={(e) => e.preventDefault()}>

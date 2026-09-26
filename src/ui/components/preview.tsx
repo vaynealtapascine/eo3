@@ -184,6 +184,7 @@ export function Preview({
         <div className="data-preview" aria-label="Preview">
             <ProfileEditor
                 open={editingProfiles}
+                document={document}
                 onClose={() => setEditingProfiles(false)}
                 onUse={(id) => {
                     setSiteTargetId(PROFILE_TARGET_PREFIX + id);

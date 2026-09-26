@@ -844,6 +844,33 @@ export class Document extends EventTarget {
         );
     }
 
+    /** Remove one retired site's marks and style history from this work, in one undo step. */
+    forgetTargetPostingState(targetId: string) {
+        const omit = <T>(record: Record<string, T>): Record<string, T> =>
+            Object.fromEntries(Object.entries(record).filter(([id]) => id !== targetId));
+        const parts = this.parts.map((part) => ({
+            ...part,
+            postedTo: omit(part.postedTo),
+        }));
+        if (
+            !this.parts.some((part) => targetId in part.postedTo) &&
+            !(targetId in this.state.skinRecords) &&
+            !(targetId in this.state.skinBaselines) &&
+            !(targetId in this.state.protectedSkinClasses)
+        )
+            return;
+        this.pushHistoryState(
+            {
+                ...this.state,
+                parts,
+                skinRecords: omit(this.state.skinRecords),
+                skinBaselines: omit(this.state.skinBaselines),
+                protectedSkinClasses: omit(this.state.protectedSkinClasses),
+            },
+            { type: ChangeType.EditParts }
+        );
+    }
+
     /** Classes the parts posted on `targetId` reference. */
     private postedClasses(targetId: string): Set<string> {
         return new Set(this.parts.flatMap((part) => part.postedTo[targetId]?.classes ?? []));
