@@ -213,3 +213,49 @@ describe('managed part modules', () => {
         expect(doc.findModule(first!)).toBeDefined();
     });
 });
+
+describe('AO3 import', () => {
+    it('keeps an imported skin shared as chapters are added', async () => {
+        const doc = new Document();
+        const skinId = await doc.importWorkSkin('#workskin .note { color: red; }');
+        const first = await doc.importChapter('Opening', '<p>First</p>');
+        expect(doc.parts).toHaveLength(1);
+        expect(first.outputId).toBe(MOD_OUTPUT);
+
+        const second = await doc.importChapter('Next', '<p>Second</p>');
+        expect(doc.parts).toHaveLength(2);
+        expect(doc.findModule(skinId)!.sends).toEqual([first.outputId, second.outputId]);
+        expect(doc.modules.at(-1)!.data).toEqual({ contents: '<p>Second</p>', language: 'html' });
+
+        const third = doc.addPart('Later');
+        expect(doc.findModule(skinId)!.sends).toContain(third.outputId);
+        const fourth = await doc.addPartWithText('More text');
+        expect(doc.findModule(skinId)!.sends).toContain(fourth.outputId);
+
+        const reimported = await doc.importWorkSkin('.note { color: blue; }');
+        expect(reimported).toBe(skinId);
+        expect(doc.modules.filter((mod) => mod.id === skinId)).toHaveLength(1);
+        expect(doc.findModule(skinId)!.data).toEqual({
+            contents: '.note { color: blue; }',
+            language: 'css',
+        });
+        doc.undo();
+        expect(doc.findModule(skinId)!.data).toEqual({
+            contents: '#workskin .note { color: red; }',
+            language: 'css',
+        });
+    });
+
+    it.each(['toml', 'json'])('round-trips the imported skin reference (%s)', async (format) => {
+        const doc = new Document();
+        const id = await doc.importWorkSkin('.note { color: red; }');
+        const loaded = deserializeV1(serializeV1(doc, format));
+        const loadedId = loaded.importedSkinModuleId;
+        expect(loadedId).toBeTruthy();
+        expect(loaded.findModule(loadedId!)!.data).toEqual(doc.findModule(id)!.data);
+        const part = loaded.addPart('Second');
+        expect(loaded.findModule(loadedId!)!.sends).toContain(part.outputId);
+        loaded.removeModule(loadedId!);
+        expect(loaded.importedSkinModuleId).toBeNull();
+    });
+});

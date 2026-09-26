@@ -1,5 +1,6 @@
 import { Document, ModuleId } from '../../document';
 import { useSiteTarget } from '../../targets/context';
+import { Ao3Import } from './ao3-import';
 import './parts-list.css';
 
 /**
@@ -13,7 +14,8 @@ export function PartsList({
     onSelectPart,
     onSelectModule,
 }: PartsList.Props) {
-    const label = useSiteTarget().plugin?.partLabel ?? 'Part';
+    const target = useSiteTarget();
+    const label = target.plugin?.partLabel ?? 'Part';
     const parts = document.parts;
     const selectedId = parts.some((p) => p.id === partId) ? partId : parts[0].id;
 
@@ -120,6 +122,13 @@ export function PartsList({
             <button className="i-add" onClick={addPart}>
                 + add {label.toLowerCase()}
             </button>
+            {target.id === 'ao3' && (
+                <Ao3Import
+                    document={document}
+                    onSelectPart={onSelectPart}
+                    onSelectModule={onSelectModule}
+                />
+            )}
         </section>
     );
 }

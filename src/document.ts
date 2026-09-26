@@ -74,6 +74,8 @@ export interface DocumentState {
     parts: Part[];
     /** Canonical lifted Work Skin rules saved when a part was marked posted. */
     skinRecord: Record<string, string>;
+    /** Managed CSS module for a pasted AO3 Work Skin, kept wired to newly added parts. */
+    importedSkinModuleId: ModuleId | null;
 }
 
 /** One unit of the work: a chapter, a post in a thread, a page — whatever the target calls it. */
@@ -152,6 +154,7 @@ export class Document extends EventTarget {
                 modules: [],
                 parts: [newPart(MOD_OUTPUT)],
                 skinRecord: {},
+                importedSkinModuleId: null,
             },
             desc: { type: ChangeType.Load },
             time: Date.now(),
@@ -161,9 +164,10 @@ export class Document extends EventTarget {
 
     /** Sets the initial state; a state without parts (older files) gets one part on MOD_OUTPUT. */
     init(
-        state: Omit<DocumentState, 'parts' | 'skinRecord'> & {
+        state: Omit<DocumentState, 'parts' | 'skinRecord' | 'importedSkinModuleId'> & {
             parts?: Part[];
             skinRecord?: Record<string, string>;
+            importedSkinModuleId?: ModuleId | null;
         }
     ) {
         if (this.history.length > 1) throw new Error('cannot init in this state');
@@ -171,6 +175,7 @@ export class Document extends EventTarget {
             ...state,
             parts: state.parts?.length ? state.parts : [newPart(MOD_OUTPUT)],
             skinRecord: state.skinRecord ?? {},
+            importedSkinModuleId: state.importedSkinModuleId ?? null,
         };
     }
 
@@ -196,6 +201,10 @@ export class Document extends EventTarget {
 
     get skinRecord(): Readonly<Record<string, string>> {
         return this.state.skinRecord;
+    }
+
+    get importedSkinModuleId(): ModuleId | null {
+        return this.state.importedSkinModuleId;
     }
 
     findPart(id: string) {
@@ -309,11 +318,30 @@ export class Document extends EventTarget {
             }
         }
 
-        this.pushHistoryState({ ...this.state, modules, parts }, { type: ChangeType.RemoveModule });
+        this.pushHistoryState(
+            {
+                ...this.state,
+                modules,
+                parts,
+                importedSkinModuleId:
+                    this.importedSkinModuleId === moduleId ? null : this.importedSkinModuleId,
+            },
+            { type: ChangeType.RemoveModule }
+        );
     }
 
     private pushParts(parts: Part[], modules = this.modules as AnyModule[]) {
         this.pushHistoryState({ ...this.state, modules, parts }, { type: ChangeType.EditParts });
+    }
+
+    /** Keep the imported Work Skin shared when a new part is added. */
+    private modulesWithImportedSkinFor(outputId: ModuleId): AnyModule[] {
+        return this.modules.map((mod) => {
+            if (mod.id !== this.importedSkinModuleId || mod.sends.includes(outputId)) return mod;
+            const copy = mod.shallowClone();
+            copy.sends = [...mod.sends, outputId];
+            return copy;
+        });
     }
 
     /** Adds an empty part at the end (or at `index`) and returns it. */
@@ -321,7 +349,7 @@ export class Document extends EventTarget {
         const part = { ...newPart(), title };
         const parts = this.parts.slice();
         parts.splice(index, 0, part);
-        this.pushParts(parts);
+        this.pushParts(parts, this.modulesWithImportedSkinFor(part.outputId));
         return part;
     }
 
@@ -335,8 +363,58 @@ export class Document extends EventTarget {
         this.pushHistoryState(
             {
                 ...this.state,
-                modules: [...this.modules, module],
+                modules: [...this.modulesWithImportedSkinFor(part.outputId), module],
                 parts: [...this.parts, part],
+            },
+            { type: ChangeType.EditParts }
+        );
+        return part;
+    }
+
+    /** Add or replace the managed imported Work Skin as one undoable CSS module edit. */
+    async importWorkSkin(css: string): Promise<ModuleId> {
+        const plugin = await MODULES['source.text'].load();
+        const existing = this.modules.find((mod) => mod.id === this.importedSkinModuleId);
+        let module: AnyModule;
+        let modules: AnyModule[];
+        if (existing?.plugin.id === 'source.text') {
+            module = existing.shallowClone();
+            module.data = { contents: css, language: 'css' };
+            module.sends = this.parts.map((part) => part.outputId);
+            modules = this.modules.map((mod) => (mod.id === existing.id ? module : mod));
+        } else {
+            module = new Module(plugin, { contents: css, language: 'css' });
+            module.title = 'Imported AO3 Work Skin';
+            module.sends = this.parts.map((part) => part.outputId);
+            modules = [...this.modules, module];
+        }
+        this.pushHistoryState(
+            { ...this.state, modules, importedSkinModuleId: module.id },
+            { type: ChangeType.EditParts }
+        );
+        return module.id;
+    }
+
+    /** Import pasted chapter HTML without running it through the editor or target sanitizer. */
+    async importChapter(title: string, html: string): Promise<Part> {
+        const plugin = await MODULES['source.text'].load();
+        const first = this.parts[0];
+        const reuseFirst =
+            this.parts.length === 1 &&
+            !first.title &&
+            !first.posted &&
+            this.modules.every(
+                (mod) => mod.id === this.importedSkinModuleId || !mod.sends.includes(first.outputId)
+            );
+        const part = reuseFirst ? { ...first, title } : { ...newPart(), title };
+        const module = new Module(plugin, { contents: html, language: 'html' });
+        module.title = title || 'Imported AO3 chapter';
+        module.sends = [part.outputId];
+        this.pushHistoryState(
+            {
+                ...this.state,
+                parts: reuseFirst ? [part] : [...this.parts, part],
+                modules: [...this.modulesWithImportedSkinFor(part.outputId), module],
             },
             { type: ChangeType.EditParts }
         );

@@ -109,6 +109,8 @@ export function serializeV1(doc: Document, format?: string): string {
     if (doc.title) docData.title = doc.title;
     if (doc.titleInPost) docData.titleInPost = doc.titleInPost;
     if (Object.keys(doc.skinRecord).length) docData.skinRecord = doc.skinRecord;
+    const importedSkin = doc.importedSkinModuleId && moduleIndices.get(doc.importedSkinModuleId);
+    if (importedSkin !== undefined && importedSkin !== null) docData.importedSkin = importedSkin;
     // A single untouched part is implied by older files, so it isn't written.
     const [first] = doc.parts;
     const trivialParts =
@@ -236,6 +238,10 @@ export function deserializeV1(input: string): Document {
         modules: docModules,
         parts,
         skinRecord: data.skinRecord || {},
+        importedSkinModuleId:
+            data.importedSkin !== undefined
+                ? moduleIdAssignments.get(data.importedSkin) ?? null
+                : null,
     });
 
     return doc;

@@ -15,8 +15,8 @@ update it whenever a step lands (what changed, what's next, anything surprising)
 | 1     | Canonical, sorted Work Skin; pinned-hash test; collision check                                                 | Done        |
 | 2     | `Work` + parts in the document; migration of saved documents; parts list UI; `export()` over a work            | Done        |
 | 3     | Delivery strategies (`shared-stylesheet`, `inline`); skin record; diff before copy; part-scoped CSS; conflicts | Done        |
-| 4     | Import an existing skin, then existing chapters                                                                | Next        |
-| 5     | Group nodes (shared but detachable); first packaged effects                                                    | Not started |
+| 4     | Import an existing skin, then existing chapters                                                                | Done        |
+| 5     | Group nodes (shared but detachable); first packaged effects                                                    | Next        |
 | 6     | Size-based splitting; custom target profiles; crossposting                                                     | Not started |
 | 7     | wafrn target (read its sanitizer source first)                                                                 | Not started |
 
@@ -123,6 +123,22 @@ while some posted part references its class. The cleanup control shows the unuse
 deleting them from the record. Older posted snapshots have class names but no saved rule text or
 Work Skin; marking those parts posted again seeds the record and diff baseline.
 
+## Phase 4 — import an existing AO3 work (done)
+
+-   [x] The AO3 parts panel has a compact import flow: paste Work Skin CSS, then paste each
+        chapter's HTML source and optional title in order. Inputs become ordinary editable
+        `source.text` modules. Existing chapters are not automatically marked posted; the user
+        checks the preview and marks them explicitly.
+-   [x] An imported Work Skin is a managed CSS module sent to every part. Adding a part later
+        wires it to the skin automatically. Reimporting replaces that module in one undo step.
+        The reference is saved in document version 1 by module index, and clears if the module
+        is removed.
+-   [x] The first pasted chapter uses an otherwise empty initial part; later ones append parts.
+        Every chapter import is one undoable change and preserves the pasted HTML in code mode.
+
+The linked design artifact was not accessible while implementing phase 4; the import behavior
+above follows the model and conventions recorded in this file and the repository.
+
 ## Log
 
 -   2026-09-26 — Plan written; phase 1 started.
@@ -139,3 +155,5 @@ Work Skin; marking those parts posted again seeds the record and diff baseline.
     export retains referenced rules, cleanup lists and removes unreferenced records, the preview
     shows added/removed style counts before copy, and selectors with conflicting part-specific
     declarations are reported. Next: phase 4 import.
+-   2026-09-26 — Phase 4 complete. AO3 skin and chapters can be pasted into editable modules;
+    the imported skin stays shared as parts are added. Next: phase 5 groups and effects.

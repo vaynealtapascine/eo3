@@ -1,0 +1,35 @@
+.ao3-import {
+    margin-top: 0.6em;
+    font-size: 0.9em;
+
+    summary {
+        cursor: pointer;
+    }
+
+    p {
+        margin: 0.5em 0;
+    }
+
+    form {
+        display: flex;
+        flex-direction: column;
+        gap: 0.3em;
+        margin: 0.7em 0;
+    }
+
+    input,
+    textarea {
+        box-sizing: border-box;
+        width: 100%;
+        font: inherit;
+        color: inherit;
+        background: rgb(var(--P-color-shade) / var(--P-color-shade-opacity));
+        border: 1px solid rgb(var(--P-color-soft-outline) / var(--P-color-soft-outline-opacity));
+        border-radius: 0.3em;
+        padding: 0.3em;
+    }
+
+    button {
+        align-self: start;
+    }
+}
