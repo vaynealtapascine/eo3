@@ -76,6 +76,10 @@ export interface DocumentState {
     skinRecord: Record<string, string>;
     /** Managed CSS module for a pasted AO3 Work Skin, kept wired to newly added parts. */
     importedSkinModuleId: ModuleId | null;
+    /** Imported generated classes kept for chapters not yet brought into eo3. */
+    protectedSkinClasses: string[];
+    /** Latest imported or marked-posted Work Skin for the diff shown before copying. */
+    skinBaseline: string | null;
 }
 
 /** One unit of the work: a chapter, a post in a thread, a page — whatever the target calls it. */
@@ -127,6 +131,8 @@ export interface WorkOutput {
     /** Each CSS module and the parts it reaches, in module order. */
     cssSources: CssSourceOutput[];
     skinRecord: Record<string, string>;
+    protectedSkinClasses: string[];
+    skinBaseline: string | null;
 }
 
 export interface CssSourceOutput {
@@ -155,6 +161,8 @@ export class Document extends EventTarget {
                 parts: [newPart(MOD_OUTPUT)],
                 skinRecord: {},
                 importedSkinModuleId: null,
+                protectedSkinClasses: [],
+                skinBaseline: null,
             },
             desc: { type: ChangeType.Load },
             time: Date.now(),
@@ -164,10 +172,19 @@ export class Document extends EventTarget {
 
     /** Sets the initial state; a state without parts (older files) gets one part on MOD_OUTPUT. */
     init(
-        state: Omit<DocumentState, 'parts' | 'skinRecord' | 'importedSkinModuleId'> & {
+        state: Omit<
+            DocumentState,
+            | 'parts'
+            | 'skinRecord'
+            | 'importedSkinModuleId'
+            | 'protectedSkinClasses'
+            | 'skinBaseline'
+        > & {
             parts?: Part[];
             skinRecord?: Record<string, string>;
             importedSkinModuleId?: ModuleId | null;
+            protectedSkinClasses?: string[];
+            skinBaseline?: string | null;
         }
     ) {
         if (this.history.length > 1) throw new Error('cannot init in this state');
@@ -176,6 +193,8 @@ export class Document extends EventTarget {
             parts: state.parts?.length ? state.parts : [newPart(MOD_OUTPUT)],
             skinRecord: state.skinRecord ?? {},
             importedSkinModuleId: state.importedSkinModuleId ?? null,
+            protectedSkinClasses: state.protectedSkinClasses ?? [],
+            skinBaseline: state.skinBaseline ?? null,
         };
     }
 
@@ -205,6 +224,14 @@ export class Document extends EventTarget {
 
     get importedSkinModuleId(): ModuleId | null {
         return this.state.importedSkinModuleId;
+    }
+
+    get protectedSkinClasses(): Readonly<string[]> {
+        return this.state.protectedSkinClasses;
+    }
+
+    get skinBaseline(): string | null {
+        return this.state.skinBaseline;
     }
 
     findPart(id: string) {
@@ -372,7 +399,11 @@ export class Document extends EventTarget {
     }
 
     /** Add or replace the managed imported Work Skin as one undoable CSS module edit. */
-    async importWorkSkin(css: string): Promise<ModuleId> {
+    async importWorkSkin(
+        css: string,
+        canonicalCss: string,
+        liftedRules: Record<string, string>
+    ): Promise<ModuleId> {
         const plugin = await MODULES['source.text'].load();
         const existing = this.modules.find((mod) => mod.id === this.importedSkinModuleId);
         let module: AnyModule;
@@ -389,7 +420,14 @@ export class Document extends EventTarget {
             modules = [...this.modules, module];
         }
         this.pushHistoryState(
-            { ...this.state, modules, importedSkinModuleId: module.id },
+            {
+                ...this.state,
+                modules,
+                importedSkinModuleId: module.id,
+                protectedSkinClasses: Object.keys(liftedRules),
+                skinRecord: { ...this.skinRecord, ...liftedRules },
+                skinBaseline: canonicalCss,
+            },
             { type: ChangeType.EditParts }
         );
         return module.id;
@@ -464,6 +502,7 @@ export class Document extends EventTarget {
                 ...this.state,
                 parts: this.parts.map((part) => (part.id === id ? { ...part, posted } : part)),
                 skinRecord: { ...this.skinRecord, ...skinRules },
+                skinBaseline: posted?.skinCss ?? this.skinBaseline,
             },
             { type: ChangeType.EditParts }
         );
@@ -471,12 +510,45 @@ export class Document extends EventTarget {
 
     /** Drop recorded rules no posted part references; currently authored rules export as usual. */
     cleanupUnusedSkinRules() {
-        const referenced = new Set(this.parts.flatMap((part) => part.posted?.classes ?? []));
+        const referenced = new Set([
+            ...this.parts.flatMap((part) => part.posted?.classes ?? []),
+            ...this.protectedSkinClasses,
+        ]);
         const skinRecord = Object.fromEntries(
             Object.entries(this.skinRecord).filter(([name]) => referenced.has(name))
         );
         if (Object.keys(skinRecord).length === Object.keys(this.skinRecord).length) return;
         this.pushHistoryState({ ...this.state, skinRecord }, { type: ChangeType.EditParts });
+    }
+
+    /** Explicitly prune imported generated rules after the user has reviewed their text. */
+    pruneImportedSkinRules(names: string[], updatedCss: string) {
+        const selected = new Set(names.filter((name) => this.protectedSkinClasses.includes(name)));
+        if (!selected.size) return;
+        const module = this.modules.find((mod) => mod.id === this.importedSkinModuleId);
+        const modules = this.modules.map((mod) => {
+            if (mod !== module) return mod;
+            const copy = mod.shallowClone();
+            copy.data = { contents: updatedCss, language: 'css' };
+            return copy;
+        });
+        const posted = new Set(this.parts.flatMap((part) => part.posted?.classes ?? []));
+        const skinRecord = Object.fromEntries(
+            Object.entries(this.skinRecord).filter(
+                ([name]) => !selected.has(name) || posted.has(name)
+            )
+        );
+        this.pushHistoryState(
+            {
+                ...this.state,
+                modules,
+                skinRecord,
+                protectedSkinClasses: this.protectedSkinClasses.filter(
+                    (name) => !selected.has(name)
+                ),
+            },
+            { type: ChangeType.EditParts }
+        );
     }
 
     movePart(id: string, index: number) {
@@ -677,6 +749,8 @@ export class Document extends EventTarget {
             work: {
                 workCss: inModuleOrder(workSources),
                 skinRecord: this.skinRecord as Record<string, string>,
+                protectedSkinClasses: this.protectedSkinClasses as string[],
+                skinBaseline: this.skinBaseline,
                 cssSources: this.modules
                     .filter((mod) => partsReached.has(mod.id))
                     .map((mod) => ({

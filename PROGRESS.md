@@ -135,9 +135,17 @@ Work Skin; marking those parts posted again seeds the record and diff baseline.
         is removed.
 -   [x] The first pasted chapter uses an otherwise empty initial part; later ones append parts.
         Every chapter import is one undoable change and preserves the pasted HTML in code mode.
+-   [x] Import canonicalizes the pasted skin to seed the record with existing `eo3-*` rules and a
+        diff baseline. Those rules are protected even if none of the already-posted chapters are
+        imported. Export does not duplicate a recorded rule already present in the imported CSS.
+        The cleanup control leaves protected rules alone; a separate review list can explicitly
+        prune selected rules from the imported module and record. A canonical unchanged Work Skin
+        round-trips byte for byte in the export test.
 
-The linked design artifact was not accessible while implementing phase 4; the import behavior
-above follows the model and conventions recorded in this file and the repository.
+AO3's chapter HTML sanitizer is not a fixed point (phase 1 finding): it can remove inter-block
+newlines on a second pass. Imported chapter HTML stays unchanged in its source module, but its
+export may have that visually identical normalization. Imported CSS is preserved as an editable
+module; eo3 never automatically removes its authored rules.
 
 ## Log
 
@@ -155,5 +163,8 @@ above follows the model and conventions recorded in this file and the repository
     export retains referenced rules, cleanup lists and removes unreferenced records, the preview
     shows added/removed style counts before copy, and selectors with conflicting part-specific
     declarations are reported. Next: phase 4 import.
--   2026-09-26 — Phase 4 complete. AO3 skin and chapters can be pasted into editable modules;
-    the imported skin stays shared as parts are added. Next: phase 5 groups and effects.
+-   2026-09-26 — Phase 4 paste flow landed. The design artifact clarified additional retention
+    and round-trip requirements.
+-   2026-09-26 — Phase 4 retention follow-up complete. Imported generated rules seed the skin
+    record, remain protected for unimported chapters, and can be pruned only after a rule review.
+    Canonical unchanged Work Skin export is byte-for-byte stable. Next: phase 5.

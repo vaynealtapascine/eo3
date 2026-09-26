@@ -1,4 +1,5 @@
 import { PartPosting } from '../../../targets/types';
+import { useState } from 'react';
 import './posted-status.css';
 
 /**
@@ -7,13 +8,14 @@ import './posted-status.css';
  */
 export function PostedStatus({ posting, partName }: { posting: PartPosting; partName: string }) {
     const { posted, copiedUnmarked, changedSincePosted, skinDiff, unusedStyles } = posting;
+    const [selectedProtected, setSelectedProtected] = useState<string[]>([]);
     const skinChanged = !!skinDiff && (skinDiff.added > 0 || skinDiff.removed > 0);
     const skinDetails = (
         <>
             {skinChanged && (
                 <span className="i-note is-warning">
-                    Work Skin since marking posted: {skinDiff.added} styles added,{' '}
-                    {skinDiff.removed} removed. Check the changes before copying it.
+                    Work Skin changes: {skinDiff.added} styles added, {skinDiff.removed} removed.
+                    Check them before copying it.
                 </span>
             )}
             {!!unusedStyles?.length && (
@@ -29,6 +31,48 @@ export function PostedStatus({ posting, partName }: { posting: PartPosting; part
                     </ul>
                     <button className="button-appearance" onClick={posting.cleanupUnusedStyles}>
                         clean up unused styles
+                    </button>
+                </details>
+            )}
+            {!!posting.protectedStyles?.length && (
+                <details className="skin-cleanup">
+                    <summary>
+                        {posting.protectedStyles.length} styles protected for imported chapters
+                    </summary>
+                    <p>
+                        These may be used by chapters you have not imported. Select rules to remove
+                        them from the imported skin and release their protection.
+                    </p>
+                    <ul>
+                        {posting.protectedStyles.map(({ className, css }) => (
+                            <li key={className}>
+                                <label>
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedProtected.includes(className)}
+                                        onChange={(event) =>
+                                            setSelectedProtected((names) =>
+                                                event.target.checked
+                                                    ? [...names, className]
+                                                    : names.filter((name) => name !== className)
+                                            )
+                                        }
+                                    />{' '}
+                                    <code>{className}</code>
+                                </label>
+                                <pre>{css}</pre>
+                            </li>
+                        ))}
+                    </ul>
+                    <button
+                        className="button-appearance"
+                        disabled={!selectedProtected.length}
+                        onClick={() => {
+                            posting.pruneProtectedStyles?.(selectedProtected);
+                            setSelectedProtected([]);
+                        }}
+                    >
+                        remove selected styles
                     </button>
                 </details>
             )}

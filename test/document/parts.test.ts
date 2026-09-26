@@ -217,7 +217,11 @@ describe('managed part modules', () => {
 describe('AO3 import', () => {
     it('keeps an imported skin shared as chapters are added', async () => {
         const doc = new Document();
-        const skinId = await doc.importWorkSkin('#workskin .note { color: red; }');
+        const skinId = await doc.importWorkSkin(
+            '#workskin .note { color: red; }',
+            '#workskin .note { color: red; }',
+            {}
+        );
         const first = await doc.importChapter('Opening', '<p>First</p>');
         expect(doc.parts).toHaveLength(1);
         expect(first.outputId).toBe(MOD_OUTPUT);
@@ -232,7 +236,11 @@ describe('AO3 import', () => {
         const fourth = await doc.addPartWithText('More text');
         expect(doc.findModule(skinId)!.sends).toContain(fourth.outputId);
 
-        const reimported = await doc.importWorkSkin('.note { color: blue; }');
+        const reimported = await doc.importWorkSkin(
+            '.note { color: blue; }',
+            '#workskin .note { color: blue; }',
+            {}
+        );
         expect(reimported).toBe(skinId);
         expect(doc.modules.filter((mod) => mod.id === skinId)).toHaveLength(1);
         expect(doc.findModule(skinId)!.data).toEqual({
@@ -248,14 +256,36 @@ describe('AO3 import', () => {
 
     it.each(['toml', 'json'])('round-trips the imported skin reference (%s)', async (format) => {
         const doc = new Document();
-        const id = await doc.importWorkSkin('.note { color: red; }');
+        const id = await doc.importWorkSkin(
+            '#workskin .eo3-h66u19 { color: red; }',
+            '#workskin .eo3-h66u19 { color: red; }',
+            { 'eo3-h66u19': '#workskin .eo3-h66u19 { color: red; }' }
+        );
         const loaded = deserializeV1(serializeV1(doc, format));
         const loadedId = loaded.importedSkinModuleId;
         expect(loadedId).toBeTruthy();
         expect(loaded.findModule(loadedId!)!.data).toEqual(doc.findModule(id)!.data);
+        expect(loaded.skinRecord).toEqual(doc.skinRecord);
+        expect(loaded.protectedSkinClasses).toEqual(['eo3-h66u19']);
+        expect(loaded.skinBaseline).toBe('#workskin .eo3-h66u19 { color: red; }');
         const part = loaded.addPart('Second');
         expect(loaded.findModule(loadedId!)!.sends).toContain(part.outputId);
         loaded.removeModule(loadedId!);
         expect(loaded.importedSkinModuleId).toBeNull();
+        expect(loaded.protectedSkinClasses).toEqual(['eo3-h66u19']);
+    });
+
+    it('only prunes imported rules after an explicit selection', async () => {
+        const doc = new Document();
+        const css = '#workskin .eo3-h66u19 { color: red; }';
+        const id = await doc.importWorkSkin(css, css, { 'eo3-h66u19': css });
+        doc.cleanupUnusedSkinRules();
+        expect(doc.skinRecord).toHaveProperty('eo3-h66u19');
+        doc.pruneImportedSkinRules(['eo3-h66u19'], '');
+        expect(doc.skinRecord).toEqual({});
+        expect(doc.protectedSkinClasses).toEqual([]);
+        expect(doc.findModule(id)!.data).toEqual({ contents: '', language: 'css' });
+        doc.undo();
+        expect(doc.skinRecord).toHaveProperty('eo3-h66u19');
     });
 });

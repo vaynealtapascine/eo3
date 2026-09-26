@@ -1,5 +1,6 @@
 import { FormEvent, useId, useState } from 'react';
 import { Document } from '../../document';
+import { liftedSkinRules } from '../../targets/delivery/skin-record';
 import './ao3-import.css';
 
 /** Paste an existing AO3 Work Skin first, then add chapters as editable HTML sources. */
@@ -25,10 +26,14 @@ export function Ao3Import({
         setBusy(true);
         setMessage('');
         try {
-            const id = await document.importWorkSkin(skin);
+            const { cleanWorkskinCss } = await import('../../targets/ao3/render');
+            const canonical = cleanWorkskinCss(skin, { prefix: '#workskin' }).trimEnd();
+            const id = await document.importWorkSkin(skin, canonical, liftedSkinRules(canonical));
             onSelectModule(id);
             setSkin('');
-            setMessage('Work Skin imported. It will apply to chapters you add later.');
+            setMessage(
+                'Work Skin imported. Generated styles remain protected for chapters not yet imported.'
+            );
         } catch (error) {
             setMessage(`Could not import Work Skin: ${String(error)}`);
         } finally {

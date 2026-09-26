@@ -14,6 +14,7 @@ import { PostPreview, PreviewConfig, makeDefaultPreviewConfig } from './post-pre
 import { DataPreview } from './data-preview';
 import { SITE_TARGETS } from '../../targets';
 import { useSiteTarget } from '../../targets/context';
+import { removeLiftedSkinRules } from '../../targets/delivery/skin-record';
 import './preview.scss';
 
 export function Preview({
@@ -88,6 +89,15 @@ export function Preview({
                             document.setPartPosted(id, posted, rules)
                         }
                         onCleanupUnusedStyles={() => document.cleanupUnusedSkinRules()}
+                        onPruneProtectedStyles={(names) => {
+                            const module = document.findModule(document.importedSkinModuleId ?? '');
+                            const css =
+                                (module?.data as { contents?: string } | undefined)?.contents ?? '';
+                            document.pruneImportedSkinRules(
+                                names,
+                                removeLiftedSkinRules(css, names)
+                            );
+                        }}
                         plugin={siteTargetPlugin}
                         config={previewConfig}
                         onConfigChange={onPreviewConfigChange}

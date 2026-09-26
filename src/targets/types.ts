@@ -39,6 +39,8 @@ export interface WorkExportInput<Config> {
     cssSources?: CssSourceOutput[];
     /** Lifted rules captured when parts were marked posted. */
     skinRecord?: Record<string, string>;
+    /** Imported classes to keep even when their already-posted chapters are not imported. */
+    protectedSkinClasses?: string[];
     config: Config;
 }
 
@@ -121,7 +123,9 @@ export interface PartPosting {
     skinDiff?: { added: number; removed: number };
     /** Recorded lifted rules no posted part needs. */
     unusedStyles?: { className: string; css: string }[];
+    protectedStyles?: { className: string; css: string }[];
     cleanupUnusedStyles?(): void;
+    pruneProtectedStyles?(names: string[]): void;
     /** Call after an export action copied `outputId`. */
     onCopied(outputId: string): void;
     markPosted(): void;

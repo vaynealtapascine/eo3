@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { exportWork } from '../../src/targets/ao3/export';
 import { PartExportInput } from '../../src/targets/types';
-import { diffSkinRules, liftedSkinRules } from '../../src/targets/delivery/skin-record';
+import {
+    diffSkinRules,
+    liftedSkinRules,
+    removeLiftedSkinRules,
+} from '../../src/targets/delivery/skin-record';
 import { renderAo3Content } from '../../src/targets/ao3/render';
 
 const part = (id: string, source: string, css = ''): PartExportInput => ({
@@ -30,11 +34,9 @@ describe('AO3 export over a work', () => {
             '.note { font-style: italic; }'
         );
         expect(errors).toEqual([]);
-        expect(out.parts.get('a')!.get('html')).toBe(
-            '<div class="eo3-part-a"><p class="eo3-lenkkc">one</p></div>'
-        );
+        expect(out.parts.get('a')!.get('html')).toBe('<p class="eo3-lenkkc">one</p>');
         expect(out.parts.get('b')!.get('html')).toBe(
-            '<div class="eo3-part-b"><p class="eo3-h66u19">two</p><p class="eo3-lenkkc">again</p></div>'
+            '<p class="eo3-h66u19">two</p><p class="eo3-lenkkc">again</p>'
         );
         expect(renderAo3Content(out.parts.get('a')!.get('html')!).html).toBe(
             out.parts.get('a')!.get('html')
@@ -58,6 +60,8 @@ describe('AO3 export over a work', () => {
         const { out } = run([part('a', 'one'), part('b', 'two', '.only-b { color: blue; }')]);
         expect(out.work.get('css')).toContain('#workskin .eo3-part-b .only-b');
         expect(out.work.get('css')).not.toContain('#workskin .only-b {');
+        expect(out.parts.get('a')!.get('html')).toBe('<p>one</p>');
+        expect(out.parts.get('b')!.get('html')).toBe('<div class="eo3-part-b"><p>two</p></div>');
     });
 
     it('scopes each CSS module to exactly the parts it reaches, in source order', () => {
@@ -147,5 +151,37 @@ describe('AO3 export over a work', () => {
             props: { selector: '.note', parts: [1, 2] },
         });
         expect(errors.filter((e) => e.id === 'cross-part-css-conflict')).toHaveLength(1);
+    });
+
+    it('round-trips an imported canonical Work Skin without duplicating protected rules', () => {
+        const skin = [
+            '#workskin .note {\n  font-style: italic;\n}',
+            '#workskin .eo3-h66u19 {\n  color: red;\n}',
+        ].join('\n\n');
+        const record = liftedSkinRules(skin);
+        expect(record).toHaveProperty('eo3-h66u19');
+        const input = {
+            parts: [part('a', '<p class="eo3-h66u19">old</p>')],
+            workCss: skin,
+            skinRecord: record,
+            protectedSkinClasses: ['eo3-h66u19'],
+            config: {},
+        };
+        expect(exportWork(input, () => {}).work.get('css')).toBe(skin);
+        expect(diffSkinRules(skin, exportWork(input, () => {}).work.get('css')!)).toEqual({
+            added: 0,
+            removed: 0,
+        });
+        expect(liftedSkinRules('.eo3-h66u19 { color: red; }')).toHaveProperty('eo3-h66u19');
+
+        const withoutRule = removeLiftedSkinRules(skin, ['eo3-h66u19']);
+        expect(withoutRule).toBe('#workskin .note {\n  font-style: italic;\n}');
+        expect(exportWork({ ...input, workCss: withoutRule }, () => {}).work.get('css')).toBe(skin);
+        expect(
+            exportWork(
+                { ...input, workCss: withoutRule, skinRecord: {}, protectedSkinClasses: [] },
+                () => {}
+            ).work.get('css')
+        ).toBe(withoutRule);
     });
 });

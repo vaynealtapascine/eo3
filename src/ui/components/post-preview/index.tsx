@@ -224,6 +224,7 @@ export function PostPreview({
     onPartCopied,
     onPostedChange,
     onCleanupUnusedStyles,
+    onPruneProtectedStyles,
 }: PostPreview.Props) {
     const partIndex = Math.max(
         0,
@@ -271,6 +272,7 @@ export function PostPreview({
                     workCss: work.workCss,
                     cssSources: work.cssSources,
                     skinRecord: work.skinRecord,
+                    protectedSkinClasses: work.protectedSkinClasses,
                     config: config.targetConfig,
                 },
                 (id, props) => errs.push({ id, props })
@@ -301,8 +303,13 @@ export function PostPreview({
         plugin.previewCssScope ? scopeCss(css, plugin.previewCssScope) : css
     );
     const needsPartScope =
-        work.parts.length > 1 &&
-        plugin.outputs.some((output) => output.scope === 'work' && output.typeId === 'text/css');
+        plugin.outputs.some((output) => output.scope === 'work' && output.typeId === 'text/css') &&
+        work.cssSources.some(
+            (source) =>
+                source.partIds.length < work.parts.length &&
+                source.partIds.includes(part.id) &&
+                !!source.css.trim()
+        );
 
     const proseContainer = useRef<HTMLDivElement>(null);
     const [asyncErrors, setAsyncErrors] = useState<ErrorMessage[]>([]);
@@ -344,19 +351,40 @@ export function PostPreview({
     const skinCss = skinOutput ? exportOutput.get(skinOutput.id) ?? '' : null;
     const unusedStyles = skinOutput
         ? Object.entries(work.skinRecord)
-              .filter(([name]) => !work.parts.some((p) => p.posted?.classes.includes(name)))
+              .filter(
+                  ([name]) =>
+                      !work.protectedSkinClasses.includes(name) &&
+                      !work.parts.some((p) => p.posted?.classes.includes(name))
+              )
               .map(([className, css]) => ({ className, css }))
+        : [];
+    const currentClasses = new Set(
+        [...exportResult.output.parts.values()].flatMap((outputs) =>
+            liftedClasses(outputs.get('html') ?? '')
+        )
+    );
+    const protectedStyles = skinOutput
+        ? work.protectedSkinClasses
+              .filter(
+                  (name) =>
+                      work.skinRecord[name] &&
+                      !currentClasses.has(name) &&
+                      !work.parts.some((p) => p.posted?.classes.includes(name))
+              )
+              .map((className) => ({ className, css: work.skinRecord[className] }))
         : [];
     const posting: PartPosting = {
         posted,
         copiedUnmarked: copied && !posted,
         changedSincePosted: !!posted && !exportResult.error && posted.htmlHash !== postedHtmlHash,
         skinDiff:
-            posted?.skinCss !== undefined && skinCss !== null
-                ? diffSkinRules(posted.skinCss, skinCss)
+            (posted?.skinCss ?? work.skinBaseline) !== null && skinCss !== null
+                ? diffSkinRules((posted?.skinCss ?? work.skinBaseline)!, skinCss)
                 : undefined,
         unusedStyles,
+        protectedStyles,
         cleanupUnusedStyles: onCleanupUnusedStyles,
+        pruneProtectedStyles: onPruneProtectedStyles,
         onCopied: (outputId) => {
             if (plugin.outputs.find((o) => o.id === outputId)?.scope === 'part') {
                 onPartCopied(part.id);
@@ -483,6 +511,7 @@ namespace PostPreview {
             skinRules: Record<string, string>
         ) => void;
         onCleanupUnusedStyles: () => void;
+        onPruneProtectedStyles: (names: string[]) => void;
     }
 }
 
