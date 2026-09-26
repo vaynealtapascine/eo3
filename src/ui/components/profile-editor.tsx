@@ -1,0 +1,262 @@
+import { useEffect, useRef, useState } from 'react';
+import {
+    DELIVERY_STRATEGIES,
+    DeliveryStrategyId,
+    newProfile,
+    parseProfile,
+    TargetProfile,
+} from '../../targets/profile/types';
+import { deleteProfile, listProfiles, saveProfile } from '../../targets/profile/store';
+import './profile-editor.css';
+
+/** Form state: lists are edited as text ("a: href title" lines, space-separated names). */
+interface Draft {
+    id: string;
+    title: string;
+    partLabel: string;
+    partMaxChars: string;
+    delivery: DeliveryStrategyId;
+    elements: string;
+    attributes: string;
+    protocols: string;
+    cssProperties: string;
+}
+
+const names = (text: string) => text.split(/[\s,]+/).filter(Boolean);
+const lines = (map: Record<string, string[]>) =>
+    Object.entries(map)
+        .map(([key, list]) => `${key}: ${list.join(' ')}`)
+        .join('\n');
+const unlines = (text: string) =>
+    Object.fromEntries(
+        text
+            .split('\n')
+            .map((line) => line.split(':'))
+            .filter(([key, list]) => key.trim() && list !== undefined)
+            .map(([key, list]) => [key.trim(), names(list)])
+    );
+
+const toDraft = (p: TargetProfile): Draft => ({
+    id: p.id,
+    title: p.title,
+    partLabel: p.partLabel,
+    partMaxChars: p.partMaxChars ? String(p.partMaxChars) : '',
+    delivery: p.delivery,
+    elements: p.elements.join(' '),
+    attributes: lines(p.attributes),
+    protocols: lines(p.protocols),
+    cssProperties: p.cssProperties?.join(' ') ?? '',
+});
+
+const fromDraft = (d: Draft) =>
+    parseProfile({
+        id: d.id,
+        title: d.title,
+        partLabel: d.partLabel,
+        ...(d.partMaxChars.trim() ? { partMaxChars: Number(d.partMaxChars) } : {}),
+        delivery: d.delivery,
+        elements: names(d.elements),
+        attributes: unlines(d.attributes),
+        protocols: unlines(d.protocols),
+        ...(d.cssProperties.trim() ? { cssProperties: names(d.cssProperties) } : {}),
+    });
+
+/** Create, edit, import, export and delete custom site profiles. */
+export function ProfileEditor({
+    open,
+    onClose,
+    onUse,
+}: {
+    open: boolean;
+    onClose: () => void;
+    /** Switch the preview to the given profile's target. */
+    onUse: (profileId: string) => void;
+}) {
+    const dialog = useRef<HTMLDialogElement>(null);
+    const [profiles, setProfiles] = useState(listProfiles);
+    const [draft, setDraft] = useState<Draft | null>(null);
+    const [isNew, setIsNew] = useState(false);
+    const [message, setMessage] = useState<string | null>(null);
+    const [importText, setImportText] = useState('');
+
+    useEffect(() => {
+        if (open && !dialog.current?.open) {
+            setProfiles(listProfiles());
+            dialog.current?.showModal();
+        } else if (!open && dialog.current?.open) dialog.current.close();
+    }, [open]);
+
+    const edit = (profile: TargetProfile, fresh = false) => {
+        setDraft(toDraft(profile));
+        setIsNew(fresh);
+        setMessage(null);
+    };
+    const field = (key: keyof Draft) => ({
+        value: draft![key],
+        onChange: (e: { target: { value: string } }) =>
+            setDraft({ ...draft!, [key]: e.target.value }),
+    });
+
+    const save = () => {
+        const result = fromDraft(draft!);
+        if (typeof result === 'string') return setMessage(result);
+        if (isNew && profiles.some((p) => p.id === result.id)) {
+            return setMessage(`A profile with the id "${result.id}" already exists.`);
+        }
+        saveProfile(result);
+        setProfiles(listProfiles());
+        setIsNew(false);
+        setMessage('Saved.');
+    };
+
+    const importProfile = () => {
+        let parsed: unknown;
+        try {
+            parsed = JSON.parse(importText);
+        } catch {
+            return setMessage('That isn’t valid JSON.');
+        }
+        const result = parseProfile(parsed);
+        if (typeof result === 'string') return setMessage(result);
+        saveProfile(result);
+        setProfiles(listProfiles());
+        setImportText('');
+        edit(result);
+        setMessage(`Imported "${result.title}".`);
+    };
+
+    return (
+        <dialog ref={dialog} className="profile-editor" onClose={onClose}>
+            <header>
+                <h2>Custom sites</h2>
+                <button onClick={onClose} aria-label="close">
+                    ×
+                </button>
+            </header>
+            <p className="i-intro">
+                Describe a site that accepts HTML: which tags and attributes it keeps, how it takes
+                CSS, and how long a post can be. Profiles are saved in this browser; export them to
+                share or move them.
+            </p>
+            <div className="i-columns">
+                <nav>
+                    <ul>
+                        {profiles.map((p) => (
+                            <li key={p.id}>
+                                <button
+                                    className={draft?.id === p.id && !isNew ? 'is-current' : ''}
+                                    onClick={() => edit(p)}
+                                >
+                                    {p.title}
+                                </button>
+                            </li>
+                        ))}
+                    </ul>
+                    <button
+                        onClick={() => edit(newProfile(`site-${Date.now().toString(36)}`), true)}
+                    >
+                        + new site
+                    </button>
+                    <details>
+                        <summary>import JSON</summary>
+                        <textarea
+                            rows={5}
+                            value={importText}
+                            onChange={(e) => setImportText(e.target.value)}
+                            placeholder='{"id": "…", "title": "…", …}'
+                        />
+                        <button onClick={importProfile} disabled={!importText.trim()}>
+                            import
+                        </button>
+                    </details>
+                </nav>
+                {draft ? (
+                    <form className="i-form" onSubmit={(e) => e.preventDefault()}>
+                        <label>
+                            Name <input {...field('title')} />
+                        </label>
+                        <label>
+                            ID <input {...field('id')} disabled={!isNew} />
+                        </label>
+                        <label>
+                            A part is called <input {...field('partLabel')} />
+                        </label>
+                        <label>
+                            Size limit per part (characters, optional){' '}
+                            <input {...field('partMaxChars')} inputMode="numeric" />
+                        </label>
+                        <label>
+                            How it takes CSS
+                            <select {...field('delivery')}>
+                                {Object.entries(DELIVERY_STRATEGIES).map(([id, label]) => (
+                                    <option key={id} value={id}>
+                                        {label}
+                                    </option>
+                                ))}
+                            </select>
+                        </label>
+                        <label>
+                            Allowed elements
+                            <textarea rows={3} {...field('elements')} />
+                        </label>
+                        <label>
+                            Allowed attributes, one element per line (<code>all:</code> for every
+                            element)
+                            <textarea rows={4} {...field('attributes')} />
+                        </label>
+                        <label>
+                            Allowed URL protocols, as <code>element.attribute: protocols</code> (
+                            <code>relative</code> allows links without one)
+                            <textarea rows={3} {...field('protocols')} />
+                        </label>
+                        <label>
+                            Allowed CSS properties (leave empty to allow any)
+                            <textarea rows={2} {...field('cssProperties')} />
+                        </label>
+                        {message && <p className="i-message">{message}</p>}
+                        <div className="i-buttons">
+                            <button onClick={save}>save</button>
+                            {!isNew && (
+                                <>
+                                    <button
+                                        onClick={() => {
+                                            save();
+                                            onUse(draft.id);
+                                        }}
+                                    >
+                                        save and preview with it
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            const result = fromDraft(draft);
+                                            if (typeof result === 'string')
+                                                return setMessage(result);
+                                            navigator.clipboard
+                                                .writeText(JSON.stringify(result, null, 2))
+                                                .then(() => setMessage('Copied as JSON.'))
+                                                .catch(() => setMessage('Couldn’t copy.'));
+                                        }}
+                                    >
+                                        copy as JSON
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            if (!window.confirm(`Delete "${draft.title}"?`)) return;
+                                            deleteProfile(draft.id);
+                                            setProfiles(listProfiles());
+                                            setDraft(null);
+                                        }}
+                                    >
+                                        delete
+                                    </button>
+                                </>
+                            )}
+                        </div>
+                    </form>
+                ) : (
+                    <p className="i-empty">Pick a site, or add a new one.</p>
+                )}
+            </div>
+        </dialog>
+    );
+}

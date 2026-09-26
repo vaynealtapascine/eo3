@@ -189,13 +189,28 @@ module; eo3 never automatically removes its authored rules.
         (→ 450 kB + 80 kB, 0.1 s). Tests: `test/util/split-html.test.ts`, split cases in
         `test/document/groups-and-splitting.test.ts`.
         Not done: an author-placed break marker in content (adding a part covers it for now).
--   [ ] **6b — custom target profiles.** A declarative `TargetProfile` (design doc, "Custom
-        target profiles") driving a generic target: the sanitize engine in
-        `targets/ao3/render/sanitize.ts` is already config-driven (`SanitizeConfig`), plus a
-        delivery strategy from `targets/delivery/`. Needs a UI to create/edit a profile, stored
-        with the document or app settings.
+-   [x] **6b — custom target profiles.** `src/targets/profile/`: `TargetProfile` + `parseProfile`
+        (validates imported JSON, fills defaults) + `newProfile` template (`types.ts`);
+        `createProfileTarget` builds a `SiteTargetPlugin` from a profile (`target.tsx`): the
+        config-driven sanitizer from `targets/ao3/render/sanitize.ts`, then one of four delivery
+        strategies — `shared-stylesheet` (lift + `exportSharedStylesheet`), `inline`
+        (`exportInline`; `class` is kept through sanitizing so CSS can match before the inliner
+        drops it), `embedded-style` (a `<style>` block per part), `plain` (all styling dropped,
+        reported). Optional `cssProperties` allowlist filters stylesheets and style attributes
+        (`filter-css.ts`). Own ERRORS registry and footer with an error list (`diagnostics.tsx`),
+        per the per-target-registries convention. Profiles are app-wide in localStorage
+        (`store.ts`, key `eo3:target-profiles`, target ids `profile:<id>`), not in documents:
+        they describe sites, not stories; the editor copies/imports them as JSON to share.
+        `SiteTargetProvider` loads them and rebuilds on change (falls back to AO3 if the active
+        one is deleted). Editor: `ui/components/profile-editor.tsx` (native `<dialog>`), opened
+        from "custom sites…" in the site selector. Tests: `test/targets/profile.test.ts`.
 -   [ ] **6c — crossposting.** More than one target per work at once, each with its own outputs,
-        warnings and posted state (today `PostedSnapshot` and the skin record assume one target).
+        warnings and posted state. Today `PostedSnapshot`, the skin record, the skin baseline and
+        the imported skin all assume one target: switching the preview to another site compares
+        its HTML against the AO3 posted hash and shows "changed since you marked it posted".
+        Plan: key posted snapshots (and the shared-stylesheet record/baseline) by target id,
+        migrating existing ones to `ao3`; let a work list its targets; show per-target posted
+        badges in the parts list.
 
 ## Log
 
@@ -222,3 +237,4 @@ module; eo3 never automatically removes its authored rules.
 -   2026-09-26 — Phase 5 done (continued from Sol's uncommitted work): effect classes renamed to
     `fx-`, styles-module naming and unsent-styles warning added, tests. Next: phase 6.
 -   2026-09-26 — Phase 6a (splitting long parts) done. Next: 6b custom target profiles.
+-   2026-09-26 — Phase 6b (custom target profiles) done. Next: 6c crossposting.

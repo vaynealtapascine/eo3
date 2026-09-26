@@ -16,6 +16,15 @@ import { SITE_TARGETS } from '../../targets';
 import { useSiteTarget } from '../../targets/context';
 import { removeLiftedSkinRules } from '../../targets/delivery/skin-record';
 import { splitHtml } from '../../util/split-html';
+import {
+    listProfiles,
+    PROFILE_TARGET_PREFIX,
+    subscribeProfiles,
+} from '../../targets/profile/store';
+import { ProfileEditor } from './profile-editor';
+
+/** Site-selector entry that opens the custom site editor instead of switching targets. */
+const EDIT_PROFILES = '__edit-profiles';
 import './preview.scss';
 
 export function Preview({
@@ -35,6 +44,9 @@ export function Preview({
     const { id: siteTargetId, plugin: siteTargetPlugin, setId: setSiteTargetId } = useSiteTarget();
     const [previewConfig, onPreviewConfigChange] = useState<PreviewConfig | null>(null);
     const [readMore, setReadMore] = useState(false);
+    const [editingProfiles, setEditingProfiles] = useState(false);
+    const [profiles, setProfiles] = useState(listProfiles);
+    useEffect(() => subscribeProfiles(() => setProfiles(listProfiles())), []);
     const lastPostPreviewHeight = useRef(0);
     const previewContainer = useRef<HTMLDivElement>(null);
 
@@ -169,6 +181,14 @@ export function Preview({
 
     return (
         <div className="data-preview" aria-label="Preview">
+            <ProfileEditor
+                open={editingProfiles}
+                onClose={() => setEditingProfiles(false)}
+                onUse={(id) => {
+                    setSiteTargetId(PROFILE_TARGET_PREFIX + id);
+                    setEditingProfiles(false);
+                }}
+            />
             <div className="preview-header">
                 <div className="preview-config">
                     <select
@@ -203,7 +223,9 @@ export function Preview({
                             className="site-target-select"
                             value={siteTargetId}
                             onChange={(e) => {
-                                setSiteTargetId((e.target as HTMLSelectElement).value);
+                                const value = (e.target as HTMLSelectElement).value;
+                                if (value === EDIT_PROFILES) setEditingProfiles(true);
+                                else setSiteTargetId(value);
                             }}
                         >
                             {Object.entries(SITE_TARGETS).map(([id, def]) => (
@@ -211,6 +233,12 @@ export function Preview({
                                     {def.title}
                                 </option>
                             ))}
+                            {profiles.map((profile) => (
+                                <option value={PROFILE_TARGET_PREFIX + profile.id} key={profile.id}>
+                                    {profile.title}
+                                </option>
+                            ))}
+                            <option value={EDIT_PROFILES}>custom sites…</option>
                         </select>
                     )}
                     <span className="live-update">
