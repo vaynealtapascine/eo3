@@ -262,8 +262,6 @@ Everything in the design's seven phases has landed. Known gaps, roughly by value
     the selection are rejected because a copied group cannot recreate them. The disabled group
     action explains that constraint. Grouped members remain separate graph cards rather than one
     collapsible card.
--   **wafrn edge cases** (see phase 7): readers with reduced motion, server-rendered pages and
-    other fediverse servers show posts without styles. Only mentioned in the target description.
 -   **Pushing.** Everything after `06b3f80` (the last push to `origin/main`) is local until
     someone pushes.
 
@@ -310,3 +308,6 @@ Everything in the design's seven phases has landed. Known gaps, roughly by value
     open work. Authors can explicitly forget a retired site's marks, skin record, baseline, and
     protected classes in one undoable change. History in unopened works stays available until
     each work is opened and reviewed.
+-   2026-09-26 — wafrn previews of styled posts now note that reduced-motion readers,
+    server-rendered pages and other fediverse servers show the post unstyled. Profile targets
+    take an optional `footerNote` for site-specific notes like this.

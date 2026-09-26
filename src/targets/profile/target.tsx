@@ -1,4 +1,4 @@
-import { ComponentType, useRef, useState } from 'react';
+import { ComponentType, ReactNode, useRef, useState } from 'react';
 import { DirPopover } from '../../uikit/dir-popover';
 import { CopyToClipboardButton } from '../../ui/components/post-preview/copy-to-clipboard-button';
 import { PostedStatus } from '../../ui/components/post-preview/posted-status';
@@ -38,6 +38,8 @@ export interface ProfileTargetExtension {
     /** Site-specific changes to each part's HTML after sanitizing, shown in preview and export. */
     finalizePart?(root: HTMLElement, pushError: PushError): void;
     mascot?: { awake: string; asleep: string };
+    /** A note under the preview about how the site shows this part's HTML. */
+    footerNote?(html: string): ReactNode;
 }
 
 /** Builds a site target from a profile: its sanitizer, its delivery strategy, its limits. */
@@ -162,6 +164,7 @@ export function createProfileTarget(
                 profile={profile}
                 exportActions={exportActions}
                 errorRegistry={errors}
+                note={extension.footerNote}
             />
         ),
         outputMascot: extension.mascot ?? { awake: MASCOT, asleep: MASCOT },
@@ -199,10 +202,12 @@ function ProfileFooter({
     profile,
     exportActions,
     errorRegistry,
+    note,
 }: SiteTargetPreviewProps<Config> & {
     profile: TargetProfile;
     exportActions: SiteTargetExportAction[];
     errorRegistry: Record<string, ComponentType<any>>;
+    note?(html: string): ReactNode;
 }) {
     const errorButton = useRef<HTMLButtonElement>(null);
     const [errorsOpen, setErrorsOpen] = useState(false);
@@ -242,6 +247,7 @@ function ProfileFooter({
                     <ErrorList errors={errors} registry={errorRegistry} />
                 </DirPopover>
             </div>
+            {note?.(html)}
         </>
     );
 }

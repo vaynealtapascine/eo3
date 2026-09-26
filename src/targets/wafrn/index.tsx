@@ -47,4 +47,13 @@ export default createProfileTarget(WAFRN_PROFILE, {
             pushError('image-not-shown', { src: img.getAttribute('src') ?? '' });
         }
     },
+    footerNote(html) {
+        if (!/<style[\s>]|\sstyle="/.test(html)) return null;
+        return (
+            <p className="i-note">
+                Keep this post readable without its styles: wafrn’s reduced-motion view, its
+                server-rendered pages and other fediverse servers show it unstyled.
+            </p>
+        );
+    },
 });
