@@ -2,7 +2,7 @@
 // core/src/useCodeMirror.ts
 
 import { forwardRef, useRef, useEffect, useState, useImperativeHandle } from 'react';
-import { EditorState, StateEffect } from '@codemirror/state';
+import { EditorSelection, EditorState, StateEffect } from '@codemirror/state';
 import { indentWithTab } from '@codemirror/commands';
 import { EditorView, keymap, ViewUpdate, placeholder } from '@codemirror/view';
 import { basicSetup } from '@uiw/codemirror-extensions-basic-setup';
@@ -150,10 +150,17 @@ export function useCodeMirror(props: UseCodeMirror) {
     {
         const currentValue = view ? view.state.doc.toString() : '';
         if (view && value !== currentValue) {
+            // Keep the selection, clamped: an outside change (e.g. undo) can shorten the text.
+            const length = (value || '').length;
+            const { ranges, mainIndex } = view.state.selection;
             view.dispatch({
                 changes: { from: 0, to: currentValue.length, insert: value || '' },
-                // keep selection
-                selection: view.state.selection,
+                selection: EditorSelection.create(
+                    ranges.map((r) =>
+                        EditorSelection.range(Math.min(r.anchor, length), Math.min(r.head, length))
+                    ),
+                    mainIndex
+                ),
             });
         }
     }
