@@ -3,6 +3,7 @@ import { initStorage, MemoryStorage } from './storage';
 import ApplicationFrame from './ui';
 import { trackViewport } from './ui/viewport';
 import { DialogHost } from './ui/dialogs';
+import { UpdateNotice } from './ui/update-notice';
 
 let canInit = true;
 {
@@ -25,6 +26,7 @@ if (canInit) {
                 <>
                     <ApplicationFrame storage={storage} />
                     <DialogHost />
+                    <UpdateNotice />
                 </>
             );
         })
@@ -36,6 +38,7 @@ if (canInit) {
                 <>
                     <ApplicationFrame storage={storage} isMemoryStorage storageError={err} />
                     <DialogHost />
+                    <UpdateNotice />
                 </>
             );
         });

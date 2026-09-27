@@ -1,6 +1,5 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-// @ts-ignore
 import { cohostStaticUrlPrefix as staticUrlPrefix } from 'eo3:config';
 import { LiveRenderFn, RenderResult } from '../types';
 import { RenderConfig } from './config';

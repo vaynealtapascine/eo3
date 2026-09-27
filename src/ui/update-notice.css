@@ -1,0 +1,146 @@
+.update-toast {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 0.6em;
+    max-width: calc(100vw - 32px);
+    padding: 0.5em 0.5em 0.5em 0.9em;
+    border-radius: 0.75em;
+    background: var(--P-dialog-bg);
+    color: rgb(var(--P-color-fg));
+    box-shadow: 0 0.5em 1em rgba(0, 0, 0, 0.3), 0 0 0 1px var(--P-dialog-outline);
+
+    button {
+        font: inherit;
+        color: inherit;
+        background: none;
+        border: 1px solid var(--P-separator);
+        border-radius: 0.5em;
+        padding: 0.25em 0.7em;
+        cursor: pointer;
+        white-space: nowrap;
+
+        &:hover,
+        &:focus-visible {
+            background: var(--P-separator);
+        }
+    }
+
+    .i-dismiss {
+        border: none;
+        padding: 0.25em 0.5em;
+        font-size: 1.1em;
+        line-height: 1;
+    }
+
+    /* Clear of the phone layout's pane tabs. */
+    @media (max-width: 700px) {
+        left: 16px;
+        right: 16px;
+        bottom: calc(4em + env(safe-area-inset-bottom, 0px));
+
+        span {
+            flex: 1;
+        }
+    }
+}
+
+.update-changes {
+    width: min(34em, calc(100vw - 32px));
+    max-height: min(40em, calc(100dvh - 32px));
+    padding: 1em;
+    border: none;
+    border-radius: 0.75em;
+    background: var(--P-dialog-bg);
+    color: rgb(var(--P-color-fg));
+    box-shadow: 0 0.5em 1em rgba(0, 0, 0, 0.3), 0 0 0 1px var(--P-dialog-outline);
+
+    &[open] {
+        display: flex;
+        flex-direction: column;
+    }
+
+    &::backdrop {
+        background: rgba(0, 0, 0, 0.3);
+    }
+
+    h2 {
+        margin: 0;
+        font-size: 1.2em;
+    }
+
+    .i-versions {
+        margin: 0.2em 0 0.8em;
+        font-size: smaller;
+        opacity: 0.7;
+    }
+
+    .i-body {
+        flex: 1;
+        overflow: auto;
+        min-height: 0;
+
+        section + section {
+            margin-top: 0.8em;
+        }
+
+        h3 {
+            display: inline;
+            margin: 0;
+            font-size: 1em;
+        }
+
+        ul {
+            margin: 0.3em 0 0;
+            padding: 0;
+            list-style: none;
+        }
+
+        /* Changes with details get the disclosure arrow; the rest line up with their text. */
+        li {
+            margin: 0.25em 0;
+            padding-left: 1.1em;
+
+            &:has(> details) {
+                padding-left: 0;
+            }
+        }
+
+        details > p {
+            margin: 0.3em 0 0.5em;
+            white-space: pre-wrap;
+            font-size: smaller;
+            opacity: 0.8;
+        }
+
+        summary {
+            cursor: pointer;
+        }
+    }
+
+    .i-buttons {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 0.8em;
+        margin-top: 0.8em;
+
+        a {
+            color: inherit;
+            font-size: smaller;
+        }
+
+        button {
+            font: inherit;
+            border: none;
+            border-radius: 0.5em;
+            padding: 0.3em 0.9em;
+            cursor: pointer;
+            background: rgb(var(--P-color-accent));
+            color: rgb(var(--P-color-accent-fg));
+        }
+    }
+}

@@ -6,7 +6,6 @@ import { StorageContext } from '../storage-context';
 import { ExamplesMenu } from './examples';
 // @ts-ignore
 import { homepage as sourceLink } from '../../package.json';
-// @ts-ignore
 import { gitCommitHash } from 'eo3:config';
 import { useOptHeld } from './opt-held';
 import { Button } from '../uikit/button';

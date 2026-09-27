@@ -355,3 +355,8 @@ done. Smaller known limits:
         duplicate, ungroup.
 -   2026-09-27 — Merged `feat/mobile-layout` (phone reflow, on-screen keyboard handling). The
     "add node" picker now fits phone widths, since Groups lives there.
+-   2026-09-27 — Update notice: after eo3 updates, a toast says so until dismissed; "See changes"
+    lists the commits since the version this browser last acknowledged, fetched from GitHub's
+    compare API (`util/changelog.ts`) and sorted into New / Fixed / Behind the scenes. The
+    version is the build's `gitCommitHash`; dev.vayne.garden's hourly deploy builds eo3 `main`.
+    A first visit lists changes since `3ce4778` (the author's chosen baseline).
