@@ -353,3 +353,5 @@ done. Smaller known limits:
     -   "add node" has a "Groups ›" row opening a second level: import file, My groups (⋯: move,
         export, remove), Examples. The card's ⋯ menu: rename, save to my groups, export,
         duplicate, ungroup.
+-   2026-09-27 — Merged `feat/mobile-layout` (phone reflow, on-screen keyboard handling). The
+    "add node" picker now fits phone widths, since Groups lives there.
