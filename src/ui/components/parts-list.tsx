@@ -6,8 +6,8 @@ import { SPLIT_MARKER, splitHtmlAtMarker } from '../../util/split-html';
 import './parts-list.css';
 
 /**
- * The work's parts (chapters, posts) in order. Selecting a part shows it in the preview and is
- * where new effects go; each part's menu opens its styles, created and wired on first use.
+ * The work's parts (chapters, posts) in order. Selecting a part shows it in the preview; each
+ * part's menu opens its styles, created and wired on first use.
  */
 export function PartsList({
     document,

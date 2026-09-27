@@ -14,6 +14,7 @@ import {
 import { AnimationController, Spring } from '../../uikit/frame-animation';
 import { shouldReduceMotion } from '../../uikit/animation';
 import { ModulePicker } from './module-picker';
+import { GroupFile } from '../../storage/group-file';
 import './module-list.css';
 import { TextField } from '../../uikit/text-field';
 import { EditIcon } from './icons';
@@ -372,10 +373,9 @@ export class ModuleList extends PureComponent<ModuleList.Props, ModuleListState>
                         onAdd={(module) => {
                             document.insertModule(module);
                         }}
-                        effects={{
-                            document,
-                            partId: this.props.partId,
-                            onAdded: this.props.onSelect,
+                        onAddGroup={async (file) => {
+                            const group = await document.insertGroupFile(file);
+                            this.props.onSelect(group.moduleIds[0]);
                         }}
                     />
                 </div>
@@ -390,17 +390,15 @@ namespace ModuleList {
         selected: ModuleId | null;
         onSelect: (m: ModuleId | null) => void;
         userData?: Map<ModuleId, UserData>;
-        /** The part effects are added to. */
-        partId: string;
     }
 }
 
 function AddModule({
     onAdd,
-    effects,
+    onAddGroup,
 }: {
     onAdd: (m: AnyModule) => void;
-    effects: ModulePicker.Props['effects'];
+    onAddGroup: (file: GroupFile) => Promise<void>;
 }) {
     const [open, setOpen] = useState(false);
     const button = useRef<HTMLElement>();
@@ -416,7 +414,7 @@ function AddModule({
                     onAdd(new Module(plugin));
                     setOpen(false);
                 }}
-                effects={effects}
+                onPickGroup={onAddGroup}
             />
         </div>
     );

@@ -4,6 +4,7 @@ import {
     Module,
     JsonValue,
     UnloadedPlugin,
+    ModuleGroup,
     ModuleId,
     MOD_OUTPUT,
     Part,
@@ -122,13 +123,11 @@ export function serializeV1(doc: Document, format?: string): string {
     if (doc.state.sharedStylesModuleId === null) docData.sharedStyles = false;
     const sharedStyles = doc.sharedStylesModuleId && moduleIndices.get(doc.sharedStylesModuleId);
     if (sharedStyles !== undefined && sharedStyles !== null) docData.sharedStyles = sharedStyles;
-    if (doc.groupDefinitions.length) docData.groupDefinitions = doc.groupDefinitions;
-    if (doc.groupInstances.length) {
-        docData.groupInstances = doc.groupInstances.map((instance) => ({
-            id: instance.id,
-            definitionId: instance.definitionId,
-            partId: instance.partId,
-            modules: instance.moduleIds.map((id) => moduleIndices.get(id)),
+    if (doc.groups.length) {
+        docData.groups = doc.groups.map((group) => ({
+            id: group.id,
+            title: group.title,
+            modules: group.moduleIds.map((id) => moduleIndices.get(id)),
         }));
     }
     // A single untouched part is implied by older files, so it isn't written.
@@ -293,26 +292,7 @@ export function deserializeV1(input: string): Document {
             data.importedSkin !== undefined
                 ? moduleIdAssignments.get(data.importedSkin) ?? null
                 : null,
-        groupDefinitions: (data.groupDefinitions || []).map((definition: any) => ({
-            id: String(definition.id),
-            title: String(definition.title),
-            ...(definition.shelfKey ? { shelfKey: String(definition.shelfKey) } : {}),
-        })),
-        groupInstances: (data.groupInstances || [])
-            .map((instance: any) => {
-                const moduleIds = (instance.modules || []).map((index: number) =>
-                    moduleIdAssignments.get(index)
-                );
-                if (!moduleIds.length || moduleIds.some((id: ModuleId | undefined) => !id))
-                    return null;
-                return {
-                    id: String(instance.id),
-                    definitionId: String(instance.definitionId),
-                    partId: String(instance.partId),
-                    moduleIds,
-                };
-            })
-            .filter(Boolean),
+        groups: readGroups(data, moduleIdAssignments),
     });
 
     return doc;
@@ -373,4 +353,27 @@ export async function migrateV1(
 
 export function nextDocumentIdV1(): string {
     return Date.now().toString(36) + Math.random().toString(36).substring(2);
+}
+
+/**
+ * Groups from `groups`, or from the older shared-definition format (`groupDefinitions` and
+ * `groupInstances`), where each instance becomes an independent group with its definition's
+ * title.
+ */
+function readGroups(data: any, moduleIdAssignments: Map<number, ModuleId>): ModuleGroup[] {
+    const titles = new Map<string, string>(
+        (data.groupDefinitions || []).map((definition: any) => [
+            String(definition.id),
+            String(definition.title),
+        ])
+    );
+    const entries: any[] = data.groups ?? data.groupInstances ?? [];
+    return entries.flatMap((entry) => {
+        const moduleIds = (entry.modules || []).map((index: number) =>
+            moduleIdAssignments.get(index)
+        );
+        if (moduleIds.length < 2 || moduleIds.some((id: ModuleId | undefined) => !id)) return [];
+        const title = entry.title ?? titles.get(String(entry.definitionId)) ?? 'Group';
+        return [{ id: String(entry.id), title: String(title), moduleIds }];
+    });
 }

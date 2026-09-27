@@ -8,6 +8,7 @@ import {
     translateGroupMembers,
 } from '../../src/ui/components/module-graph/group-cards';
 import { GROUP_HEADER_HEIGHT, layoutNodes } from '../../src/ui/components/module-graph/auto-layout';
+import { addExample } from '../helpers/examples';
 
 // The real Text plugin pulls in editors that need a full browser; the document only needs its id.
 vi.mock('../../src/plugins', () => ({
@@ -49,7 +50,7 @@ function send(doc: Document, from: string, to: string, name?: string) {
 describe('group cards in the graph', () => {
     it('collapses a group into one card unless it is expanded', async () => {
         const doc = new Document();
-        const instance = (await doc.addPackagedEffect('letter', doc.parts[0].id))!;
+        const instance = await addExample(doc, 'Letter');
 
         const collapsed = groupCards(doc, new Set(), []);
         expect(collapsed.cards).toEqual([
@@ -65,8 +66,8 @@ describe('group cards in the graph', () => {
 
     it('lists the links that cross the group edge as its inputs and outputs', async () => {
         const doc = new Document();
-        const letter = (await doc.addPackagedEffect('letter', doc.parts[0].id))!;
-        const other = (await doc.addPackagedEffect('chat-log', doc.parts[0].id))!;
+        const letter = await addExample(doc, 'Letter');
+        const other = await addExample(doc, 'Chat log');
         const [html, styles] = letter.moduleIds;
         send(doc, other.moduleIds[0], html);
         send(doc, other.moduleIds[1], styles, 'accent');
@@ -82,7 +83,7 @@ describe('group cards in the graph', () => {
 
     it('lays out a collapsed group as its card and keeps expanded members together', async () => {
         const doc = new Document();
-        const letter = (await doc.addPackagedEffect('letter', doc.parts[0].id))!;
+        const letter = await addExample(doc, 'Letter');
         const collapsed = groupCards(doc, new Set(), []);
         const card = collapsed.cards[0];
         const layout = layoutNodes(doc, collapsed);
@@ -97,7 +98,7 @@ describe('group cards in the graph', () => {
 
     it('leaves out hidden members and groups with fewer than two left', async () => {
         const doc = new Document();
-        const instance = (await doc.addPackagedEffect('letter', doc.parts[0].id))!;
+        const instance = await addExample(doc, 'Letter');
         expect(groupCards(doc, new Set([instance.moduleIds[1]]), []).cards).toEqual([]);
     });
 
@@ -125,8 +126,8 @@ describe('group cards in the graph', () => {
 
     it('moves every member by one drag offset without changing another group', async () => {
         const doc = new Document();
-        const first = (await doc.addPackagedEffect('letter', doc.parts[0].id))!;
-        const other = (await doc.addPackagedEffect('letter', doc.parts[0].id))!;
+        const first = await addExample(doc, 'Letter');
+        const other = await addExample(doc, 'Letter');
         const positions = new Map([
             [first.moduleIds[0], { x: 10, y: 20 }],
             [first.moduleIds[1], { x: 30, y: 40 }],

@@ -17,7 +17,7 @@ export interface GroupPort {
 }
 
 export interface GroupCard {
-    instanceId: string;
+    groupId: string;
     nodeId: string;
     title: string;
     /** Visible members, in the instance's order. */
@@ -33,20 +33,19 @@ const outHandle = (member: ModuleId) => `out:${member}`;
 const inHandle = (member: ModuleId) => `in:${member}`;
 const namedHandle = (member: ModuleId, name: string) => `named:${member}:${name}`;
 
-/** Group instances as graph cards; members of collapsed ones map to their card's node. */
+/** Groups as graph cards; members of collapsed ones map to their card's node. */
 export function groupCards(doc: Document, hidden: Set<ModuleId>, expanded: readonly string[]) {
     const collapsedInto = new Map<ModuleId, string>();
-    const cards: GroupCard[] = doc.groupInstances.flatMap((instance) => {
-        const members = instance.moduleIds.filter((id) => doc.findModule(id) && !hidden.has(id));
+    const cards: GroupCard[] = doc.groups.flatMap((group) => {
+        const members = group.moduleIds.filter((id) => doc.findModule(id) && !hidden.has(id));
         if (members.length < 2) return [];
-        const title =
-            doc.groupDefinitions.find((d) => d.id === instance.definitionId)?.title ?? 'Group';
+        const title = group.title;
         const card = {
-            instanceId: instance.id,
-            nodeId: GROUP_NODE_PREFIX + instance.id,
+            groupId: group.id,
+            nodeId: GROUP_NODE_PREFIX + group.id,
             title,
             members,
-            expanded: expanded.includes(instance.id),
+            expanded: expanded.includes(group.id),
             ...groupPorts(doc, hidden, members, title),
         };
         if (!card.expanded) for (const id of members) collapsedInto.set(id, card.nodeId);

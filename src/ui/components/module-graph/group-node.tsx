@@ -4,12 +4,11 @@ import { Data } from '../../../document';
 import { MOD_BASE_WIDTH, MOD_HEADER_HEIGHT, MOD_INPUT_HEIGHT, MOD_OUTPUT_HEIGHT } from './consts';
 import { GroupPort } from './group-cards';
 import { ActionMenu } from '../action-menu';
-import { useSiteTarget } from '../../../targets/context';
 const HEIGHT_PROP = '--height' as any;
 
 /** A collapsed group, drawn like a module: its rows are the links crossing the group's edge. */
 export function GroupNode({ id, data }: { id: string; data: GroupNode.NodeData }) {
-    const { title, memberCount, inputs, outputs, outputData, selected, sharing, onToggle } = data;
+    const { title, memberCount, inputs, outputs, outputData, selected, actions, onToggle } = data;
     const updateNodeInternals = useUpdateNodeInternals();
     const handles = [...inputs, ...outputs].map((port) => port.handle).join(' ');
     useEffect(() => updateNodeInternals(id), [handles]);
@@ -25,7 +24,7 @@ export function GroupNode({ id, data }: { id: string; data: GroupNode.NodeData }
             <div className="i-header" style={{ [HEIGHT_PROP]: MOD_HEADER_HEIGHT }}>
                 <GroupToggle title={title} expanded={false} onToggle={onToggle} />
                 <span className="i-label">{title}</span>
-                <GroupMenu title={title} sharing={sharing} />
+                <GroupMenu title={title} actions={actions} />
             </div>
             {inputs.map((port) => (
                 <div
@@ -82,41 +81,31 @@ export namespace GroupNode {
         outputs: GroupPort[];
         outputData: Map<string, Data>;
         selected: boolean;
-        sharing: GroupSharing;
+        actions: GroupActions;
         onToggle(): void;
     }
 }
 
-/** How a group instance shares its definition, and the actions for that. */
-export interface GroupSharing {
-    /** Instances using the same definition, this one included. */
-    count: number;
-    /** Indices of the parts it can be copied to. */
-    otherParts: { id: string; index: number }[];
-    onCopy(partId: string): void;
-    onDetach(): void;
+/** What a group card's ⋯ menu does. */
+export interface GroupActions {
+    rename(): void;
+    save(): void;
+    export(): void;
+    duplicate(): void;
+    ungroup(): void;
 }
 
-function GroupMenu({ title, sharing }: { title: string; sharing: GroupSharing }) {
-    const partLabel = useSiteTarget().plugin?.partLabel ?? 'Part';
+function GroupMenu({ title, actions }: { title: string; actions: GroupActions }) {
     return (
         <ActionMenu
             className="i-group-menu nodrag"
             label={`${title} actions`}
-            note={
-                sharing.count > 1
-                    ? `Shared by ${sharing.count} uses: editing one edits all.`
-                    : 'Not shared with other uses.'
-            }
             actions={[
-                ...sharing.otherParts.map((part) => ({
-                    label: `Use in ${partLabel} ${part.index + 1}`,
-                    run: () => sharing.onCopy(part.id),
-                })),
-                sharing.count > 1 && {
-                    label: 'Detach: edit this one separately',
-                    run: sharing.onDetach,
-                },
+                { label: 'Rename…', run: actions.rename },
+                { label: 'Save to my groups', run: actions.save },
+                { label: 'Export to file…', run: actions.export },
+                { label: 'Duplicate', run: actions.duplicate },
+                { label: 'Ungroup', run: actions.ungroup },
             ]}
         />
     );
@@ -124,13 +113,13 @@ function GroupMenu({ title, sharing }: { title: string; sharing: GroupSharing })
 
 /** An expanded group: a frame behind its members, with a header to collapse it again. */
 export function GroupFrame({ data }: { data: GroupFrame.NodeData }) {
-    const { title, width, height, sharing, onToggle } = data;
+    const { title, width, height, actions, onToggle } = data;
     return (
         <div className="i-group-frame" style={{ width, height }}>
             <div className="i-group-header">
                 <GroupToggle title={title} expanded onToggle={onToggle} />
                 <span className="i-label">{title}</span>
-                <GroupMenu title={title} sharing={sharing} />
+                <GroupMenu title={title} actions={actions} />
             </div>
         </div>
     );
@@ -140,7 +129,7 @@ export namespace GroupFrame {
         title: string;
         width: number;
         height: number;
-        sharing: GroupSharing;
+        actions: GroupActions;
         onToggle(): void;
     }
 }

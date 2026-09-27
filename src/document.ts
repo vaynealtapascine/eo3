@@ -1,6 +1,6 @@
 import { Component, FunctionComponent } from 'react';
 import { MODULES } from './plugins';
-import { EFFECTS, EffectKey } from './effects';
+import type { GroupFile } from './storage/group-file';
 
 export type JsonValue = null | boolean | number | string | JsonValue[] | { [k: string]: JsonValue };
 
@@ -84,9 +84,8 @@ export interface DocumentState {
     protectedSkinClasses: Record<string, string[]>;
     /** Per target id: the latest imported or marked-posted stylesheet, for the diff before copying. */
     skinBaselines: Record<string, string>;
-    /** Named reusable groups; each instance contains ordinary modules in the graph. */
-    groupDefinitions: GroupDefinition[];
-    groupInstances: GroupInstance[];
+    /** Modules the author grouped into one card in the graph. */
+    groups: ModuleGroup[];
     /**
      * The "All chapters" styles module, wired to every new part. Undefined in works from before
      * it existed (ensureSharedStyles adds it); null once the author deletes it.
@@ -94,18 +93,13 @@ export interface DocumentState {
     sharedStylesModuleId?: ModuleId | null;
 }
 
-export interface GroupDefinition {
+/**
+ * Modules shown as one card in the graph. The modules stay ordinary modules, wired as before;
+ * a group only names them and keeps them together. Every group is independent.
+ */
+export interface ModuleGroup {
     id: string;
     title: string;
-    /** Built-in shelf entry, when this definition came from one. */
-    shelfKey?: string;
-}
-
-export interface GroupInstance {
-    id: string;
-    definitionId: string;
-    partId: string;
-    /** Module IDs in corresponding order across instances of a definition. */
     moduleIds: ModuleId[];
 }
 
@@ -217,8 +211,7 @@ export class Document extends EventTarget {
                 importedSkinModuleId: null,
                 protectedSkinClasses: {},
                 skinBaselines: {},
-                groupDefinitions: [],
-                groupInstances: [],
+                groups: [],
             },
             desc: { type: ChangeType.Load },
             time: Date.now(),
@@ -235,16 +228,14 @@ export class Document extends EventTarget {
             | 'importedSkinModuleId'
             | 'protectedSkinClasses'
             | 'skinBaselines'
-            | 'groupDefinitions'
-            | 'groupInstances'
+            | 'groups'
         > & {
             parts?: Part[];
             skinRecords?: Record<string, Record<string, string>>;
             importedSkinModuleId?: ModuleId | null;
             protectedSkinClasses?: Record<string, string[]>;
             skinBaselines?: Record<string, string>;
-            groupDefinitions?: GroupDefinition[];
-            groupInstances?: GroupInstance[];
+            groups?: ModuleGroup[];
             sharedStylesModuleId?: ModuleId | null;
         }
     ) {
@@ -256,8 +247,7 @@ export class Document extends EventTarget {
             importedSkinModuleId: state.importedSkinModuleId ?? null,
             protectedSkinClasses: state.protectedSkinClasses ?? {},
             skinBaselines: state.skinBaselines ?? {},
-            groupDefinitions: state.groupDefinitions ?? [],
-            groupInstances: state.groupInstances ?? [],
+            groups: state.groups ?? [],
         };
     }
 
@@ -300,12 +290,12 @@ export class Document extends EventTarget {
         return this.state.skinBaselines[targetId] ?? null;
     }
 
-    get groupDefinitions(): Readonly<GroupDefinition[]> {
-        return this.state.groupDefinitions;
+    get groups(): Readonly<ModuleGroup[]> {
+        return this.state.groups;
     }
 
-    get groupInstances(): Readonly<GroupInstance[]> {
-        return this.state.groupInstances;
+    findGroup(id: string) {
+        return this.groups.find((group) => group.id === id);
     }
 
     get sharedStylesModuleId(): ModuleId | null {
@@ -419,24 +409,6 @@ export class Document extends EventTarget {
         } else {
             const newModules = this.modules.slice();
             newModules[index] = module;
-            const instance = this.groupInstances.find((group) =>
-                group.moduleIds.includes(module.id)
-            );
-            if (instance) {
-                const slot = instance.moduleIds.indexOf(module.id);
-                const siblings = new Set(
-                    this.groupInstances
-                        .filter((group) => group.definitionId === instance.definitionId)
-                        .map((group) => group.moduleIds[slot])
-                );
-                for (let i = 0; i < newModules.length; i++) {
-                    if (newModules[i].id === module.id || !siblings.has(newModules[i].id)) continue;
-                    const copy = newModules[i].shallowClone();
-                    copy.data = structuredClone(module.data);
-                    copy.title = module.title;
-                    newModules[i] = copy;
-                }
-            }
             this.pushModulesState(newModules, {
                 type: ChangeType.UpdateModule,
                 module: module.id,
@@ -474,9 +446,13 @@ export class Document extends EventTarget {
                 importedSkinModuleId:
                     this.importedSkinModuleId === moduleId ? null : this.importedSkinModuleId,
                 ...(this.sharedStylesModuleId === moduleId ? { sharedStylesModuleId: null } : {}),
-                groupInstances: this.groupInstances.filter(
-                    (instance) => !instance.moduleIds.includes(moduleId)
-                ),
+                // A group of one is just a module again.
+                groups: this.groups
+                    .map((group) => ({
+                        ...group,
+                        moduleIds: group.moduleIds.filter((id) => id !== moduleId),
+                    }))
+                    .filter((group) => group.moduleIds.length > 1),
             },
             { type: ChangeType.RemoveModule }
         );
@@ -486,163 +462,144 @@ export class Document extends EventTarget {
         this.pushHistoryState({ ...this.state, modules, parts }, { type: ChangeType.EditParts });
     }
 
-    /** A selection can be reused when its wiring is self-contained and reaches one part. */
-    groupablePart(moduleIds: ModuleId[]): Part | null {
+    /** Whether these modules can become a group: two or more, none already in a group. */
+    canGroup(moduleIds: ModuleId[]): boolean {
         const ids = new Set(moduleIds);
-        if (!ids.size || ids.size !== moduleIds.length) return null;
-        if (this.groupInstances.some((instance) => instance.moduleIds.some((id) => ids.has(id))))
-            return null;
-        const modules = moduleIds.map((id) => this.findModule(id));
-        if (modules.some((mod) => !mod)) return null;
-        const outputs = new Set<ModuleId>();
-        for (const mod of modules as AnyModule[]) {
-            for (const target of mod.sends) {
-                if (ids.has(target)) continue;
-                if (!isPartOutput(target)) return null;
-                outputs.add(target);
-            }
-            if ([...mod.namedSends.keys()].some((target) => !ids.has(target))) return null;
-        }
-        if (outputs.size !== 1) return null;
-        for (const mod of this.modules) {
-            if (ids.has(mod.id)) continue;
-            if (mod.sends.some((target) => ids.has(target))) return null;
-            if ([...mod.namedSends.keys()].some((target) => ids.has(target))) return null;
-        }
-        return this.parts.find((part) => part.outputId === [...outputs][0]) ?? null;
+        if (ids.size < 2 || ids.size !== moduleIds.length) return false;
+        if (moduleIds.some((id) => !this.findModule(id))) return false;
+        return !this.groups.some((group) => group.moduleIds.some((id) => ids.has(id)));
     }
 
-    /** Turn modules wired within one part into a reusable shared definition. */
-    createGroup(title: string, partId: string, moduleIds: ModuleId[], shelfKey?: string) {
-        const part = this.groupablePart(moduleIds);
-        if (!part || part.id !== partId) return null;
-        const definition: GroupDefinition = {
-            id: Module.genModuleId(),
-            title,
-            ...(shelfKey ? { shelfKey } : {}),
-        };
-        const instance: GroupInstance = {
-            id: Module.genModuleId(),
-            definitionId: definition.id,
-            partId,
-            moduleIds,
-        };
+    /**
+     * Groups modules into one card, keeping their layout: each member without a saved graph
+     * position gets its current one from `positions`. One undo step.
+     */
+    createGroup(
+        title: string,
+        moduleIds: ModuleId[],
+        positions: ReadonlyMap<ModuleId, { x: number; y: number }> = new Map()
+    ): ModuleGroup | null {
+        if (!this.canGroup(moduleIds)) return null;
+        const members = new Set(moduleIds);
+        const group: ModuleGroup = { id: Module.genModuleId(), title, moduleIds };
+        const modules = this.modules.map((mod) => {
+            const position = positions.get(mod.id);
+            if (!members.has(mod.id) || mod.graphPos || !position) return mod;
+            const pinned = mod.shallowClone();
+            pinned.graphPos = { ...position };
+            return pinned;
+        });
+        this.pushHistoryState(
+            { ...this.state, modules, groups: [...this.groups, group] },
+            { type: ChangeType.EditParts }
+        );
+        return group;
+    }
+
+    renameGroup(id: string, title: string) {
         this.pushHistoryState(
             {
                 ...this.state,
-                groupDefinitions: [...this.groupDefinitions, definition],
-                groupInstances: [...this.groupInstances, instance],
+                groups: this.groups.map((group) => (group.id === id ? { ...group, title } : group)),
             },
             { type: ChangeType.EditParts }
         );
-        return instance;
     }
 
-    /** Clone a group's ordinary graph modules, remapping its internal links and part output. */
-    duplicateGroup(instanceId: string, targetPartId: string): GroupInstance | null {
-        const source = this.groupInstances.find((instance) => instance.id === instanceId);
-        const fromPart = source && this.findPart(source.partId);
-        const toPart = this.findPart(targetPartId);
-        if (!source || !fromPart || !toPart) return null;
-        const originals = source.moduleIds.map((id) => this.findModule(id));
-        if (originals.some((mod) => !mod)) return null;
-        const copies = (originals as AnyModule[]).map((mod) => {
-            const copy = new Module(mod.plugin, structuredClone(mod.data));
-            copy.title = mod.title;
-            return copy;
-        });
-        const remap = new Map(source.moduleIds.map((id, i) => [id, copies[i].id]));
-        for (let i = 0; i < copies.length; i++) {
-            const original = originals[i]!;
-            copies[i].sends = original.sends.map((target) =>
-                target === fromPart.outputId ? toPart.outputId : remap.get(target) ?? target
+    /** Dissolves a group; its modules stay where they are, wired as they were. */
+    ungroup(id: string) {
+        this.pushHistoryState(
+            { ...this.state, groups: this.groups.filter((group) => group.id !== id) },
+            { type: ChangeType.EditParts }
+        );
+    }
+
+    /** A group as a file: its modules, their links to each other, and their layout. */
+    groupFile(id: string): GroupFile | null {
+        const group = this.findGroup(id);
+        if (!group) return null;
+        const members = group.moduleIds.map((mid) => this.findModule(mid)!);
+        const index = new Map(group.moduleIds.map((mid, i) => [mid, i]));
+        const placed = members.filter((mod) => mod.graphPos);
+        const left = Math.min(...placed.map((mod) => mod.graphPos!.x));
+        const top = Math.min(...placed.map((mod) => mod.graphPos!.y));
+        return {
+            eo3: 'group',
+            version: 1,
+            title: group.title,
+            modules: members.map((mod) => {
+                const sends = mod.sends.filter((t) => index.has(t)).map((t) => index.get(t)!);
+                const namedSends = [...mod.namedSends].filter(([t]) => index.has(t));
+                return {
+                    plugin: mod.plugin.id,
+                    data: structuredClone(mod.data),
+                    ...(mod.title ? { title: mod.title } : {}),
+                    ...(sends.length ? { sends } : {}),
+                    ...(namedSends.length
+                        ? {
+                              namedSends: Object.fromEntries(
+                                  namedSends.map(([t, names]) => [index.get(t)!, [...names]])
+                              ),
+                          }
+                        : {}),
+                    ...(mod.graphPos
+                        ? {
+                              position: [mod.graphPos.x - left, mod.graphPos.y - top] as [
+                                  number,
+                                  number
+                              ],
+                          }
+                        : {}),
+                };
+            }),
+        };
+    }
+
+    /**
+     * Adds a group from a file as new, unwired modules; with `at`, laid out from that graph
+     * position. One undo step. Throws when a module type isn't available in this eo3.
+     */
+    async insertGroupFile(file: GroupFile, at?: { x: number; y: number }): Promise<ModuleGroup> {
+        const missing = file.modules.filter((mod) => !MODULES[mod.plugin]);
+        if (missing.length) {
+            throw new Error(
+                `This group uses a module type this version of eo3 doesn’t have: ${missing
+                    .map((mod) => mod.plugin)
+                    .join(', ')}`
             );
-            copies[i].namedSends = new Map(
-                [...original.namedSends].map(([target, names]) => [
-                    remap.get(target) ?? target,
+        }
+        const plugins = await Promise.all(file.modules.map((mod) => MODULES[mod.plugin].load()));
+        const modules = file.modules.map((entry, i) => {
+            const mod = new Module(plugins[i], structuredClone(entry.data));
+            mod.title = entry.title ?? '';
+            if (at && entry.position) {
+                mod.graphPos = { x: at.x + entry.position[0], y: at.y + entry.position[1] };
+            }
+            return mod;
+        });
+        file.modules.forEach((entry, i) => {
+            modules[i].sends = (entry.sends ?? []).map((t) => modules[t].id);
+            modules[i].namedSends = new Map(
+                Object.entries(entry.namedSends ?? {}).map(([t, names]) => [
+                    modules[+t].id,
                     new Set(names),
                 ])
             );
-        }
-        const instance: GroupInstance = {
+        });
+        const group: ModuleGroup = {
             id: Module.genModuleId(),
-            definitionId: source.definitionId,
-            partId: targetPartId,
-            moduleIds: copies.map((mod) => mod.id),
+            title: file.title,
+            moduleIds: modules.map((mod) => mod.id),
         };
         this.pushHistoryState(
             {
                 ...this.state,
-                modules: [...this.modules, ...copies],
-                groupInstances: [...this.groupInstances, instance],
+                modules: [...this.modules, ...modules],
+                groups: modules.length > 1 ? [...this.groups, group] : [...this.groups],
             },
             { type: ChangeType.EditParts }
         );
-        return instance;
-    }
-
-    /** Give one instance its own definition; subsequent edits no longer change its siblings. */
-    detachGroup(instanceId: string) {
-        const instance = this.groupInstances.find((group) => group.id === instanceId);
-        const definition = this.groupDefinitions.find(
-            (group) => group.id === instance?.definitionId
-        );
-        if (!instance || !definition) return;
-        const copy: GroupDefinition = {
-            id: Module.genModuleId(),
-            title: `${definition.title} copy`,
-        };
-        this.pushHistoryState(
-            {
-                ...this.state,
-                groupDefinitions: [...this.groupDefinitions, copy],
-                groupInstances: this.groupInstances.map((group) =>
-                    group.id === instanceId ? { ...group, definitionId: copy.id } : group
-                ),
-            },
-            { type: ChangeType.EditParts }
-        );
-    }
-
-    /** Add a shelf effect as a group of ordinary HTML and CSS modules. */
-    async addPackagedEffect(key: EffectKey, partId: string): Promise<GroupInstance | null> {
-        const part = this.findPart(partId);
-        if (!part) return null;
-        const existing = this.groupDefinitions.find((definition) => definition.shelfKey === key);
-        const source =
-            existing &&
-            this.groupInstances.find((instance) => instance.definitionId === existing.id);
-        if (source) return this.duplicateGroup(source.id, partId);
-
-        const plugin = await MODULES['source.text'].load();
-        const effect = EFFECTS[key];
-        const html = new Module(plugin, { contents: effect.html, language: 'html' });
-        html.title = `${effect.title} HTML`;
-        html.sends = [part.outputId];
-        const css = new Module(plugin, { contents: effect.css, language: 'css' });
-        css.title = `${effect.title} styles`;
-        css.sends = [part.outputId];
-        const definition: GroupDefinition = {
-            id: Module.genModuleId(),
-            title: effect.title,
-            shelfKey: key,
-        };
-        const instance: GroupInstance = {
-            id: Module.genModuleId(),
-            definitionId: definition.id,
-            partId,
-            moduleIds: [html.id, css.id],
-        };
-        this.pushHistoryState(
-            {
-                ...this.state,
-                modules: [...this.modules, html, css],
-                groupDefinitions: [...this.groupDefinitions, definition],
-                groupInstances: [...this.groupInstances, instance],
-            },
-            { type: ChangeType.EditParts }
-        );
-        return instance;
+        return group;
     }
 
     /** Wires "All chapters" and the imported Work Skin to a new part. */
@@ -689,10 +646,8 @@ export class Document extends EventTarget {
                 reason: 'This text is also sent elsewhere. Make a separate copy before splitting it.',
             };
         }
-        if (this.groupInstances.some((instance) => instance.moduleIds.includes(mod.id))) {
-            return {
-                reason: 'This text belongs to a reusable group. Detach or copy it before splitting.',
-            };
+        if (this.groups.some((group) => group.moduleIds.includes(mod.id))) {
+            return { reason: 'This text belongs to a group. Ungroup it before splitting.' };
         }
         const language = (mod.data as { language?: unknown } | null)?.language;
         if (mod.plugin.id !== 'source.text' || !HTML_LANGUAGES.has(language as string)) {
@@ -1005,7 +960,6 @@ export class Document extends EventTarget {
                 ...this.state,
                 parts: this.parts.filter((p) => p.id !== id),
                 modules,
-                groupInstances: this.groupInstances.filter((instance) => instance.partId !== id),
             },
             { type: ChangeType.EditParts }
         );

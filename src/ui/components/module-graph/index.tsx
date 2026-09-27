@@ -25,6 +25,10 @@ import {
     routeEdge,
     translateGroupMembers,
 } from './group-cards';
+import { GroupActions } from './group-node';
+import { GroupFile } from '../../../storage/group-file';
+import { saveLibraryGroup } from '../../../storage/group-library';
+import { downloadGroupFile } from '../../group-files';
 import {
     DOCK_GAP,
     GRID_SIZE,
@@ -62,12 +66,12 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
         expandedGroups: [] as string[],
     };
 
-    toggleGroup(instanceId: string) {
+    toggleGroup(groupId: string) {
         const expanded = this.state.expandedGroups;
         this.setState({
-            expandedGroups: expanded.includes(instanceId)
-                ? expanded.filter((id) => id !== instanceId)
-                : [...expanded, instanceId],
+            expandedGroups: expanded.includes(groupId)
+                ? expanded.filter((id) => id !== groupId)
+                : [...expanded, groupId],
         });
     }
 
@@ -277,6 +281,44 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
         this.props.onSelect(module.id);
     };
 
+    onAddGroup = async (file: GroupFile) => {
+        const [x, y] = this.graphPosForNextAdd ?? this.getNewCenteredNodePos();
+        this.graphPosForNextAdd = null;
+        const group = await this.props.document.insertGroupFile(file, { x, y });
+        this.props.onSelect(group.moduleIds[0]);
+    };
+
+    /** What a group card's menu does. */
+    groupActions(groupId: string, title: string, members: ModuleId[]): GroupActions {
+        const { document } = this.props;
+        const file = () => document.groupFile(groupId)!;
+        return {
+            rename: () => {
+                const next = window.prompt('Rename this group', title);
+                if (next?.trim()) document.renameGroup(groupId, next.trim());
+            },
+            save: () => {
+                saveLibraryGroup(file());
+                window.alert(`Saved “${title}” to My groups, in “add node” → Groups.`);
+            },
+            export: () => downloadGroupFile(file()),
+            duplicate: async () => {
+                const first = this.modulePositions.get(members[0]) ?? { x: 0, y: 0 };
+                const group = await document.insertGroupFile(file(), {
+                    x: first.x,
+                    y: first.y + GRID_SIZE * 4,
+                });
+                this.props.onSelect(group.moduleIds[0]);
+            },
+            ungroup: () => {
+                this.setState({
+                    expandedGroups: this.state.expandedGroups.filter((id) => id !== groupId),
+                });
+                document.ungroup(groupId);
+            },
+        };
+    }
+
     onNodesChange = (changes: NodeChange[]) => {
         let newSelected = this.props.selected;
         const groupSelection = new Set(this.state.groupSelection);
@@ -418,7 +460,7 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
         const { cards, collapsedInto } = groups;
         const layout = layoutNodes(document, groups);
         const nodes: any[] = [];
-        const groupablePart = document.groupablePart(this.state.groupSelection);
+        const canGroup = document.canGroup(this.state.groupSelection);
 
         const colStride = Math.ceil((MOD_BASE_WIDTH + MIN_COL_GAP) / GRID_SIZE) * GRID_SIZE;
         const maxLayoutX = (layout.columns.length - 1) * colStride;
@@ -461,19 +503,9 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
         }
 
         for (const card of cards) {
-            const { instanceId, members, nodeId, title } = card;
-            const onToggle = () => this.toggleGroup(instanceId);
-            const instance = document.groupInstances.find((item) => item.id === instanceId)!;
-            const sharing = {
-                count: document.groupInstances.filter(
-                    (item) => item.definitionId === instance.definitionId
-                ).length,
-                otherParts: document.parts
-                    .map((part, index) => ({ id: part.id, index }))
-                    .filter((part) => part.id !== instance.partId),
-                onCopy: (partId: string) => document.duplicateGroup(instanceId, partId),
-                onDetach: () => document.detachGroup(instanceId),
-            };
+            const { groupId, members, nodeId, title } = card;
+            const onToggle = () => this.toggleGroup(groupId);
+            const actions = this.groupActions(groupId, title, members);
 
             if (card.expanded) {
                 // A frame around the members, with its header in the room layout left above them.
@@ -494,7 +526,7 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
                     draggable: false,
                     selectable: false,
                     deletable: false,
-                    data: { title, width: right - left, height: bottom - top, sharing, onToggle },
+                    data: { title, width: right - left, height: bottom - top, actions, onToggle },
                 });
                 continue;
             }
@@ -527,7 +559,7 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
                     outputs: card.outputs,
                     outputData,
                     selected: !!selected && members.includes(selected),
-                    sharing,
+                    actions,
                     onToggle,
                 },
             });
@@ -631,20 +663,20 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
                     <Button run={this.runAutoLayout}>auto layout</Button>{' '}
                     {this.state.groupSelection.length > 1 && (
                         <Button
-                            disabled={!groupablePart}
+                            disabled={!canGroup}
                             title={
-                                groupablePart
-                                    ? 'Make these nodes reusable in other parts'
-                                    : 'Select nodes that connect only to each other and one part output'
+                                canGroup
+                                    ? 'Collapse these nodes into one, keeping their layout'
+                                    : 'Some of these nodes are already in a group'
                             }
                             run={() => {
-                                if (!groupablePart) return;
-                                const title = window.prompt('Name this reusable group');
+                                if (!canGroup) return;
+                                const title = window.prompt('Name this group');
                                 if (!title?.trim()) return;
                                 document.createGroup(
                                     title.trim(),
-                                    groupablePart.id,
-                                    this.state.groupSelection
+                                    this.state.groupSelection,
+                                    this.modulePositions
                                 );
                                 this.setState({ groupSelection: [] });
                             }}
@@ -666,15 +698,9 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
                         open={this.state.addingModule}
                         onClose={() => this.setState({ addingModule: false })}
                         onPick={this.onAddModule}
-                        effects={
+                        onPickGroup={
                             // A connection being dragged out needs a single module at its end.
-                            this.connectionForNextAdd
-                                ? undefined
-                                : {
-                                      document,
-                                      partId: this.props.partId,
-                                      onAdded: this.props.onSelect,
-                                  }
+                            this.connectionForNextAdd ? undefined : this.onAddGroup
                         }
                     />
                 </div>
@@ -689,8 +715,6 @@ namespace ModuleGraph {
         selected: ModuleId | EdgeId | null;
         render: RenderState;
         onSelect: (m: ModuleId | EdgeId | null) => void;
-        /** The part effects are added to. */
-        partId: string;
     }
 }
 

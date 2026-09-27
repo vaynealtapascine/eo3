@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { AnyModule, Document, Module } from '../../src/document';
 import { serializeV1, deserializeV1 } from '../../src/storage/versions/v1';
+import { parseGroupFile, stringifyGroupFile } from '../../src/storage/group-file';
+import { addExample } from '../helpers/examples';
 
 // The real Text plugin pulls in editors that need a full browser; the document only needs its id.
 vi.mock('../../src/plugins', () => ({
@@ -28,131 +30,169 @@ function edit(doc: Document, id: string, contents: string) {
 const contentsOf = (doc: Document, id: string) =>
     (doc.findModule(id)!.data as { contents: string }).contents;
 
-describe('packaged effects', () => {
-    it('adds an effect as HTML and CSS modules wired to the part, in one undo step', async () => {
-        const doc = new Document();
-        const part = doc.parts[0];
-        const instance = (await doc.addPackagedEffect('letter', part.id))!;
-        expect(instance.moduleIds).toHaveLength(2);
-        for (const id of instance.moduleIds) {
-            expect(doc.findModule(id)!.sends).toEqual([part.outputId]);
-        }
-        expect(contentsOf(doc, instance.moduleIds[0])).toContain('class="fx-letter"');
-        expect(doc.groupDefinitions.map((d) => d.shelfKey)).toEqual(['letter']);
+const TEXT = { id: 'source.text', acceptsInputs: false, acceptsNamedInputs: false } as any;
+const TRANSFORM = { id: 'source.text', acceptsInputs: true, acceptsNamedInputs: true } as any;
 
+/** Text → transform → part output, with the transform fed from outside the two. */
+function chain(doc: Document) {
+    const outside = new Module(TEXT, { contents: 'in', language: 'html' }) as unknown as AnyModule;
+    const source = new Module(TEXT, { contents: 'a', language: 'html' }) as unknown as AnyModule;
+    const result = new Module(TRANSFORM, {
+        contents: 'b',
+        language: 'html',
+    }) as unknown as AnyModule;
+    outside.sends = [result.id];
+    source.sends = [result.id];
+    source.namedSends = new Map([[result.id, new Set(['side'])]]);
+    result.sends = [doc.parts[0].outputId];
+    for (const mod of [outside, source, result]) doc.insertModule(mod);
+    return { outside, source, result };
+}
+
+describe('groups', () => {
+    it('groups any selection, wired to anything, and keeps its layout', () => {
+        const doc = new Document();
+        const { source, result } = chain(doc);
+        const positions = new Map([
+            [source.id, { x: -300, y: 0 }],
+            [result.id, { x: -150, y: 24 }],
+        ]);
+        const group = doc.createGroup('Pair', [source.id, result.id], positions)!;
+
+        expect(group.moduleIds).toEqual([source.id, result.id]);
+        expect(doc.findModule(result.id)!.graphPos).toEqual({ x: -150, y: 24 });
         doc.undo();
-        expect(doc.modules).toHaveLength(0);
-        expect(doc.groupInstances).toHaveLength(0);
+        expect(doc.groups).toHaveLength(0);
+        expect(doc.findModule(result.id)!.graphPos).toBeNull();
     });
 
-    it('never uses the eo3- class prefix, which is reserved for generated classes', async () => {
-        const { EFFECTS } = await import('../../src/effects');
-        for (const effect of Object.values(EFFECTS)) {
-            expect(effect.html + effect.css).not.toMatch(/\beo3-/);
+    it('refuses fewer than two modules or ones already grouped', () => {
+        const doc = new Document();
+        const { outside, source, result } = chain(doc);
+        expect(doc.canGroup([source.id])).toBe(false);
+        doc.createGroup('Pair', [source.id, result.id]);
+        expect(doc.canGroup([outside.id, result.id])).toBe(false);
+    });
+
+    it('keeps modules wired as they were when ungrouped or renamed', () => {
+        const doc = new Document();
+        const { source, result } = chain(doc);
+        const group = doc.createGroup('Pair', [source.id, result.id])!;
+        doc.renameGroup(group.id, 'Renamed');
+        expect(doc.findGroup(group.id)!.title).toBe('Renamed');
+        doc.ungroup(group.id);
+        expect(doc.groups).toHaveLength(0);
+        expect(doc.findModule(source.id)!.sends).toEqual([result.id]);
+    });
+
+    it('drops a group once fewer than two of its modules are left', () => {
+        const doc = new Document();
+        const { source, result } = chain(doc);
+        doc.createGroup('Pair', [source.id, result.id]);
+        doc.removeModule(source.id);
+        expect(doc.groups).toHaveLength(0);
+    });
+
+    it('exports only links inside the group, with positions relative to it', () => {
+        const doc = new Document();
+        const { source, result } = chain(doc);
+        const positions = new Map([
+            [source.id, { x: -300, y: 48 }],
+            [result.id, { x: -150, y: 72 }],
+        ]);
+        const group = doc.createGroup('Pair', [source.id, result.id], positions)!;
+        const file = doc.groupFile(group.id)!;
+
+        expect(file.title).toBe('Pair');
+        expect(file.modules[0]).toMatchObject({
+            sends: [1],
+            namedSends: { 1: ['side'] },
+            position: [0, 0],
+        });
+        expect(file.modules[1]).toMatchObject({ position: [150, 24] });
+        expect(file.modules[1].sends).toBeUndefined(); // the part output is outside
+    });
+
+    it('imports a group file as new, unwired, independent modules', async () => {
+        const doc = new Document();
+        const { source, result } = chain(doc);
+        const group = doc.createGroup(
+            'Pair',
+            [source.id, result.id],
+            new Map([
+                [source.id, { x: 0, y: 0 }],
+                [result.id, { x: 100, y: 0 }],
+            ])
+        )!;
+        const file = parseGroupFile(stringifyGroupFile(doc.groupFile(group.id)!));
+        const copy = await doc.insertGroupFile(file, { x: 500, y: 500 });
+
+        const [a, b] = copy.moduleIds.map((id) => doc.findModule(id)!);
+        expect(a.sends).toEqual([b.id]);
+        expect(b.sends).toEqual([]);
+        expect(b.graphPos).toEqual({ x: 600, y: 500 });
+        edit(doc, a.id, 'changed');
+        expect(contentsOf(doc, source.id)).toBe('a');
+    });
+
+    it('refuses a group file with a module type this eo3 lacks', async () => {
+        const doc = new Document();
+        await expect(
+            doc.insertGroupFile({
+                eo3: 'group',
+                version: 1,
+                title: 'Future',
+                modules: [{ plugin: 'source.future', data: null }],
+            })
+        ).rejects.toThrow(/source\.future/);
+    });
+
+    it('rejects files that are not group files', () => {
+        expect(() => parseGroupFile('{}')).toThrow(/isn’t an eo3 group/);
+        expect(() => parseGroupFile('nope')).toThrow(/JSON/);
+    });
+
+    it('ships examples that import cleanly and avoid the reserved eo3- prefix', async () => {
+        const { EXAMPLE_GROUPS } = await import('../../src/groups/examples');
+        for (const file of EXAMPLE_GROUPS) {
+            expect(JSON.stringify(file)).not.toMatch(/\beo3-/);
+            const doc = new Document();
+            const group = await doc.insertGroupFile(parseGroupFile(stringifyGroupFile(file)));
+            expect(group.moduleIds).toHaveLength(2);
         }
-    });
-});
-
-describe('shared groups', () => {
-    async function sharedLetter() {
-        const doc = new Document();
-        const second = doc.addPart('Chapter 2');
-        const a = (await doc.addPackagedEffect('letter', doc.parts[0].id))!;
-        const b = (await doc.addPackagedEffect('letter', second.id))!;
-        return { doc, second, a, b };
-    }
-
-    it('reuses the definition for a second part, wired to that part', async () => {
-        const { doc, second, a, b } = await sharedLetter();
-        expect(b.definitionId).toBe(a.definitionId);
-        expect(doc.groupDefinitions).toHaveLength(1);
-        expect(doc.findModule(b.moduleIds[0])!.sends).toEqual([second.outputId]);
-    });
-
-    it('shares edits between instances until one is detached', async () => {
-        const { doc, a, b } = await sharedLetter();
-        edit(doc, a.moduleIds[0], '<p>Shared</p>');
-        expect(contentsOf(doc, b.moduleIds[0])).toBe('<p>Shared</p>');
-
-        doc.detachGroup(b.id);
-        edit(doc, a.moduleIds[0], '<p>Only A</p>');
-        expect(contentsOf(doc, b.moduleIds[0])).toBe('<p>Shared</p>');
-        expect(doc.groupDefinitions).toHaveLength(2);
-    });
-
-    it('forgets instances whose part or module is removed', async () => {
-        const { doc, second, a, b } = await sharedLetter();
-        doc.removePart(second.id);
-        expect(doc.groupInstances.map((i) => i.id)).toEqual([a.id]);
-        expect(doc.findModule(b.moduleIds[0])).toBeDefined(); // only unwired, not deleted
-
-        doc.removeModule(a.moduleIds[1]);
-        expect(doc.groupInstances).toHaveLength(0);
-    });
-
-    it('only groups modules that stay inside the group and its part', () => {
-        const doc = new Document();
-        const second = doc.addPart();
-        const inside = new Module(
-            { id: 'x', acceptsInputs: false, acceptsNamedInputs: false } as any,
-            {}
-        ) as unknown as AnyModule;
-        inside.sends = [doc.parts[0].outputId, second.outputId];
-        doc.insertModule(inside);
-        expect(doc.createGroup('Mixed', doc.parts[0].id, [inside.id])).toBeNull();
-    });
-
-    it('groups a self-contained graph selection and remaps its links when copied', () => {
-        const doc = new Document();
-        const second = doc.addPart();
-        const plugin = {
-            id: 'x',
-            acceptsInputs: true,
-            acceptsNamedInputs: false,
-        } as any;
-        const source = new Module(plugin, {}) as AnyModule;
-        const result = new Module(plugin, {}) as AnyModule;
-        source.sends = [result.id];
-        result.sends = [doc.parts[0].outputId];
-        doc.insertModule(source);
-        doc.insertModule(result);
-
-        expect(doc.groupablePart([source.id, result.id])?.id).toBe(doc.parts[0].id);
-        const group = doc.createGroup('Custom', doc.parts[0].id, [source.id, result.id])!;
-        const copy = doc.duplicateGroup(group.id, second.id)!;
-        expect(doc.findModule(copy.moduleIds[0])!.sends).toEqual([copy.moduleIds[1]]);
-        expect(doc.findModule(copy.moduleIds[1])!.sends).toEqual([second.outputId]);
-    });
-
-    it('rejects a selection with incoming links from unselected modules', () => {
-        const doc = new Document();
-        const plugin = { id: 'x', acceptsInputs: true, acceptsNamedInputs: false } as any;
-        const outside = new Module(plugin, {}) as AnyModule;
-        const inside = new Module(plugin, {}) as AnyModule;
-        outside.sends = [inside.id];
-        inside.sends = [doc.parts[0].outputId];
-        doc.insertModule(outside);
-        doc.insertModule(inside);
-
-        expect(doc.groupablePart([inside.id])).toBeNull();
-        expect(doc.createGroup('Incomplete', doc.parts[0].id, [inside.id])).toBeNull();
     });
 });
 
 describe('saving and loading groups', () => {
-    it.each(['toml', 'json'])('round-trips definitions and instances (%s)', async (format) => {
+    it.each(['toml', 'json'])('round-trips groups (%s)', (format) => {
         const doc = new Document();
-        const second = doc.addPart('Chapter 2');
-        await doc.addPackagedEffect('chat-log', doc.parts[0].id);
-        await doc.addPackagedEffect('chat-log', second.id);
+        const { source, result } = chain(doc);
+        doc.createGroup('Pair', [source.id, result.id]);
 
         const loaded = deserializeV1(serializeV1(doc, format));
-        expect(loaded.groupDefinitions).toEqual(doc.groupDefinitions);
-        expect(loaded.groupInstances.map((i) => [i.id, i.definitionId, i.partId])).toEqual(
-            doc.groupInstances.map((i) => [i.id, i.definitionId, i.partId])
+        expect(loaded.groups.map((g) => [g.id, g.title, g.moduleIds.length])).toEqual(
+            doc.groups.map((g) => [g.id, g.title, 2])
         );
-        const [first] = loaded.groupInstances;
-        expect(loaded.findModule(first.moduleIds[0])!.title).toBe('Chat log HTML');
+    });
+
+    it('reads shared definitions from older files as independent groups', () => {
+        const doc = new Document();
+        const { source, result } = chain(doc);
+        const saved = JSON.parse(serializeV1(doc, 'json'));
+        const indexOf = (id: string) => doc.modules.findIndex((m) => m.id === id);
+        saved.groupDefinitions = [{ id: 'd', title: 'Letter', shelfKey: 'letter' }];
+        saved.groupInstances = [
+            {
+                id: 'i',
+                definitionId: 'd',
+                partId: 'p',
+                modules: [indexOf(source.id), indexOf(result.id)],
+            },
+        ];
+        const loaded = deserializeV1(JSON.stringify(saved));
+        expect(loaded.groups).toEqual([
+            { id: 'i', title: 'Letter', moduleIds: [loaded.modules[1].id, loaded.modules[2].id] },
+        ]);
     });
 });
 
@@ -187,7 +227,7 @@ describe('splitting a part', () => {
 
     it('refuses a part whose content comes from several modules', async () => {
         const { doc, part } = await oneChapter('<p>one</p>');
-        await doc.addPackagedEffect('letter', part.id);
+        await addExample(doc, 'Letter');
         expect(doc.splittableContent(part.id)).toHaveProperty('reason');
         expect(doc.splitPart(part.id, 'a', 'b')).toBeNull();
     });
@@ -204,7 +244,9 @@ describe('splitting a part', () => {
         const local = doc.findModule(text.id)!.shallowClone();
         local.sends = [part.outputId];
         doc.insertModule(local);
-        expect(doc.createGroup('Text', part.id, [text.id])).not.toBeNull();
+        const extra = new Module(TEXT, { contents: '', language: 'css' }) as unknown as AnyModule;
+        doc.insertModule(extra);
+        expect(doc.createGroup('Text', [text.id, extra.id])).not.toBeNull();
         expect(doc.splittableContent(part.id)).toHaveProperty('reason');
     });
 });

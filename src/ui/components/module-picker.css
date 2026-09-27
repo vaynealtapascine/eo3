@@ -67,4 +67,59 @@
             }
         }
     }
+
+    /* A row that opens a further list: a chevron instead of a plus. */
+    .module-picker-item > .i-add-button.is-level {
+        &::before {
+            width: 0.6em;
+            height: 0.6em;
+            background: none;
+            border: solid currentColor;
+            border-width: 2px 2px 0 0;
+            transform: translate(-65%, -50%) rotate(45deg);
+        }
+        &::after {
+            display: none;
+        }
+    }
+
+    .i-level-header {
+        display: flex;
+        align-items: center;
+        gap: 0.5em;
+        padding: 0.6em 1em 0.2em;
+
+        h2 {
+            flex: 1;
+            margin: 0;
+            font-size: inherit;
+        }
+
+        button {
+            font: inherit;
+            color: inherit;
+            background: none;
+            border: 1px solid var(--P-separator);
+            border-radius: 0.5em;
+            padding: 0.2em 0.6em;
+            cursor: pointer;
+
+            &:hover,
+            &:focus-visible {
+                background: var(--P-separator);
+            }
+        }
+
+        .i-back {
+            font-size: 1.2em;
+            line-height: 1;
+            padding: 0.1em 0.5em;
+        }
+    }
+
+    .i-empty {
+        margin: 0.2em 1em 0.6em;
+        font-size: smaller;
+        opacity: 0.7;
+    }
 }

@@ -340,3 +340,16 @@ done. Smaller known limits:
     -   The sidebar lists chapters only, with a ⋯ menu per row (`action-menu.tsx`). The effect
         shelf moved into "add node"; group sharing ("use in Chapter N", detach) moved onto the
         group card's ⋯ menu.
+-   2026-09-27 — Groups reworked after review ("effects feel too hardcoded", "too abstract"):
+    -   A group is just named modules shown as one card (`ModuleGroup`: id, title, moduleIds).
+        Any selection of two or more ungrouped modules can be grouped; links crossing its edge
+        become the card's rows. Grouping pins members' positions so the layout is kept.
+    -   Copies are independent: no shared definitions, no detach. Older files' definitions and
+        instances load as independent groups titled by their definition.
+    -   Group files (`storage/group-file.ts`, `.eo3group.json`) hold modules, internal links and
+        relative layout; imports arrive unwired. "My groups" (`storage/group-library.ts`) keeps
+        saved group files in this browser, in an order the author sets.
+    -   The built-in effects are now example group files (`src/groups/examples.ts`).
+    -   "add node" has a "Groups ›" row opening a second level: import file, My groups (⋯: move,
+        export, remove), Examples. The card's ⋯ menu: rename, save to my groups, export,
+        duplicate, ungroup.

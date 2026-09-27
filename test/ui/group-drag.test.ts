@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { Document } from '../../src/document';
 import { ModuleGraph } from '../../src/ui/components/module-graph';
+import { addExample } from '../helpers/examples';
 
 vi.mock('../../src/plugins', () => ({
     MODULES: {
@@ -21,11 +22,10 @@ vi.mock('../../src/plugins', () => ({
 describe('dragging a collapsed group card', () => {
     it('tracks the controlled card position and commits one undoable move', async () => {
         const document = new Document();
-        const instance = (await document.addPackagedEffect('letter', document.parts[0].id))!;
+        const instance = await addExample(document, 'Letter');
         const graph = new ModuleGraph({
             document,
             selected: null,
-            partId: document.parts[0].id,
             render: {} as any,
             onSelect: vi.fn(),
         });
