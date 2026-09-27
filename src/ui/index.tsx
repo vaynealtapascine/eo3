@@ -26,6 +26,7 @@ import { useOptHeld } from './opt-held';
 import { shouldReduceMotion } from '../uikit/animation';
 import { DirPopover } from '../uikit/dir-popover';
 import { Button } from '../uikit/button';
+import { showAlert, showConfirm } from './dialogs';
 
 let lastEo3Init = 0;
 try {
@@ -260,17 +261,23 @@ export default function ApplicationFrame({
                         I don’t know what that error above might be, but I can offer you to a reset:
                         <br />
                         <button
-                            onClick={() => {
-                                if (!confirm('you sure?')) return;
+                            onClick={async () => {
+                                const yes = await showConfirm(
+                                    'Delete all of eo3’s data in this browser, including every saved work? This can’t be undone.',
+                                    { confirmLabel: 'Delete everything', danger: true }
+                                );
+                                if (!yes) return;
                                 storage.close();
                                 const req = window.indexedDB.deleteDatabase('eo3_data');
                                 req.addEventListener('blocked', () => {
-                                    alert(
-                                        'oh… we’re waiting on another tab to stop using the data'
+                                    showAlert(
+                                        'Waiting for another eo3 tab to stop using the data. Close it to continue.'
                                     );
                                 });
                                 req.addEventListener('error', () => {
-                                    alert('could not delete data: ' + req.error);
+                                    showAlert(String(req.error), {
+                                        title: 'Couldn’t delete the data',
+                                    });
                                 });
                                 req.addEventListener('success', () => {
                                     window.location.reload();
@@ -608,7 +615,7 @@ function LoadButton({ onLoad }: { onLoad: (doc: Document) => void }) {
             }
 
             loadFile(file).catch((err) => {
-                alert(`Error loading file\n\n${err}`);
+                showAlert(String(err), { title: 'Couldn’t load the file' });
             });
         });
     };
@@ -646,7 +653,7 @@ function LoadButton({ onLoad }: { onLoad: (doc: Document) => void }) {
         }
 
         if (!didRead) {
-            alert(errors.join('\n\n'));
+            showAlert(errors.join('\n\n'), { title: 'Couldn’t load that' });
         }
     };
 

@@ -4,6 +4,7 @@ import { Ao3Import } from './ao3-import';
 import { ActionMenu } from './action-menu';
 import { SPLIT_MARKER, splitHtmlAtMarker } from '../../util/split-html';
 import './parts-list.css';
+import { showAlert, showConfirm } from '../dialogs';
 
 /**
  * The work's parts (chapters, posts) in order. Selecting a part shows it in the preview; each
@@ -42,18 +43,22 @@ export function PartsList({
         const message =
             `Remove ${label} ${index + 1}? Its managed styles are removed too; ` +
             'other modules stay, unwired from it.';
-        if (window.confirm(message)) document.removePart(id);
+        showConfirm(message, { confirmLabel: 'Remove', danger: true }).then(
+            (yes) => yes && document.removePart(id)
+        );
     };
 
     const splitAtBreak = (id: string) => {
         const found = document.splittableContent(id);
         if ('reason' in found) {
-            window.alert(found.reason);
+            showAlert(found.reason, { title: 'Can’t split this automatically' });
             return;
         }
         const split = splitHtmlAtMarker((found.module.data as { contents: string }).contents);
         if (!split) {
-            window.alert('Place the break between content on both sides.');
+            showAlert('Place the break between content on both sides.', {
+                title: 'Can’t split here',
+            });
             return;
         }
         const added = document.splitPart(id, split.first, split.second);

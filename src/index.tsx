@@ -2,6 +2,7 @@ import { createRoot } from 'react-dom/client';
 import { initStorage, MemoryStorage } from './storage';
 import ApplicationFrame from './ui';
 import { trackViewport } from './ui/viewport';
+import { DialogHost } from './ui/dialogs';
 
 let canInit = true;
 {
@@ -20,14 +21,22 @@ if (canInit) {
 
     initStorage()
         .then((storage) => {
-            reactRoot.render(<ApplicationFrame storage={storage} />);
+            reactRoot.render(
+                <>
+                    <ApplicationFrame storage={storage} />
+                    <DialogHost />
+                </>
+            );
         })
         .catch((err) => {
             console.error(err);
 
             const storage = new MemoryStorage();
             reactRoot.render(
-                <ApplicationFrame storage={storage} isMemoryStorage storageError={err} />
+                <>
+                    <ApplicationFrame storage={storage} isMemoryStorage storageError={err} />
+                    <DialogHost />
+                </>
             );
         });
 }

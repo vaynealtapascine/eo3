@@ -9,6 +9,7 @@ import {
 import { deleteProfile, listProfiles, saveProfile } from '../../targets/profile/store';
 import { Document } from '../../document';
 import './profile-editor.css';
+import { showConfirm } from '../dialogs';
 
 /** Form state: lists are edited as text ("a: href title" lines, space-separated names). */
 interface Draft {
@@ -217,10 +218,11 @@ export function ProfileEditor({
                                 <div key={id}>
                                     <code>{id.slice('profile:'.length)}</code>{' '}
                                     <button
-                                        onClick={() => {
+                                        onClick={async () => {
                                             if (
-                                                window.confirm(
-                                                    `Forget this work’s posting marks and saved styles for ${id}? You can undo this change.`
+                                                await showConfirm(
+                                                    `Forget this work’s posting marks and saved styles for ${id}? You can undo this change.`,
+                                                    { confirmLabel: 'Forget', danger: true }
                                                 )
                                             ) {
                                                 document.forgetTargetPostingState(id);
@@ -380,8 +382,12 @@ export function ProfileEditor({
                                         copy as JSON
                                     </button>
                                     <button
-                                        onClick={() => {
-                                            if (!window.confirm(`Delete "${draft.title}"?`)) return;
+                                        onClick={async () => {
+                                            const yes = await showConfirm(
+                                                `Delete the site “${draft.title}”?`,
+                                                { confirmLabel: 'Delete', danger: true }
+                                            );
+                                            if (!yes) return;
                                             deleteProfile(draft.id);
                                             setProfiles(listProfiles());
                                             setDraft(null);

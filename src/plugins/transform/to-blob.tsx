@@ -11,6 +11,7 @@ import { Form, FormFooter, FormItem } from '../../uikit/form';
 import Checkbox from '../../uikit/checkbox';
 import { TextField } from '../../uikit/text-field';
 import { Button } from '../../uikit/button';
+import { showAlert } from '../../ui/dialogs';
 
 export type ToBlobData = {
     mime: string;
@@ -39,7 +40,7 @@ function ToBlob({ id, data, onChange, document }: ModulePluginProps<ToBlobData>)
 
                 result.drop();
             } else if (result.type === 'error') {
-                alert('Could not generate file\n\n' + result.error);
+                showAlert(String(result.error), { title: 'Couldn’t generate the file' });
             }
         });
     };

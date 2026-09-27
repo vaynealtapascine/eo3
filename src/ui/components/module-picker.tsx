@@ -14,6 +14,7 @@ import { EXAMPLE_GROUPS } from '../../groups/examples';
 import { downloadGroupFile, pickGroupFile } from '../group-files';
 import { ActionMenu } from './action-menu';
 import './module-picker.css';
+import { showAlert, showConfirm } from '../dialogs';
 
 /**
  * "add node": module types, plus a "Groups" entry that opens a second level with the
@@ -30,7 +31,7 @@ export function ModulePicker({ open, anchor, onClose, onPick, onPickGroup }: Mod
         try {
             await onPickGroup?.(file);
         } catch (error) {
-            window.alert((error as Error).message);
+            showAlert((error as Error).message, { title: 'Couldn’t add the group' });
         }
     };
 
@@ -105,7 +106,9 @@ function GroupsLevel({ onBack, onPick }: { onBack: () => void; onPick: (f: Group
                             const file = await pickGroupFile();
                             if (file) onPick(file);
                         } catch (error) {
-                            window.alert((error as Error).message);
+                            showAlert((error as Error).message, {
+                                title: 'Couldn’t add the group',
+                            });
                         }
                     }}
                 >
@@ -145,8 +148,10 @@ function GroupsLevel({ onBack, onPick }: { onBack: () => void; onPick: (f: Group
                                     label: 'Remove from my groups',
                                     danger: true,
                                     run: () => {
-                                        if (window.confirm(`Remove “${entry.file.title}”?`))
-                                            removeLibraryGroup(entry.id);
+                                        showConfirm(
+                                            `Remove “${entry.file.title}” from My groups? Works that use it keep their copy.`,
+                                            { confirmLabel: 'Remove', danger: true }
+                                        ).then((yes) => yes && removeLibraryGroup(entry.id));
                                     },
                                 },
                             ]}

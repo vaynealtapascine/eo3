@@ -1,0 +1,51 @@
+.app-dialog {
+    width: min(26em, calc(100vw - 32px));
+    padding: 1em;
+    border: none;
+    border-radius: 0.75em;
+    background: var(--P-dialog-bg);
+    color: rgb(var(--P-color-fg));
+    box-shadow: 0 0.5em 1em rgba(0, 0, 0, 0.3), 0 0 0 1px var(--P-dialog-outline);
+
+    &::backdrop {
+        background: rgba(0, 0, 0, 0.3);
+    }
+
+    h2 {
+        margin: 0 0 0.4em;
+        font-size: 1.1em;
+    }
+
+    p {
+        margin: 0 0 1em;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+    }
+
+    .i-buttons {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.4em;
+
+        button {
+            font: inherit;
+            color: inherit;
+            background: none;
+            border: 1px solid var(--P-separator);
+            border-radius: 0.5em;
+            padding: 0.3em 0.9em;
+            cursor: pointer;
+
+            &.is-primary {
+                background: rgb(var(--P-color-accent));
+                border-color: transparent;
+                color: rgb(var(--P-color-accent-fg));
+            }
+        }
+    }
+
+    &.is-danger .i-buttons .is-primary {
+        background: var(--P-danger);
+        color: var(--P-danger-content-fg);
+    }
+}

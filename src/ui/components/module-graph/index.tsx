@@ -44,6 +44,7 @@ import { NamePopover } from '../name-popover';
 import 'reactflow/dist/style.css';
 import './index.css';
 import { Button } from '../../../uikit/button';
+import { showAlert } from '../../dialogs';
 
 export type EdgeId = string;
 
@@ -332,7 +333,9 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
             rename: () => this.setState({ naming: { kind: 'rename', groupId, title } }),
             save: () => {
                 saveLibraryGroup(file());
-                window.alert(`Saved “${title}” to My groups, in “add node” → Groups.`);
+                showAlert(`“${title}” is in My groups now. Find it in “add node” → Groups.`, {
+                    title: 'Saved',
+                });
             },
             export: () => downloadGroupFile(file()),
             duplicate: async () => {

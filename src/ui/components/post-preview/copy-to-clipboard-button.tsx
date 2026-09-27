@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { DirPopover } from '../../../uikit/dir-popover';
 import { Button } from '../../../uikit/button';
 import { SiteTargetExportAction, SiteTargetExportOutput } from '../../../targets/types';
+import { showAlert } from '../../dialogs';
 
 export function CopyToClipboardButton({
     action,
@@ -29,7 +30,7 @@ export function CopyToClipboardButton({
                 setCopied(false);
             }, 1000);
         } catch (err) {
-            alert('Could not copy to clipboard\n\n' + err);
+            showAlert(String(err), { title: 'Couldn’t copy to the clipboard' });
         }
     };
 
