@@ -25,6 +25,7 @@ describe('dragging a collapsed group card', () => {
         const graph = new ModuleGraph({
             document,
             selected: null,
+            partId: document.parts[0].id,
             render: {} as any,
             onSelect: vi.fn(),
         });

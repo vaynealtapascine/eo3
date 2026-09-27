@@ -3,12 +3,14 @@ import { GRID_SIZE } from './consts';
 import { ModuleNode } from './module-node';
 import { OutputNode } from './output-node';
 import { GroupFrame, GroupNode } from './group-node';
+import { PartStylesNode } from './part-styles-node';
 
 const nodeTypes = {
     module: ModuleNode,
     modOutput: OutputNode,
-    group: GroupNode,
+    groupCard: GroupNode,
     groupFrame: GroupFrame,
+    partStyles: PartStylesNode,
 };
 
 export default function ReactFlow(props: ReactFlowProps) {

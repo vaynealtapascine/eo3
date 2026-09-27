@@ -328,3 +328,15 @@ done. Smaller known limits:
     member sending out (with its type), each with its own handle. Auto layout places the card as
     one node, keeps expanded members adjacent, and leaves room for a framed "▾ title" header.
     Needs a visual check in a visible window (the Claude pane can't draw while hidden).
+-   2026-09-27 — Chapters UI pass, from a design review with the author:
+    -   "All chapters" (`source.shared-styles`): a visible CSS node that also accepts CSS, wired to
+        every part and to each new part (`Document.modulesWiredToNewPart`). No hidden rule: reach
+        is still decided by wiring, and the node names itself "3 of 4 chapters" when unwired
+        from some. Works that predate it get an empty one on open (`ensureSharedStyles`, no undo
+        step), existing links untouched; deleting it is remembered (`sharedStyles = false`).
+    -   Part outputs show separate HTML and CSS inputs; edges attach by the data they carry.
+    -   Each part's managed styles are docked to the right of its output, feeding a CSS port on
+        that side; parts without styles show a "+ styles" placeholder.
+    -   The sidebar lists chapters only, with a ⋯ menu per row (`action-menu.tsx`). The effect
+        shelf moved into "add node"; group sharing ("use in Chapter N", detach) moved onto the
+        group card's ⋯ menu.

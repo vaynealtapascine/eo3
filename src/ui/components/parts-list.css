@@ -1,20 +1,38 @@
 .parts-list {
-    padding: 0.4em 0.6em 0.6em;
-    box-shadow: inset 0 -1px #0004;
+    padding: 0.5em 0.75em 0.75em;
+    box-shadow: inset 0 -1px var(--P-separator);
 
     button {
         font: inherit;
         color: inherit;
-        background: rgb(var(--P-color-shade) / var(--P-color-shade-opacity));
-        border: none;
-        border-radius: 0.4em;
-        padding: 0.15em 0.45em;
+        background: none;
+        border: 1px solid var(--P-separator);
+        border-radius: 0.5em;
+        padding: 0.15em 0.5em;
         margin: 0;
         cursor: pointer;
+
+        &:hover:not(:disabled),
+        &:focus-visible {
+            background: var(--P-separator);
+        }
 
         &:disabled {
             opacity: 0.4;
             cursor: default;
+        }
+    }
+
+    .i-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 0.3em;
+
+        h2 {
+            margin: 0;
+            font-size: 1.1em;
+            font-weight: normal;
         }
     }
 
@@ -28,22 +46,29 @@
         display: flex;
         align-items: center;
         gap: 0.4em;
-        padding: 0.2em;
+        padding: 0.2em 0.3em;
         border-radius: 0.5em;
+        border-left: 3px solid transparent;
+        cursor: pointer;
+
+        &:hover {
+            background: rgb(var(--P-color-shade) / var(--P-color-shade-opacity));
+        }
 
         &.is-selected {
             background: rgb(var(--P-color-accent) / 0.12);
-
-            .i-select {
-                background: rgb(var(--P-color-accent));
-                color: rgb(var(--P-color-accent-fg));
-            }
+            border-left-color: rgb(var(--P-color-accent));
         }
     }
 
     .i-select {
         flex-shrink: 0;
-        white-space: nowrap;
+        min-width: 1.8em;
+        font-weight: bold;
+        border: none !important;
+        background: none !important;
+        padding: 0.15em 0.2em;
+        text-align: right;
     }
 
     .i-title {
@@ -58,41 +83,26 @@
 
         &:hover,
         &:focus {
-            border-color: rgb(var(--P-color-soft-outline) / var(--P-color-soft-outline-opacity));
+            border-color: var(--P-separator);
         }
     }
 
     .i-badge {
-        flex-shrink: 0;
+        flex-shrink: 1;
+        min-width: 0;
+        max-width: 10em;
         font-size: 0.8em;
-        padding: 0.05em 0.4em;
+        padding: 0.05em 0.5em;
         border-radius: 1em;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
         background: rgb(var(--P-color-shade) / var(--P-color-shade-opacity));
 
         &.is-warning {
             background: rgb(var(--P-color-warning) / 0.2);
             color: rgb(var(--P-color-warning));
         }
-    }
-
-    .i-also-posted {
-        flex-shrink: 1;
-        min-width: 0;
-        font-size: 0.8em;
-        opacity: 0.7;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .i-actions {
-        display: flex;
-        gap: 0.2em;
-        flex-shrink: 0;
-    }
-
-    .i-add {
-        margin-top: 0.3em;
     }
 
     .i-unsent {
@@ -105,44 +115,7 @@
         }
     }
 
-    .i-effect-shelf {
+    .ao3-import {
         margin-top: 0.5em;
-
-        summary {
-            cursor: pointer;
-        }
-
-        p {
-            margin: 0.3em 0;
-            font-size: 0.9em;
-            opacity: 0.8;
-        }
-
-        button {
-            margin: 0 0.3em 0.3em 0;
-        }
-    }
-
-    .i-groups {
-        margin-top: 0.5em;
-
-        h3 {
-            margin: 0 0 0.3em;
-            font-size: 0.9em;
-            font-weight: normal;
-            opacity: 0.8;
-        }
-    }
-
-    .i-group {
-        display: flex;
-        align-items: center;
-        gap: 0.4em;
-        padding: 0.15em 0;
-
-        span {
-            font-size: 0.85em;
-            opacity: 0.7;
-        }
     }
 }

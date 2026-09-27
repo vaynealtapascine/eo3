@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Position, Handle, useUpdateNodeInternals } from 'reactflow';
-import { AnyModule, Data } from '../../../document';
+import { AnyModule, Data, Document, moduleDescription } from '../../../document';
+import { useSiteTarget } from '../../../targets/context';
 import {
     MOD_BASE_WIDTH,
     MOD_HEADER_HEIGHT,
@@ -11,7 +12,8 @@ import {
 const HEIGHT_PROP = '--height' as any;
 
 export function ModuleNode({ data }: { data: ModuleNode.NodeData }) {
-    const { index, module, selected, namedInputs, currentOutput, currentError } = data;
+    const { document, index, module, selected, namedInputs, currentOutput, currentError } = data;
+    const partLabel = useSiteTarget().plugin?.partLabel ?? 'Part';
     const updateNodeInternals = useUpdateNodeInternals();
 
     useEffect(() => {
@@ -19,7 +21,7 @@ export function ModuleNode({ data }: { data: ModuleNode.NodeData }) {
         updateNodeInternals(module.id);
     }, [namedInputs]);
 
-    const modDesc = module.title || module.plugin.description(module.data);
+    const modDesc = module.title || moduleDescription(document, module, partLabel);
 
     return (
         <div
@@ -80,6 +82,7 @@ export function ModuleNode({ data }: { data: ModuleNode.NodeData }) {
 }
 export namespace ModuleNode {
     export interface NodeData {
+        document: Document;
         index: number;
         module: AnyModule;
         namedInputs: Set<string>;

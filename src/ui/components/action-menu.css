@@ -1,0 +1,55 @@
+.action-menu-button {
+    font: inherit;
+    color: inherit;
+    background: none;
+    border: 1px solid var(--P-separator);
+    border-radius: 0.5em;
+    min-width: 2em;
+    min-height: 1.6em;
+    padding: 0 0.3em;
+    line-height: 1;
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible {
+        background: var(--P-separator);
+    }
+}
+
+.action-menu {
+    display: flex;
+    flex-direction: column;
+    min-width: 12em;
+    padding: 0.3em;
+
+    .i-note {
+        margin: 0.2em 0.6em 0.4em;
+        font-size: smaller;
+        opacity: 0.7;
+    }
+
+    & > button.i-item {
+        font: inherit;
+        color: inherit;
+        background: none;
+        border: none;
+        border-radius: 0.4em;
+        padding: 0.45em 0.6em;
+        text-align: left;
+        cursor: pointer;
+
+        &:hover:not(:disabled),
+        &:focus-visible {
+            background: var(--P-separator);
+        }
+
+        &:disabled {
+            opacity: 0.4;
+            cursor: default;
+        }
+
+        &.is-danger {
+            color: var(--P-error);
+        }
+    }
+}

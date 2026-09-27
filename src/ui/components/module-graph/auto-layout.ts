@@ -147,8 +147,8 @@ export function layoutNodes(
             column: 0,
             index: i,
             y: 0,
-            // Room for the mascot, part label, and managed styles control.
-            height: doc.parts.length > 1 ? 190 : 165,
+            // Room for the HTML and CSS inputs, the mascot and the part label.
+            height: doc.parts.length > 1 ? 196 : 172,
             acceptsInputs: true,
             namedInputs: new Set(),
         });

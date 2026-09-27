@@ -1,6 +1,14 @@
 .module-picker-items {
     width: 400px;
 
+    .i-section {
+        margin: 0;
+        padding: 0.75em 1em 0.25em;
+        font-size: smaller;
+        font-weight: normal;
+        opacity: 0.7;
+    }
+
     .module-picker-item {
         padding: 0.75em 1em;
         display: flex;

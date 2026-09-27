@@ -9,6 +9,7 @@ import {
     ChangeType,
     ModulePluginProps,
     UserData,
+    moduleDescription,
 } from '../../document';
 import { AnimationController, Spring } from '../../uikit/frame-animation';
 import { shouldReduceMotion } from '../../uikit/animation';
@@ -371,6 +372,11 @@ export class ModuleList extends PureComponent<ModuleList.Props, ModuleListState>
                         onAdd={(module) => {
                             document.insertModule(module);
                         }}
+                        effects={{
+                            document,
+                            partId: this.props.partId,
+                            onAdded: this.props.onSelect,
+                        }}
                     />
                 </div>
             </div>
@@ -384,10 +390,18 @@ namespace ModuleList {
         selected: ModuleId | null;
         onSelect: (m: ModuleId | null) => void;
         userData?: Map<ModuleId, UserData>;
+        /** The part effects are added to. */
+        partId: string;
     }
 }
 
-function AddModule({ onAdd }: { onAdd: (m: AnyModule) => void }) {
+function AddModule({
+    onAdd,
+    effects,
+}: {
+    onAdd: (m: AnyModule) => void;
+    effects: ModulePicker.Props['effects'];
+}) {
     const [open, setOpen] = useState(false);
     const button = useRef<HTMLElement>();
 
@@ -402,6 +416,7 @@ function AddModule({ onAdd }: { onAdd: (m: AnyModule) => void }) {
                     onAdd(new Module(plugin));
                     setOpen(false);
                 }}
+                effects={effects}
             />
         </div>
     );
@@ -489,7 +504,11 @@ class ModuleItem extends PureComponent<ModuleItem.Props> {
                         />
                         <span className="i-label" id={this.labelNodeId}>
                             <span className="i-index">{index + 1}</span>
-                            <ModuleTitle module={module} onChange={onChange} />
+                            <ModuleTitle
+                                document={this.props.document}
+                                module={module}
+                                onChange={onChange}
+                            />
                         </span>
                     </div>
                     <div className="i-header-controls">
@@ -598,14 +617,17 @@ namespace ModuleItem {
 }
 
 function ModuleTitle({
+    document,
     module,
     onChange,
 }: {
+    document: Document;
     module: AnyModule;
     onChange: (m: AnyModule) => void;
 }) {
     const [editing, setEditing] = useState(false);
-    const description = module.plugin.description(module.data);
+    const partLabel = useSiteTarget().plugin?.partLabel ?? 'Part';
+    const description = moduleDescription(document, module, partLabel);
 
     const textField = useRef<TextField>(null);
     useEffect(() => {
@@ -689,7 +711,9 @@ function ModuleSends({ document, sends, onChange }: ModuleSends.Props) {
                     .map((mod, i) => {
                         if (!mod.plugin.acceptsInputs) return null;
 
-                        const label = `${i + 1}. ${mod.title || mod.plugin.description(mod.data)}`;
+                        const label = `${i + 1}. ${
+                            mod.title || moduleDescription(document, mod, partLabel)
+                        }`;
                         return (
                             <option key={i} value={mod.id}>
                                 {label}
@@ -743,6 +767,7 @@ namespace ModuleSends {
 }
 
 function ModuleNamedSends({ document, namedSends, onChange }: ModuleNamedSends.Props) {
+    const partLabel = useSiteTarget().plugin?.partLabel ?? 'Part';
     const makeModuleSelect = (
         key: string,
         value: ModuleId | null,
@@ -762,7 +787,9 @@ function ModuleNamedSends({ document, namedSends, onChange }: ModuleNamedSends.P
                     .map((mod, i) => {
                         if (!mod.plugin.acceptsNamedInputs) return null;
 
-                        const label = `${i + 1}. ${mod.title || mod.plugin.description(mod.data)}`;
+                        const label = `${i + 1}. ${
+                            mod.title || moduleDescription(document, mod, partLabel)
+                        }`;
                         return (
                             <option key={i} value={mod.id}>
                                 {label}

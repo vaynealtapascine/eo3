@@ -87,6 +87,11 @@ export interface DocumentState {
     /** Named reusable groups; each instance contains ordinary modules in the graph. */
     groupDefinitions: GroupDefinition[];
     groupInstances: GroupInstance[];
+    /**
+     * The "All chapters" styles module, wired to every new part. Undefined in works from before
+     * it existed (ensureSharedStyles adds it); null once the author deletes it.
+     */
+    sharedStylesModuleId?: ModuleId | null;
 }
 
 export interface GroupDefinition {
@@ -138,8 +143,22 @@ const PART_OUTPUT_PREFIX = 'output:';
 const HTML_LANGUAGES = new Set(['html', 'html-contenteditable']);
 
 /** Modules that produce CSS rather than content: CSS text, Sass and Less sources. */
-function isCssModule(mod: AnyModule): boolean {
-    if (mod.plugin.id === 'source.sass' || mod.plugin.id === 'source.lesscss') return true;
+/**
+ * A module's generated name. For "All chapters" it counts the parts it reaches, so a chapter
+ * unwired from it shows as "3 of 4 chapters".
+ */
+export function moduleDescription(doc: Document, module: AnyModule, partLabel: string): string {
+    if (module.id !== doc.sharedStylesModuleId) return module.plugin.description(module.data);
+    const plural = partLabel.toLowerCase() + 's';
+    const reach = doc.sharedStylesReach().length;
+    const total = doc.parts.length;
+    return reach === total ? `All ${plural}` : `${reach} of ${total} ${plural}`;
+}
+
+/** Whether a module outputs CSS, judged from its settings (for before it has rendered). */
+export function isCssModule(mod: AnyModule): boolean {
+    if (['source.sass', 'source.lesscss', 'source.shared-styles'].includes(mod.plugin.id))
+        return true;
     return (
         mod.plugin.id === 'source.text' &&
         (mod.data as { language?: unknown } | null)?.language === 'css'
@@ -226,6 +245,7 @@ export class Document extends EventTarget {
             skinBaselines?: Record<string, string>;
             groupDefinitions?: GroupDefinition[];
             groupInstances?: GroupInstance[];
+            sharedStylesModuleId?: ModuleId | null;
         }
     ) {
         if (this.history.length > 1) throw new Error('cannot init in this state');
@@ -286,6 +306,35 @@ export class Document extends EventTarget {
 
     get groupInstances(): Readonly<GroupInstance[]> {
         return this.state.groupInstances;
+    }
+
+    get sharedStylesModuleId(): ModuleId | null {
+        return this.state.sharedStylesModuleId ?? null;
+    }
+
+    /** The parts the "All chapters" module is wired to, in part order. */
+    sharedStylesReach(): Part[] {
+        const module = this.sharedStylesModuleId && this.findModule(this.sharedStylesModuleId);
+        return module ? this.parts.filter((part) => module.sends.includes(part.outputId)) : [];
+    }
+
+    /**
+     * Adds the "All chapters" module to a work that predates it, wired to every part, without
+     * an undo step: it's part of opening the work. Existing links are left alone.
+     */
+    async ensureSharedStyles() {
+        if (this.state.sharedStylesModuleId !== undefined) return;
+        const plugin = await MODULES['source.shared-styles'].load();
+        if (this.state.sharedStylesModuleId !== undefined) return;
+        const module = new Module(plugin, plugin.initialData());
+        module.sends = this.parts.map((part) => part.outputId);
+        const entry = this.history[this.historyCursor];
+        entry.state = {
+            ...entry.state,
+            modules: [...entry.state.modules, module],
+            sharedStylesModuleId: module.id,
+        };
+        this.emitChange();
     }
 
     findPart(id: string) {
@@ -424,6 +473,7 @@ export class Document extends EventTarget {
                 parts,
                 importedSkinModuleId:
                     this.importedSkinModuleId === moduleId ? null : this.importedSkinModuleId,
+                ...(this.sharedStylesModuleId === moduleId ? { sharedStylesModuleId: null } : {}),
                 groupInstances: this.groupInstances.filter(
                     (instance) => !instance.moduleIds.includes(moduleId)
                 ),
@@ -595,10 +645,11 @@ export class Document extends EventTarget {
         return instance;
     }
 
-    /** Keep the imported Work Skin shared when a new part is added. */
-    private modulesWithImportedSkinFor(outputId: ModuleId): AnyModule[] {
+    /** Wires "All chapters" and the imported Work Skin to a new part. */
+    private modulesWiredToNewPart(outputId: ModuleId): AnyModule[] {
+        const shared = [this.importedSkinModuleId, this.sharedStylesModuleId];
         return this.modules.map((mod) => {
-            if (mod.id !== this.importedSkinModuleId || mod.sends.includes(outputId)) return mod;
+            if (!shared.includes(mod.id) || mod.sends.includes(outputId)) return mod;
             const copy = mod.shallowClone();
             copy.sends = [...mod.sends, outputId];
             return copy;
@@ -610,7 +661,7 @@ export class Document extends EventTarget {
         const part = { ...newPart(), title };
         const parts = this.parts.slice();
         parts.splice(index, 0, part);
-        this.pushParts(parts, this.modulesWithImportedSkinFor(part.outputId));
+        this.pushParts(parts, this.modulesWiredToNewPart(part.outputId));
         return part;
     }
 
@@ -702,7 +753,7 @@ export class Document extends EventTarget {
         this.pushHistoryState(
             {
                 ...this.state,
-                modules: [...this.modulesWithImportedSkinFor(part.outputId), module],
+                modules: [...this.modulesWiredToNewPart(part.outputId), module],
                 parts: [...this.parts, part],
             },
             { type: ChangeType.EditParts }
@@ -771,7 +822,7 @@ export class Document extends EventTarget {
             {
                 ...this.state,
                 parts: reuseFirst ? [part] : [...this.parts, part],
-                modules: [...this.modulesWithImportedSkinFor(part.outputId), module],
+                modules: [...this.modulesWiredToNewPart(part.outputId), module],
             },
             { type: ChangeType.EditParts }
         );
@@ -1089,6 +1140,7 @@ export class Document extends EventTarget {
             const cssSources = new Set<ModuleId>();
             inputs.forEach(({ source, data }, i) => {
                 const cssData = data.into(CssData);
+                if (cssData && !cssData.contents.trim()) return;
                 if (cssData) {
                     cssBySource.set(source, cssData.contents);
                     cssSources.add(source);

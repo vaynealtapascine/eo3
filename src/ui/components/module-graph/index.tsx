@@ -5,6 +5,7 @@ import {
     Module,
     ModuleId,
     RenderState,
+    isCssModule,
     isPartOutput,
 } from '../../../document';
 import {
@@ -24,7 +25,16 @@ import {
     routeEdge,
     translateGroupMembers,
 } from './group-cards';
-import { GRID_SIZE, MIN_COL_GAP, MIN_ROW_GAP, MOD_BASE_WIDTH } from './consts';
+import {
+    DOCK_GAP,
+    GRID_SIZE,
+    MIN_COL_GAP,
+    MIN_ROW_GAP,
+    MOD_BASE_WIDTH,
+    MOD_HEADER_HEIGHT,
+    MOD_INPUT_HEIGHT,
+    MOD_OUTPUT_HEIGHT,
+} from './consts';
 import { ModulePicker } from '../module-picker';
 import 'reactflow/dist/style.css';
 import './index.css';
@@ -33,6 +43,8 @@ import { Button } from '../../../uikit/button';
 export type EdgeId = string;
 
 const GROUP_FRAME_PADDING = 8;
+/** Node id for the "+ styles" placeholder docked to a part without styles. */
+const DOCKED_PLACEHOLDER_PREFIX = 'styles:';
 
 const ReactFlow = lazy(() => import('./reactflow'));
 
@@ -135,7 +147,8 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
     onConnect = ({ source, target, targetHandle }: Connection) => {
         if (!source || !target || !targetHandle) return;
 
-        if (targetHandle === 'in') {
+        // A part output sorts its inputs by type, so either of its rows takes any connection.
+        if (targetHandle === 'in' || (targetHandle === 'css' && isPartOutput(target))) {
             this.insertConnection(source, target);
         } else if (targetHandle === 'named-new') {
             this.insertNewNamedConnection(source, target);
@@ -272,6 +285,7 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
         const nodeRemoveChanges: NodeRemoveChange[] = [];
 
         for (const change of changes) {
+            if ('id' in change && change.id.startsWith(DOCKED_PLACEHOLDER_PREFIX)) continue;
             if ('id' in change && isGroupNode(change.id)) {
                 if (
                     change.type === 'position' &&
@@ -435,6 +449,7 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
                 type: 'module',
                 selected,
                 data: {
+                    document,
                     index: layout.indices.get(module.id)!,
                     module,
                     namedInputs: nodeLayout.namedInputs,
@@ -448,6 +463,17 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
         for (const card of cards) {
             const { instanceId, members, nodeId, title } = card;
             const onToggle = () => this.toggleGroup(instanceId);
+            const instance = document.groupInstances.find((item) => item.id === instanceId)!;
+            const sharing = {
+                count: document.groupInstances.filter(
+                    (item) => item.definitionId === instance.definitionId
+                ).length,
+                otherParts: document.parts
+                    .map((part, index) => ({ id: part.id, index }))
+                    .filter((part) => part.id !== instance.partId),
+                onCopy: (partId: string) => document.duplicateGroup(instanceId, partId),
+                onDetach: () => document.detachGroup(instanceId),
+            };
 
             if (card.expanded) {
                 // A frame around the members, with its header in the room layout left above them.
@@ -468,7 +494,7 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
                     draggable: false,
                     selectable: false,
                     deletable: false,
-                    data: { title, width: right - left, height: bottom - top, onToggle },
+                    data: { title, width: right - left, height: bottom - top, sharing, onToggle },
                 });
                 continue;
             }
@@ -492,7 +518,7 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
             nodes.push({
                 id: nodeId,
                 position: transient?.nodeId === nodeId ? transient.position : cardPos,
-                type: 'group',
+                type: 'groupCard',
                 deletable: false,
                 data: {
                     title,
@@ -501,6 +527,7 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
                     outputs: card.outputs,
                     outputData,
                     selected: !!selected && members.includes(selected),
+                    sharing,
                     onToggle,
                 },
             });
@@ -519,8 +546,36 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
                     partIndex: i,
                     partTitle: part.title,
                     partCount: document.parts.length,
-                    hasStyles: !!part.stylesModuleId,
-                    openStyles: async (title: string) => {
+                },
+            });
+
+            // The part's own styles, docked to its right so its CSS row lines up with the output's.
+            const docked = part.stylesModuleId && hidden.has(part.stylesModuleId);
+            const stylesModule = docked ? document.findModule(part.stylesModuleId!) : null;
+            if (part.stylesModuleId && !docked) return;
+            nodes.push({
+                id: stylesModule ? stylesModule.id : DOCKED_PLACEHOLDER_PREFIX + part.id,
+                position: {
+                    x: MOD_BASE_WIDTH + DOCK_GAP,
+                    y:
+                        outputLayout.y +
+                        MOD_INPUT_HEIGHT * 1.5 -
+                        MOD_HEADER_HEIGHT -
+                        MOD_OUTPUT_HEIGHT / 2,
+                },
+                type: 'partStyles',
+                // React Flow ignores pointers on nodes that can't be dragged or selected.
+                style: { pointerEvents: 'all' },
+                draggable: false,
+                selectable: !!stylesModule,
+                deletable: false,
+                selected: stylesModule?.id === selected,
+                data: {
+                    partIndex: i,
+                    partCount: document.parts.length,
+                    selected: !!stylesModule && stylesModule.id === selected,
+                    hasModule: !!stylesModule,
+                    onCreate: async (title: string) => {
                         const id = await document.partStyles(part.id, title);
                         if (id) this.props.onSelect(id);
                     },
@@ -528,8 +583,21 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
             });
         });
 
+        const outputHandle = (source: ModuleId) => {
+            const rendered = render?.output?.outputs.get(source);
+            const module = document.findModule(source);
+            const css = rendered ? rendered.typeId === 'text/css' : !!module && isCssModule(module);
+            return css ? 'css' : 'in';
+        };
         const edges = getConnections(document, selected).flatMap((edge) => {
-            if (hidden.has(edge.source) || hidden.has(edge.target)) return [];
+            if (hidden.has(edge.target)) return [];
+            if (hidden.has(edge.source)) {
+                // Only a docked part styles module is hidden from layout; it feeds its dock port.
+                return isPartOutput(edge.target) ? [{ ...edge, targetHandle: 'styles' }] : [];
+            }
+            if (isPartOutput(edge.target) && edge.targetHandle === 'in') {
+                edge = { ...edge, targetHandle: outputHandle(edge.source) };
+            }
             return routeEdge(edge, collapsedInto) ?? [];
         });
 
@@ -598,6 +666,16 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
                         open={this.state.addingModule}
                         onClose={() => this.setState({ addingModule: false })}
                         onPick={this.onAddModule}
+                        effects={
+                            // A connection being dragged out needs a single module at its end.
+                            this.connectionForNextAdd
+                                ? undefined
+                                : {
+                                      document,
+                                      partId: this.props.partId,
+                                      onAdded: this.props.onSelect,
+                                  }
+                        }
                     />
                 </div>
             </div>
@@ -611,6 +689,8 @@ namespace ModuleGraph {
         selected: ModuleId | EdgeId | null;
         render: RenderState;
         onSelect: (m: ModuleId | EdgeId | null) => void;
+        /** The part effects are added to. */
+        partId: string;
     }
 }
 

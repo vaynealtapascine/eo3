@@ -785,8 +785,10 @@ function useDocument(documentId?: string, virtual?: Document): [boolean, any, Do
         setLoading(true);
         if (virtual) {
             setLoadedDocId(virtualIds.get(virtual) ?? null);
-            setDocument(virtual);
-            setLoading(false);
+            virtual.ensureSharedStyles().finally(() => {
+                setDocument(virtual);
+                setLoading(false);
+            });
         } else if (documentId) {
             if (loadedDocId === documentId) {
                 setLoading(false);
@@ -795,7 +797,8 @@ function useDocument(documentId?: string, virtual?: Document): [boolean, any, Do
 
             storage
                 .getDocument(documentId)
-                .then((doc) => {
+                .then(async (doc) => {
+                    await doc?.ensureSharedStyles();
                     setLoadedDocId(documentId);
                     setDocument(doc);
                     setLoading(false);

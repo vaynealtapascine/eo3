@@ -1,13 +1,13 @@
 import { Document, ModuleId } from '../../document';
 import { copiedKey, targetTitle, useSiteTarget } from '../../targets/context';
 import { Ao3Import } from './ao3-import';
-import { EFFECTS, EffectKey } from '../../effects';
+import { ActionMenu } from './action-menu';
 import { SPLIT_MARKER, splitHtmlAtMarker } from '../../util/split-html';
 import './parts-list.css';
 
 /**
- * The work's parts (chapters, posts) in order. Selecting a part shows it in the preview; each
- * part links to its styles module, which is created and wired on first use.
+ * The work's parts (chapters, posts) in order. Selecting a part shows it in the preview and is
+ * where new effects go; each part's menu opens its styles, created and wired on first use.
  */
 export function PartsList({
     document,
@@ -45,135 +45,132 @@ export function PartsList({
         if (window.confirm(message)) document.removePart(id);
     };
 
+    const splitAtBreak = (id: string) => {
+        const found = document.splittableContent(id);
+        if ('reason' in found) {
+            window.alert(found.reason);
+            return;
+        }
+        const split = splitHtmlAtMarker((found.module.data as { contents: string }).contents);
+        if (!split) {
+            window.alert('Place the break between content on both sides.');
+            return;
+        }
+        const added = document.splitPart(id, split.first, split.second);
+        if (added) onSelectPart(added.id);
+    };
+
+    const hasBreak = (outputId: string) =>
+        document.modules.some(
+            (module) =>
+                module.sends.includes(outputId) &&
+                (module.data as { contents?: unknown } | null)?.contents
+                    ?.toString()
+                    .includes(SPLIT_MARKER)
+        );
+
     return (
         <section className="parts-list" aria-label={`${label}s`}>
+            <header className="i-heading">
+                <h2>{label}s</h2>
+                <button className="i-add" onClick={addPart}>
+                    + add {label.toLowerCase()}
+                </button>
+            </header>
             <ol className="i-parts">
-                {parts.map((part, i) => (
-                    <li
-                        key={part.id}
-                        className={'i-part' + (part.id === selectedId ? ' is-selected' : '')}
-                    >
-                        <button
-                            className="i-select"
-                            aria-pressed={part.id === selectedId}
-                            aria-label={`Preview ${label} ${i + 1}`}
+                {parts.map((part, i) => {
+                    const name = `${label} ${i + 1}`;
+                    const elsewhere = Object.keys(part.postedTo)
+                        .filter((id) => id !== target.id)
+                        .map(targetTitle);
+                    return (
+                        <li
+                            key={part.id}
+                            className={'i-part' + (part.id === selectedId ? ' is-selected' : '')}
                             onClick={() => onSelectPart(part.id)}
                         >
-                            {label} {i + 1}
-                        </button>
-                        <input
-                            className="i-title"
-                            placeholder="title"
-                            aria-label={`${label} ${i + 1} title`}
-                            value={part.title}
-                            onFocus={() => onSelectPart(part.id)}
-                            onChange={(e) =>
-                                document.updatePart(part.id, { title: e.target.value })
-                            }
-                        />
-                        {part.postedTo[target.id] ? (
-                            <span
-                                className="i-badge"
-                                title={`Marked as posted on ${part.postedTo[target.id].at}`}
-                            >
-                                posted
-                            </span>
-                        ) : copiedParts.includes(copiedKey(target.id, part.id)) ? (
-                            <span
-                                className="i-badge is-warning"
-                                title="Copied but not marked as posted; mark it in the preview once it's up"
-                            >
-                                not marked posted
-                            </span>
-                        ) : null}
-                        {Object.keys(part.postedTo).some((id) => id !== target.id) && (
-                            <span
-                                className="i-also-posted"
-                                title="Crossposted: marked as posted on these sites too"
-                            >
-                                also on{' '}
-                                {Object.keys(part.postedTo)
-                                    .filter((id) => id !== target.id)
-                                    .map(targetTitle)
-                                    .join(', ')}
-                            </span>
-                        )}
-                        <span className="i-actions">
-                            {document.modules.some(
-                                (module) =>
-                                    module.sends.includes(part.outputId) &&
-                                    (module.data as { contents?: unknown } | null)?.contents
-                                        ?.toString()
-                                        .includes(SPLIT_MARKER)
-                            ) && (
-                                <button
-                                    title="Split this part at its first chapter break marker"
-                                    onClick={() => {
-                                        const found = document.splittableContent(part.id);
-                                        if ('reason' in found) {
-                                            window.alert(found.reason);
-                                            return;
-                                        }
-                                        const html = (found.module.data as { contents: string })
-                                            .contents;
-                                        const split = splitHtmlAtMarker(html);
-                                        if (!split) {
-                                            window.alert(
-                                                'Place the break between content on both sides.'
-                                            );
-                                            return;
-                                        }
-                                        const added = document.splitPart(
-                                            part.id,
-                                            split.first,
-                                            split.second
-                                        );
-                                        if (added) onSelectPart(added.id);
-                                    }}
-                                >
-                                    split at break
-                                </button>
-                            )}
                             <button
-                                onClick={() => openStyles(part.id)}
-                                title={`CSS that applies to this ${label.toLowerCase()} only`}
+                                className="i-select"
+                                aria-pressed={part.id === selectedId}
+                                aria-label={`Preview ${name}`}
+                                onClick={() => onSelectPart(part.id)}
                             >
-                                styles
+                                {i + 1}
                             </button>
-                            {part.stylesModuleId && (
-                                <button
-                                    onClick={() =>
-                                        document.updatePart(part.id, { stylesModuleId: null })
+                            <input
+                                className="i-title"
+                                placeholder={`${name} title`}
+                                aria-label={`${name} title`}
+                                value={part.title}
+                                onFocus={() => onSelectPart(part.id)}
+                                onChange={(e) =>
+                                    document.updatePart(part.id, { title: e.target.value })
+                                }
+                            />
+                            {part.postedTo[target.id] ? (
+                                <span
+                                    className="i-badge"
+                                    title={
+                                        `Marked as posted on ${part.postedTo[target.id].at}` +
+                                        (elsewhere.length
+                                            ? `; also on ${elsewhere.join(', ')}`
+                                            : '')
                                     }
-                                    title="Stop managing the styles module; it stays in the graph for you to rewire"
                                 >
-                                    detach
-                                </button>
-                            )}
-                            <button
-                                aria-label={`Move ${label} ${i + 1} up`}
-                                disabled={i === 0}
-                                onClick={() => document.movePart(part.id, i - 1)}
-                            >
-                                ↑
-                            </button>
-                            <button
-                                aria-label={`Move ${label} ${i + 1} down`}
-                                disabled={i === parts.length - 1}
-                                onClick={() => document.movePart(part.id, i + 1)}
-                            >
-                                ↓
-                            </button>
-                            <button
-                                aria-label={`Remove ${label} ${i + 1}`}
-                                disabled={parts.length === 1}
-                                onClick={() => removePart(part.id, i)}
-                            >
-                                ×
-                            </button>
-                        </span>
-                    </li>
-                ))}
+                                    posted
+                                </span>
+                            ) : copiedParts.includes(copiedKey(target.id, part.id)) ? (
+                                <span
+                                    className="i-badge is-warning"
+                                    title="Copied but not marked as posted; mark it in the preview once it is up"
+                                >
+                                    not marked
+                                </span>
+                            ) : elsewhere.length ? (
+                                <span
+                                    className="i-badge"
+                                    title={`Marked as posted on ${elsewhere.join(', ')}`}
+                                >
+                                    on {elsewhere.join(', ')}
+                                </span>
+                            ) : null}
+                            <ActionMenu
+                                label={`${name} actions`}
+                                actions={[
+                                    {
+                                        label: part.stylesModuleId ? 'Edit styles' : 'Add styles',
+                                        run: () => openStyles(part.id),
+                                    },
+                                    !!part.stylesModuleId && {
+                                        label: 'Detach styles',
+                                        run: () =>
+                                            document.updatePart(part.id, { stylesModuleId: null }),
+                                    },
+                                    hasBreak(part.outputId) && {
+                                        label: 'Split at chapter break',
+                                        run: () => splitAtBreak(part.id),
+                                    },
+                                    {
+                                        label: 'Move up',
+                                        disabled: i === 0,
+                                        run: () => document.movePart(part.id, i - 1),
+                                    },
+                                    {
+                                        label: 'Move down',
+                                        disabled: i === parts.length - 1,
+                                        run: () => document.movePart(part.id, i + 1),
+                                    },
+                                    {
+                                        label: `Remove ${label.toLowerCase()}`,
+                                        danger: true,
+                                        disabled: parts.length === 1,
+                                        run: () => removePart(part.id, i),
+                                    },
+                                ]}
+                            />
+                        </li>
+                    );
+                })}
             </ol>
             {unsentStyles.length > 0 && (
                 <p className="i-unsent">
@@ -188,62 +185,6 @@ export function PartsList({
                         </button>
                     ))}
                 </p>
-            )}
-            <button className="i-add" onClick={addPart}>
-                + add {label.toLowerCase()}
-            </button>
-            <details className="i-effect-shelf">
-                <summary>effect shelf</summary>
-                <p>Add an editable effect to this {label.toLowerCase()}.</p>
-                {Object.entries(EFFECTS).map(([key, effect]) => (
-                    <button
-                        key={key}
-                        onClick={async () => {
-                            const instance = await document.addPackagedEffect(
-                                key as EffectKey,
-                                selectedId
-                            );
-                            if (instance) onSelectModule(instance.moduleIds[0]);
-                        }}
-                    >
-                        + {effect.title}
-                    </button>
-                ))}
-            </details>
-            {document.groupInstances.some((instance) => instance.partId === selectedId) && (
-                <section className="i-groups" aria-label="Effect groups in this part">
-                    <h3>groups in this {label.toLowerCase()}</h3>
-                    {document.groupInstances
-                        .filter((instance) => instance.partId === selectedId)
-                        .map((instance) => {
-                            const definition = document.groupDefinitions.find(
-                                (item) => item.id === instance.definitionId
-                            );
-                            const count = document.groupInstances.filter(
-                                (item) => item.definitionId === instance.definitionId
-                            ).length;
-                            return (
-                                <div key={instance.id} className="i-group">
-                                    <button onClick={() => onSelectModule(instance.moduleIds[0])}>
-                                        {definition?.title ?? 'Group'}
-                                    </button>
-                                    <span>{count > 1 ? `shared by ${count}` : 'one instance'}</span>
-                                    <button
-                                        onClick={() =>
-                                            document.duplicateGroup(instance.id, selectedId)
-                                        }
-                                    >
-                                        copy here
-                                    </button>
-                                    {count > 1 && (
-                                        <button onClick={() => document.detachGroup(instance.id)}>
-                                            detach
-                                        </button>
-                                    )}
-                                </div>
-                            );
-                        })}
-                </section>
             )}
             {target.id === 'ao3' && (
                 <Ao3Import

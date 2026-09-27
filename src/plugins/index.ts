@@ -5,6 +5,8 @@ export type ModuleDef = {
     title: string;
     description: string;
     load: () => Promise<ModulePlugin<any>>;
+    /** Created by eo3 itself, so not offered in the "add node" picker. */
+    managed?: boolean;
 };
 
 export const MODULES: { [k: string]: ModuleDef } = {
@@ -12,6 +14,12 @@ export const MODULES: { [k: string]: ModuleDef } = {
         title: 'Text',
         description: 'Text source (e.g. HTML or CSS).',
         load: lazy(() => import('./source/text')),
+    },
+    'source.shared-styles': {
+        title: 'All chapters',
+        description: 'CSS for every chapter it’s connected to.',
+        load: lazy(() => import('./source/shared-styles')),
+        managed: true,
     },
     'source.lesscss': {
         title: 'LessCSS',

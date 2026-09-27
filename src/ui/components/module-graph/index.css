@@ -201,6 +201,25 @@
         }
     }
 
+    .i-module-item.is-group .i-header,
+    .i-group-frame .i-group-header {
+        display: flex;
+        align-items: center;
+
+        .i-label {
+            flex: 1;
+            min-width: 0;
+        }
+    }
+
+    .i-group-menu {
+        flex-shrink: 0;
+        min-width: 1.6em;
+        min-height: 1.3em;
+        border: none;
+        font-size: 0.85em;
+    }
+
     .i-module-item.is-group .i-output.is-empty {
         opacity: 0.6;
 
@@ -227,8 +246,6 @@
             white-space: nowrap;
             overflow: hidden;
             pointer-events: auto;
-            width: fit-content;
-            max-width: 100%;
 
             .i-label {
                 overflow: hidden;
@@ -237,14 +254,57 @@
         }
     }
 
+    /* The CSS input's second port, on the right, where the part's docked styles connect. */
+    .i-module-item .i-input.has-dock::after {
+        content: '';
+        position: absolute;
+        right: 0;
+        top: 50%;
+        margin-top: -0.5em;
+        border: 0.5em solid transparent;
+        border-right-color: var(--conn-port-in);
+    }
+
+    /* A part's docked styles send to the left, into the output beside them. */
+    .i-module-item .i-output.is-docked {
+        justify-content: flex-start;
+        padding-left: 0.7em;
+        padding-right: 0.5em;
+
+        &::before {
+            left: 0;
+            right: auto;
+            border-right-color: transparent;
+            border-left-color: var(--conn-port-out);
+        }
+    }
+
+    .i-docked-styles-placeholder {
+        appearance: none;
+        display: block;
+        height: 44px;
+        border: 1px dashed var(--P-separator);
+        border-radius: 0.5em;
+        background: none;
+        color: inherit;
+        font: inherit;
+        font-size: smaller;
+        opacity: 0.75;
+        cursor: pointer;
+
+        &:hover,
+        &:focus-visible {
+            opacity: 1;
+            border-color: rgb(var(--P-color-accent));
+        }
+    }
+
     .i-output-node {
         cursor: grab;
 
-        .i-part-styles {
-            display: block;
-            margin: 4px auto 0;
-            cursor: pointer;
-            font-size: 0.75em;
+        .i-output-inputs {
+            margin-bottom: 4px;
+            cursor: default;
         }
 
         .i-part-name {

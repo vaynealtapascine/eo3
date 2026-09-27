@@ -118,6 +118,10 @@ export function serializeV1(doc: Document, format?: string): string {
         docData.skinBaselines = doc.state.skinBaselines;
     const importedSkin = doc.importedSkinModuleId && moduleIndices.get(doc.importedSkinModuleId);
     if (importedSkin !== undefined && importedSkin !== null) docData.importedSkin = importedSkin;
+    // false records that the author deleted "All chapters", so opening the work won't re-add it.
+    if (doc.state.sharedStylesModuleId === null) docData.sharedStyles = false;
+    const sharedStyles = doc.sharedStylesModuleId && moduleIndices.get(doc.sharedStylesModuleId);
+    if (sharedStyles !== undefined && sharedStyles !== null) docData.sharedStyles = sharedStyles;
     if (doc.groupDefinitions.length) docData.groupDefinitions = doc.groupDefinitions;
     if (doc.groupInstances.length) {
         docData.groupInstances = doc.groupInstances.map((instance) => ({
@@ -279,6 +283,12 @@ export function deserializeV1(input: string): Document {
         skinBaselines:
             data.skinBaselines ??
             (typeof data.skinBaseline === 'string' ? { [LEGACY_TARGET]: data.skinBaseline } : {}),
+        sharedStylesModuleId:
+            data.sharedStyles === false || data.sharedStyles === null
+                ? null
+                : data.sharedStyles !== undefined
+                ? moduleIdAssignments.get(data.sharedStyles)
+                : undefined,
         importedSkinModuleId:
             data.importedSkin !== undefined
                 ? moduleIdAssignments.get(data.importedSkin) ?? null

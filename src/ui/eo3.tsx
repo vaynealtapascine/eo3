@@ -167,6 +167,11 @@ export class Eo3 extends PureComponent<Eo3.Props, Eo3State> {
         scheduleRender: () => this.scheduleRender(),
     };
 
+    /** The part being previewed, which new effects go to; the first when none was picked. */
+    selectedPartId(doc: Document) {
+        return doc.findPart(this.state.partId ?? '')?.id ?? doc.parts[0].id;
+    }
+
     render() {
         const doc = this.props.document;
         const { render } = this.state;
@@ -192,6 +197,7 @@ export class Eo3 extends PureComponent<Eo3.Props, Eo3State> {
                                 />
                                 <ModuleList
                                     document={doc}
+                                    partId={this.selectedPartId(doc)}
                                     selected={this.state.selected}
                                     onSelect={(selected) => this.setState({ selected })}
                                     userData={this.state.render.output?.userData}
@@ -242,6 +248,7 @@ export class Eo3 extends PureComponent<Eo3.Props, Eo3State> {
                                 {this.props.graphOpen ? (
                                     <ModuleGraph
                                         document={doc}
+                                        partId={this.selectedPartId(doc)}
                                         selected={this.state.selected}
                                         render={render}
                                         onSelect={(selected) => this.setState({ selected })}

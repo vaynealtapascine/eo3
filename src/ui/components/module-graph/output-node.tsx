@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Position, Handle } from 'reactflow';
 import { AnimationController, Spring } from '../../../uikit/frame-animation';
 import { useSiteTarget } from '../../../targets/context';
+import { MOD_BASE_WIDTH, MOD_INPUT_HEIGHT } from './consts';
+const HEIGHT_PROP = '--height' as any;
 
 export function OutputNode({ data }: { data: any }) {
     const node = useRef<HTMLDivElement>(null);
@@ -77,7 +79,22 @@ export function OutputNode({ data }: { data: any }) {
             onPointerMove={onMove}
             onPointerUp={onUp}
         >
-            <Handle id="in" type="target" position={Position.Left} />
+            <div className="i-module-item i-output-inputs" style={{ width: MOD_BASE_WIDTH }}>
+                <div className="i-input" style={{ [HEIGHT_PROP]: MOD_INPUT_HEIGHT }}>
+                    <span className="i-label">HTML</span>
+                    <Handle id="in" type="target" position={Position.Left} />
+                </div>
+                <div className="i-input has-dock" style={{ [HEIGHT_PROP]: MOD_INPUT_HEIGHT }}>
+                    <span className="i-label">CSS</span>
+                    <Handle id="css" type="target" position={Position.Left} />
+                    <Handle
+                        id="styles"
+                        type="target"
+                        position={Position.Right}
+                        isConnectable={false}
+                    />
+                </div>
+            </div>
             <div
                 className="eggbug-containment-zone"
                 style={{
@@ -94,17 +111,6 @@ export function OutputNode({ data }: { data: any }) {
                 }}
             ></div>
             {partName && <div className="i-part-name">{partName}</div>}
-            <button
-                className="i-part-styles nodrag"
-                title="Edit styles for this part"
-                onPointerDown={(event) => event.stopPropagation()}
-                onClick={(event) => {
-                    event.stopPropagation();
-                    data.openStyles(`${siteTargetPlugin?.partLabel ?? 'Part'} styles`);
-                }}
-            >
-                {data.hasStyles ? 'edit styles' : '+ styles'}
-            </button>
         </div>
     );
 }
