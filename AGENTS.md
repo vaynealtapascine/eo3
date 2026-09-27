@@ -62,5 +62,8 @@ compares the port's output against it.
     `var()` makes the registration invalid).
 -   Line endings: the repo uses `core.autocrlf`; check formatting with
     `npx prettier --check --end-of-line auto <files>` to avoid CRLF noise.
+-   Never use `alert()`, `confirm()` or `prompt()`: some browsers and embedded views skip or
+    throw on them. Use `showAlert`/`showConfirm` from `src/ui/dialogs.tsx` and `NamePopover`
+    for names.
 -   Don't change module data interfaces in a backwards-incompatible way; saved documents depend on
     them.
