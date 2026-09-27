@@ -19,7 +19,15 @@ interface Eo3State {
     partId: string | null;
     /** Parts whose output was copied this session; unmarked ones get a reminder. */
     copiedParts: string[];
+    /** Phone-sized viewport: show one pane at a time instead of split panels. */
+    compact: boolean;
+    /** The pane shown in compact mode. */
+    pane: CompactPane;
 }
+
+type CompactPane = 'edit' | 'preview' | 'graph';
+
+const compactQuery = window.matchMedia('(max-width: 700px)');
 
 export class Eo3 extends PureComponent<Eo3.Props, Eo3State> {
     state = {
@@ -35,9 +43,14 @@ export class Eo3 extends PureComponent<Eo3.Props, Eo3State> {
         selected: null,
         partId: null,
         copiedParts: [] as string[],
+        compact: compactQuery.matches,
+        pane: 'edit' as CompactPane,
     };
 
+    onCompactChange = () => this.setState({ compact: compactQuery.matches });
+
     componentDidMount() {
+        compactQuery.addEventListener('change', this.onCompactChange);
         this.props.document.addEventListener('change', this.onDocumentChange);
         if (this.props.initWithoutRender) {
             const renderId = ++this.renderId;
@@ -87,6 +100,7 @@ export class Eo3 extends PureComponent<Eo3.Props, Eo3State> {
         }
     }
     componentWillUnmount() {
+        compactQuery.removeEventListener('change', this.onCompactChange);
         this.props.document.removeEventListener('change', this.onDocumentChange);
     }
 
@@ -167,88 +181,138 @@ export class Eo3 extends PureComponent<Eo3.Props, Eo3State> {
         scheduleRender: () => this.scheduleRender(),
     };
 
-    render() {
+    leftPanel() {
         const doc = this.props.document;
-        const { render } = this.state;
+        return (
+            <div className="eo3-left-panel">
+                <DocumentSettings doc={doc} />
+                <PartsList
+                    document={doc}
+                    partId={this.state.partId}
+                    onSelectPart={(partId) => this.setState({ partId })}
+                    copiedParts={this.state.copiedParts}
+                    onSelectModule={(selected) => this.setState({ selected })}
+                />
+                <ModuleList
+                    document={doc}
+                    selected={this.state.selected}
+                    onSelect={(selected) => this.setState({ selected })}
+                    userData={this.state.render.output?.userData}
+                />
+            </div>
+        );
+    }
 
+    previewPane() {
+        return (
+            <Preview
+                document={this.props.document}
+                render={this.state.render}
+                partId={this.state.partId}
+                onPartChange={(partId) => this.setState({ partId })}
+                copiedParts={this.state.copiedParts}
+                onPartCopied={(id) =>
+                    this.setState({
+                        copiedParts: [...this.state.copiedParts.filter((p) => p !== id), id],
+                    })
+                }
+                clickToRender={
+                    this.state.clickToRender
+                        ? () => {
+                              this.setState({ clickToRender: false }, () => {
+                                  this.renderPreview();
+                              });
+                          }
+                        : null
+                }
+                onLiveChange={(live) => {
+                    this.setState({ render: { ...this.state.render, live } }, () => {
+                        if (live) this.renderPreview();
+                    });
+                }}
+                onRender={() => this.renderPreview()}
+                onTargetChange={(target) => {
+                    this.setState({ render: { ...this.state.render, target } }, () => {
+                        this.renderPreview();
+                    });
+                }}
+            />
+        );
+    }
+
+    graphPane() {
+        return (
+            <ModuleGraph
+                document={this.props.document}
+                selected={this.state.selected}
+                render={this.state.render}
+                onSelect={(selected) => this.setState({ selected })}
+            />
+        );
+    }
+
+    /** Phone layout: one full-size pane at a time, switched from a bottom tab bar. */
+    compactLayout() {
+        const { graphOpen } = this.props;
+        const current = this.state.pane === 'graph' && !graphOpen ? 'edit' : this.state.pane;
+        const panes: CompactPane[] = graphOpen ? ['edit', 'preview', 'graph'] : ['edit', 'preview'];
+        const pane = (id: CompactPane, contents: React.ReactNode) => (
+            <div
+                className={'i-pane' + (current === id ? ' is-active' : '')}
+                role="tabpanel"
+                id={`eo3-pane-${id}`}
+            >
+                {contents}
+            </div>
+        );
+
+        return (
+            <div className="eo3-compact">
+                {pane('edit', this.leftPanel())}
+                {pane('preview', this.previewPane())}
+                {graphOpen ? pane('graph', this.graphPane()) : null}
+                <nav className="i-pane-tabs" role="tablist">
+                    {panes.map((id) => (
+                        <button
+                            key={id}
+                            role="tab"
+                            aria-selected={current === id}
+                            aria-controls={`eo3-pane-${id}`}
+                            className={'i-pane-tab' + (current === id ? ' is-active' : '')}
+                            onClick={() => this.setState({ pane: id })}
+                        >
+                            {id}
+                        </button>
+                    ))}
+                </nav>
+            </div>
+        );
+    }
+
+    render() {
         return (
             <RenderContext.Provider value={this.renderContext}>
                 <SiteTargetProvider>
                     <div className="eo3">
-                        <SplitPanel
-                            initialPos={Math.min(
-                                0.7,
-                                Math.max(500 / innerWidth, 1 - 700 / innerWidth)
-                            )}
-                        >
-                            <div className="eo3-left-panel">
-                                <DocumentSettings doc={doc} />
-                                <PartsList
-                                    document={doc}
-                                    partId={this.state.partId}
-                                    onSelectPart={(partId) => this.setState({ partId })}
-                                    copiedParts={this.state.copiedParts}
-                                    onSelectModule={(selected) => this.setState({ selected })}
-                                />
-                                <ModuleList
-                                    document={doc}
-                                    selected={this.state.selected}
-                                    onSelect={(selected) => this.setState({ selected })}
-                                    userData={this.state.render.output?.userData}
-                                />
-                            </div>
-                            <SplitPanel vertical initialPos={Math.max(0.6, 1 - 300 / innerHeight)}>
-                                <Preview
-                                    document={doc}
-                                    render={render}
-                                    partId={this.state.partId}
-                                    onPartChange={(partId) => this.setState({ partId })}
-                                    copiedParts={this.state.copiedParts}
-                                    onPartCopied={(id) =>
-                                        this.setState({
-                                            copiedParts: [
-                                                ...this.state.copiedParts.filter((p) => p !== id),
-                                                id,
-                                            ],
-                                        })
-                                    }
-                                    clickToRender={
-                                        this.state.clickToRender
-                                            ? () => {
-                                                  this.setState({ clickToRender: false }, () => {
-                                                      this.renderPreview();
-                                                  });
-                                              }
-                                            : null
-                                    }
-                                    onLiveChange={(live) => {
-                                        this.setState(
-                                            { render: { ...this.state.render, live } },
-                                            () => {
-                                                if (live) this.renderPreview();
-                                            }
-                                        );
-                                    }}
-                                    onRender={() => this.renderPreview()}
-                                    onTargetChange={(target) => {
-                                        this.setState(
-                                            { render: { ...this.state.render, target } },
-                                            () => {
-                                                this.renderPreview();
-                                            }
-                                        );
-                                    }}
-                                />
-                                {this.props.graphOpen ? (
-                                    <ModuleGraph
-                                        document={doc}
-                                        selected={this.state.selected}
-                                        render={render}
-                                        onSelect={(selected) => this.setState({ selected })}
-                                    />
-                                ) : null}
+                        {this.state.compact ? (
+                            this.compactLayout()
+                        ) : (
+                            <SplitPanel
+                                initialPos={Math.min(
+                                    0.7,
+                                    Math.max(500 / innerWidth, 1 - 700 / innerWidth)
+                                )}
+                            >
+                                {this.leftPanel()}
+                                <SplitPanel
+                                    vertical
+                                    initialPos={Math.max(0.6, 1 - 300 / innerHeight)}
+                                >
+                                    {this.previewPane()}
+                                    {this.props.graphOpen ? this.graphPane() : null}
+                                </SplitPanel>
                             </SplitPanel>
-                        </SplitPanel>
+                        )}
                     </div>
                 </SiteTargetProvider>
             </RenderContext.Provider>

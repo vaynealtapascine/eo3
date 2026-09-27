@@ -1,6 +1,7 @@
 import { createRoot } from 'react-dom/client';
 import { initStorage, MemoryStorage } from './storage';
 import ApplicationFrame from './ui';
+import { trackViewport } from './ui/viewport';
 
 let canInit = true;
 {
@@ -14,6 +15,7 @@ if (canInit) {
     const container = document.createElement('div');
     container.id = 'eo3-root';
     document.body.appendChild(container);
+    trackViewport();
     const reactRoot = createRoot(container);
 
     initStorage()
