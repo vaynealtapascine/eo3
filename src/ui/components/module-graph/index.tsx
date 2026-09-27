@@ -40,6 +40,7 @@ import {
     MOD_OUTPUT_HEIGHT,
 } from './consts';
 import { ModulePicker } from '../module-picker';
+import { NamePopover } from '../name-popover';
 import 'reactflow/dist/style.css';
 import './index.css';
 import { Button } from '../../../uikit/button';
@@ -49,6 +50,22 @@ export type EdgeId = string;
 const GROUP_FRAME_PADDING = 8;
 /** Node id for the "+ styles" placeholder docked to a part without styles. */
 const DOCKED_PLACEHOLDER_PREFIX = 'styles:';
+
+type Naming =
+    | { kind: 'group'; moduleIds: ModuleId[] }
+    | { kind: 'rename'; groupId: string; title: string }
+    | { kind: 'input'; source: ModuleId; target: ModuleId };
+
+function namingText(naming: Naming | null) {
+    switch (naming?.kind) {
+        case 'rename':
+            return { label: 'Group name', initial: naming.title, submitLabel: 'Rename' };
+        case 'input':
+            return { label: 'Side input name', submitLabel: 'Connect' };
+        default:
+            return { label: 'Group name', submitLabel: 'Group' };
+    }
+}
 
 const ReactFlow = lazy(() => import('./reactflow'));
 
@@ -64,6 +81,23 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
         } | null,
         /** Group instances shown as their member nodes; the rest are one card each. */
         expandedGroups: [] as string[],
+        /** What the name popover is asking a name for, if it's open. */
+        naming: null as Naming | null,
+    };
+
+    groupButton = createRef<Button>();
+
+    onNamed = (name: string) => {
+        const { document } = this.props;
+        const naming = this.state.naming;
+        if (naming?.kind === 'group') {
+            document.createGroup(name, naming.moduleIds, this.modulePositions);
+            this.setState({ groupSelection: [] });
+        } else if (naming?.kind === 'rename') {
+            document.renameGroup(naming.groupId, name);
+        } else if (naming?.kind === 'input') {
+            this.insertNamedConnection(naming.source, naming.target, name);
+        }
     };
 
     toggleGroup(groupId: string) {
@@ -178,14 +212,16 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
     }
 
     insertNewNamedConnection(source: ModuleId, target: ModuleId) {
+        const targetModule = this.props.document.findModule(target);
+        if (!this.props.document.findModule(source) || !targetModule) return;
+        if (!targetModule.plugin.acceptsNamedInputs) return;
+        this.setState({ naming: { kind: 'input', source, target } });
+    }
+
+    insertNamedConnection(source: ModuleId, target: ModuleId, name: string) {
         const { document } = this.props;
         let sourceModule = document.findModule(source);
-        const targetModule = document.findModule(target);
-        if (!sourceModule || !targetModule) return;
-        if (!targetModule.plugin.acceptsNamedInputs) return;
-
-        const name = prompt('Enter side input name');
-        if (!name) return;
+        if (!sourceModule || !document.findModule(target)) return;
 
         sourceModule = sourceModule.shallowClone();
         if (!sourceModule.namedSends.has(target)) {
@@ -293,10 +329,7 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
         const { document } = this.props;
         const file = () => document.groupFile(groupId)!;
         return {
-            rename: () => {
-                const next = window.prompt('Rename this group', title);
-                if (next?.trim()) document.renameGroup(groupId, next.trim());
-            },
+            rename: () => this.setState({ naming: { kind: 'rename', groupId, title } }),
             save: () => {
                 saveLibraryGroup(file());
                 window.alert(`Saved “${title}” to My groups, in “add node” → Groups.`);
@@ -663,6 +696,7 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
                     <Button run={this.runAutoLayout}>auto layout</Button>{' '}
                     {this.state.groupSelection.length > 1 && (
                         <Button
+                            ref={this.groupButton}
                             disabled={!canGroup}
                             title={
                                 canGroup
@@ -671,14 +705,9 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
                             }
                             run={() => {
                                 if (!canGroup) return;
-                                const title = window.prompt('Name this group');
-                                if (!title?.trim()) return;
-                                document.createGroup(
-                                    title.trim(),
-                                    this.state.groupSelection,
-                                    this.modulePositions
-                                );
-                                this.setState({ groupSelection: [] });
+                                this.setState({
+                                    naming: { kind: 'group', moduleIds: this.state.groupSelection },
+                                });
                             }}
                         >
                             group {this.state.groupSelection.length} nodes
@@ -693,6 +722,17 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
                     >
                         add node
                     </Button>
+                    <NamePopover
+                        open={!!this.state.naming}
+                        anchor={
+                            this.state.naming?.kind === 'group'
+                                ? this.groupButton.current?.node
+                                : null
+                        }
+                        {...namingText(this.state.naming)}
+                        onSubmit={this.onNamed}
+                        onClose={() => this.setState({ naming: null })}
+                    />
                     <ModulePicker
                         anchor={this.state.modulePickerAnchor || this.addModuleButton.current?.node}
                         open={this.state.addingModule}

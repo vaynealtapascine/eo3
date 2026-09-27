@@ -1,0 +1,49 @@
+.name-popover {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6em;
+    padding: 0.8em;
+    width: min(18em, calc(100vw - 32px));
+
+    label {
+        display: flex;
+        flex-direction: column;
+        gap: 0.3em;
+    }
+
+    input {
+        font: inherit;
+        color: inherit;
+        background: none;
+        border: 1px solid var(--P-separator);
+        border-radius: 0.4em;
+        padding: 0.3em 0.5em;
+    }
+
+    .i-buttons {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.4em;
+
+        button {
+            font: inherit;
+            color: inherit;
+            background: none;
+            border: 1px solid var(--P-separator);
+            border-radius: 0.5em;
+            padding: 0.25em 0.8em;
+            cursor: pointer;
+
+            &:disabled {
+                opacity: 0.4;
+                cursor: default;
+            }
+
+            &.is-primary {
+                background: rgb(var(--P-color-accent));
+                border-color: transparent;
+                color: rgb(var(--P-color-accent-fg));
+            }
+        }
+    }
+}
