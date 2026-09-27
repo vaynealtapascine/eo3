@@ -25,8 +25,7 @@
     }
 }
 
-@media (max-height: 600px) {
-    .code-editor {
-        height: 50vh;
-    }
+/* at most half of a short screen; the stable height ignores an open on-screen keyboard */
+.code-editor {
+    height: min(300px, var(--P-stable-height, 100vh) / 2);
 }

@@ -64,6 +64,10 @@ export default function ApplicationFrame({
 
     const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth > 1400);
     const [graphOpen, setGraphOpen] = useState(true);
+    // on phones the sidebar covers the document (see index.css), so get it out of the way
+    const closeSidebarIfOverlay = () => {
+        if (window.matchMedia('(max-width: 700px)').matches) setSidebarOpen(false);
+    };
 
     // don't render if the page was loaded twice in quick succession; possibly due to a bad render
     const shouldStartWithoutRender = useMemo(() => {
@@ -372,10 +376,12 @@ export default function ApplicationFrame({
                             onOpen={(id) => {
                                 openDocument(id);
                                 setCurrentTab(id);
+                                closeSidebarIfOverlay();
                             }}
                             onLoad={(doc) => {
                                 setVirtualOpenDoc(doc);
                                 setCurrentTab(null);
+                                closeSidebarIfOverlay();
                             }}
                             isMemoryStorage={isMemoryStorage}
                         />

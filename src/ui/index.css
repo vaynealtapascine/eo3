@@ -156,6 +156,9 @@ html {
 #eo3-root {
     position: fixed;
     inset: 0;
+    /* follow the visible area around an on-screen keyboard (see viewport.ts) */
+    top: var(--P-viewport-top, 0);
+    height: var(--P-viewport-height, auto);
 }
 
 .application-frame {
@@ -307,6 +310,33 @@ html {
 
             .application-tab {
                 grid-area: 1 / 1;
+            }
+        }
+    }
+
+    /* phones: bigger touch targets, and the sidebar slides over the document
+       instead of squeezing it (keep the width in sync with eo3.tsx) */
+    @media (max-width: 700px) {
+        > .i-toolbar {
+            height: 2.8em;
+
+            > .i-buttons > .i-section {
+                display: none;
+            }
+        }
+
+        > .i-content-split {
+            position: relative;
+
+            > .i-sidebar.is-open {
+                position: absolute;
+                inset: 0 auto 0 0;
+                z-index: 10;
+                box-shadow: 0 0 1em #0006;
+
+                > .application-sidebar {
+                    max-width: 85vw;
+                }
             }
         }
     }
