@@ -7,7 +7,6 @@ groups = [{ id = "fic-case-file-renderer", title = "Case file · reusable render
 [[modules]]
 plugin = "source.text"
 title = "Write here · Field: value · ## section · > statement"
-graphPos = [0, 0]
 data.language = "text"
 data.contents = '''
 ---
@@ -34,7 +33,6 @@ namedSends = { "2" = ["draft"] }
 [[modules]]
 plugin = "source.text"
 title = "Workskin · colors and spacing"
-graphPos = [0, 100]
 data.language = "css"
 data.contents = '''
 /* A redaction is literal text, never an invisible spoiler or hidden secret. */
@@ -111,7 +109,6 @@ sends = ["output"]
 [[modules]]
 plugin = "source.svelte"
 title = "Compose · reuse the component here"
-graphPos = [380, 0]
 data.svelteVersion = "v4"
 data.contents = '''
 <script>
@@ -127,7 +124,6 @@ sends = ["output"]
 [[modules]]
 plugin = "source.svelte-component"
 title = "CaseFile · layout"
-graphPos = [380, 100]
 data.name = "CaseFile"
 data.contents = '''
 <script>
@@ -157,7 +153,6 @@ sends = [2]
 [[modules]]
 plugin = "source.svelte-component"
 title = "FicText · shared emphasis and paragraphs"
-graphPos = [380, 200]
 data.name = "FicText"
 data.contents = '''
 <script>
@@ -193,7 +188,6 @@ sends = [2]
 [[modules]]
 plugin = "source.text"
 title = "Writing helpers · shared parser"
-graphPos = [380, 300]
 data.language = "javascript"
 data.contents = '''
 // Shared writing helpers. Unknown or unfinished syntax stays visible as text.

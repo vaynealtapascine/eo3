@@ -10,6 +10,13 @@ update it whenever a step lands (what changed, what's next, anything surprising)
 
 ## Status
 
+2026-09-28 — Workskin examples now use automatic graph positions, including their
+downloadable groups. Layout keeps writing inputs to the left of the whole renderer,
+reserves expanded group frames across every column, and places styles below the HTML
+path. The AO3 output has space for its logo. Expanding or collapsing groups and running
+auto layout fits the graph into view. Tests cover all 14 examples in both views and
+multiple imported groups across chapters; the site browser checks verify visible bounds.
+
 2026-09-28 — Rebuilt all 14 workskin examples around plain-text writing inputs,
 reusable Svelte 4 components, shared writing helpers, and separate styles. ChatLog
 supports NAME: text, optional timestamps, events, continuations, quotes and reactions.

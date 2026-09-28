@@ -7,7 +7,6 @@ groups = [{ id = "fic-group-chat-renderer", title = "Group chat · reusable rend
 [[modules]]
 plugin = "source.text"
 title = "Write here · NAME: text · ! event · > quote · + reaction"
-graphPos = [0, 0]
 data.language = "text"
 data.contents = '''
 ---
@@ -28,7 +27,6 @@ namedSends = { "2" = ["draft"] }
 [[modules]]
 plugin = "source.text"
 title = "Workskin · colors and spacing"
-graphPos = [0, 100]
 data.language = "css"
 data.contents = '''
 /* Keep the sender and time in the HTML: alignment alone is not enough. */
@@ -169,7 +167,6 @@ sends = ["output"]
 [[modules]]
 plugin = "source.svelte"
 title = "Compose · reuse the component here"
-graphPos = [380, 0]
 data.svelteVersion = "v4"
 data.contents = '''
 <script>
@@ -185,7 +182,6 @@ sends = ["output"]
 [[modules]]
 plugin = "source.svelte-component"
 title = "ChatLog · layout"
-graphPos = [380, 100]
 data.name = "ChatLog"
 data.contents = '''
 <script>
@@ -225,7 +221,6 @@ sends = [2]
 [[modules]]
 plugin = "source.svelte-component"
 title = "FicText · shared emphasis and paragraphs"
-graphPos = [380, 200]
 data.name = "FicText"
 data.contents = '''
 <script>
@@ -261,7 +256,6 @@ sends = [2]
 [[modules]]
 plugin = "source.text"
 title = "Writing helpers · shared parser"
-graphPos = [380, 300]
 data.language = "javascript"
 data.contents = '''
 // Shared writing helpers. Unknown or unfinished syntax stays visible as text.

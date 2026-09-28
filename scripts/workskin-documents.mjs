@@ -32,7 +32,6 @@ export function workskinDocument(item) {
                 title: 'Write here · ' + sample.syntax,
                 data: { language: 'text', contents: sample.writing },
                 namedSends: { 2: ['draft'] },
-                graphPos: [0, 0],
             },
             {
                 plugin: 'source.text',
@@ -47,35 +46,30 @@ export function workskinDocument(item) {
                             : read('styles/' + item.id + '.css'),
                 },
                 sends: ['output'],
-                graphPos: [0, 100],
             },
             {
                 plugin: 'source.svelte',
                 title: 'Compose · reuse the component here',
                 data: { svelteVersion: 'v4', contents: main },
                 sends: ['output'],
-                graphPos: [380, 0],
             },
             {
                 plugin: 'source.svelte-component',
                 title: sample.component + ' · layout',
                 data: { name: sample.component, contents: read(sample.component + '.svelte') },
                 sends: [2],
-                graphPos: [380, 100],
             },
             {
                 plugin: 'source.svelte-component',
                 title: 'FicText · shared emphasis and paragraphs',
                 data: { name: 'FicText', contents: read('FicText.svelte') },
                 sends: [2],
-                graphPos: [380, 200],
             },
             {
                 plugin: 'source.text',
                 title: 'Writing helpers · shared parser',
                 data: { language: 'javascript', contents: read('writing.js') },
                 namedSends: { 2: ['writing'] },
-                graphPos: [380, 300],
             },
         ],
     };
@@ -89,7 +83,7 @@ export function workskinGroup(item, doc = workskinDocument(item)) {
         modules: doc.modules.map(({ graphPos, sends, ...module }) => ({
             ...module,
             ...(sends ? { sends: sends.filter((s) => typeof s === 'number') } : {}),
-            position: graphPos,
+            ...(graphPos ? { position: graphPos } : {}),
         })),
     };
 }
@@ -111,7 +105,7 @@ export function documentToml(doc) {
                 (m) =>
                     '\n[[modules]]\n' +
                     `plugin = ${quote(m.plugin)}\ntitle = ${quote(m.title)}\n` +
-                    `graphPos = [${m.graphPos.join(', ')}]\n` +
+                    (m.graphPos ? `graphPos = [${m.graphPos.join(', ')}]\n` : '') +
                     (m.data.language ? `data.language = ${quote(m.data.language)}\n` : '') +
                     (m.data.svelteVersion
                         ? `data.svelteVersion = ${quote(m.data.svelteVersion)}\n`

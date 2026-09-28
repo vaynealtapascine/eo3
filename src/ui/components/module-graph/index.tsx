@@ -17,7 +17,13 @@ import {
     OnConnectStartParams,
     ReactFlowInstance,
 } from 'reactflow';
-import { collapsedStyles, getNodeHeight, GROUP_HEADER_HEIGHT, layoutNodes } from './auto-layout';
+import {
+    collapsedStyles,
+    getNodeHeight,
+    GROUP_HEADER_HEIGHT,
+    GROUP_FRAME_PADDING,
+    layoutNodes,
+} from './auto-layout';
 import {
     connectionId,
     groupCards,
@@ -48,7 +54,6 @@ import { showAlert } from '../../dialogs';
 
 export type EdgeId = string;
 
-const GROUP_FRAME_PADDING = 8;
 /** Node id for the "+ styles" placeholder docked to a part without styles. */
 const DOCKED_PLACEHOLDER_PREFIX = 'styles:';
 
@@ -103,11 +108,14 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
 
     toggleGroup(groupId: string) {
         const expanded = this.state.expandedGroups;
-        this.setState({
-            expandedGroups: expanded.includes(groupId)
-                ? expanded.filter((id) => id !== groupId)
-                : [...expanded, groupId],
-        });
+        this.setState(
+            {
+                expandedGroups: expanded.includes(groupId)
+                    ? expanded.filter((id) => id !== groupId)
+                    : [...expanded, groupId],
+            },
+            this.fitGraph
+        );
     }
 
     private selectionChangeFromGraph: ModuleId | EdgeId | null = null;
@@ -181,6 +189,17 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
 
     onReactFlowInit = (instance: ReactFlowInstance) => {
         this.reactFlow = instance;
+    };
+
+    fitGraph = () => {
+        // Let React Flow measure newly expanded members before fitting their bounds.
+        requestAnimationFrame(() =>
+            requestAnimationFrame(() => {
+                if (this.containerNode.current) {
+                    this.reactFlow?.fitView({ padding: 0.2, duration: 300 });
+                }
+            })
+        );
     };
 
     onConnect = ({ source, target, targetHandle }: Connection) => {
@@ -477,16 +496,17 @@ export class ModuleGraph extends PureComponent<ModuleGraph.Props> {
         const { document } = this.props;
 
         const hasManualLayout = document.modules.find((m) => !!m.graphPos);
-        if (!hasManualLayout) return;
-
-        document.pushModulesState(
-            document.modules.map((m) => {
-                m = m.shallowClone();
-                m.graphPos = null;
-                return m;
-            }),
-            { type: ChangeType.RearrangeModules }
-        );
+        if (hasManualLayout) {
+            document.pushModulesState(
+                document.modules.map((m) => {
+                    m = m.shallowClone();
+                    m.graphPos = null;
+                    return m;
+                }),
+                { type: ChangeType.RearrangeModules }
+            );
+        }
+        this.fitGraph();
     };
 
     render() {

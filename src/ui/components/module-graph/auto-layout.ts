@@ -1,4 +1,4 @@
-import { Document, ModuleId, AnyModule } from '../../../document';
+import { Document, ModuleId, AnyModule, isCssModule } from '../../../document';
 import {
     MOD_HEADER_HEIGHT,
     MOD_INPUT_HEIGHT,
@@ -72,6 +72,7 @@ export type GraphLayout = {
 
 /** Room above an expanded group's first member for its frame header. */
 export const GROUP_HEADER_HEIGHT = GRID_SIZE;
+export const GROUP_FRAME_PADDING = 8;
 
 /**
  * Lays out the graph in columns by distance from the outputs. A collapsed group is placed as
@@ -122,7 +123,8 @@ export function layoutNodes(
         items.set(mod.id, {
             id: mod.id,
             targets: targetsOf([mod.id], mod.id),
-            order: groupOrder.get(mod.id)?.order ?? i,
+            // Keep the HTML path above its stylesheet at a chapter output.
+            order: groupOrder.get(mod.id)?.order ?? (isCssModule(mod) ? i + doc.modules.length : i),
             group: groupOrder.get(mod.id)?.group,
             height: getNodeHeight(doc, mod),
             acceptsInputs: mod.plugin.acceptsInputs,
@@ -155,12 +157,36 @@ export function layoutNodes(
         columns[0].push({ id: part.outputId, order: i - doc.parts.length });
     });
 
-    for (const item of toposort(items)) {
-        let column = 0;
+    const expandedByMember = new Map(
+        groups.cards
+            .filter((card) => card.expanded)
+            .flatMap((card) => card.members.map((id) => [id, card] as const))
+    );
+    const depths = new Map<string, number>();
+    const visiting = new Set<string>();
+    const depthOf = (id: string): number => {
+        if (depths.has(id)) return depths.get(id)!;
+        const item = items.get(id);
+        if (!item || visiting.has(id)) return 0;
+        visiting.add(id);
+        let depth = 0;
         for (const target of item.targets) {
-            const otherLoc = nodeLayouts.get(target);
-            if (otherLoc) column = Math.max(column, otherLoc.column + 1);
+            const group = expandedByMember.get(target);
+            // An external input belongs to the left of the entire expanded frame,
+            // rather than sharing a column with its internal helper components.
+            const targetDepth =
+                group && item.group !== group.nodeId
+                    ? Math.max(...group.members.map(depthOf))
+                    : depthOf(target);
+            depth = Math.max(depth, targetDepth + 1);
         }
+        visiting.delete(id);
+        depths.set(id, depth);
+        return depth;
+    };
+
+    for (const item of toposort(items)) {
+        const column = depthOf(item.id);
 
         while (!columns[column]) columns.push([]);
         nodeLayouts.set(item.id, {
@@ -174,22 +200,48 @@ export function layoutNodes(
         columns[column].push({ id: item.id, order: item.order, group: item.group });
     }
 
-    let colIndex = 0;
-    for (const col of columns) {
-        col.sort((a, b) => a.order - b.order);
-        let y = 0;
-        for (let i = 0; i < col.length; i++) {
-            const layout = nodeLayouts.get(col[i].id)!;
-            if (col[i].group && col[i].group !== col[i - 1]?.group) y += GROUP_HEADER_HEIGHT;
+    // Reserve an expanded group's whole rectangle in every column it spans.
+    // This keeps unrelated styles and inputs out of its frame, including its header.
+    const blocks = new Map<string, { order: number; members: ColumnEntry[]; expanded: boolean }>();
+    columns.forEach((column) =>
+        column.forEach((entry) => {
+            const key = entry.group ?? entry.id;
+            const block = blocks.get(key) ?? {
+                order: entry.order,
+                members: [],
+                expanded: !!entry.group,
+            };
+            block.order = Math.min(block.order, entry.order);
+            block.members.push(entry);
+            blocks.set(key, block);
+        })
+    );
+    const cursors = columns.map(() => 0);
+    const snap = (y: number) => Math.ceil(y / GRID_SIZE) * GRID_SIZE;
+    for (const block of [...blocks.values()].sort((a, b) => a.order - b.order)) {
+        const occupied = block.members.map((entry) => nodeLayouts.get(entry.id)!.column);
+        const left = Math.min(...occupied),
+            right = Math.max(...occupied);
+        const top = Math.max(...cursors.slice(left, right + 1));
+        const rows = new Map<number, number>();
+        let bottom = top;
+        for (const entry of block.members.sort((a, b) => a.order - b.order)) {
+            const layout = nodeLayouts.get(entry.id)!;
+            layout.y = rows.get(layout.column) ?? top + (block.expanded ? GROUP_HEADER_HEIGHT : 0);
+            bottom = Math.max(bottom, layout.y + layout.height);
+            rows.set(layout.column, snap(layout.y + layout.height + MIN_ROW_GAP));
+        }
+        const next = snap(bottom + MIN_ROW_GAP + (block.expanded ? GROUP_FRAME_PADDING : 0));
+        for (let column = left; column <= right; column++) cursors[column] = next;
+    }
+    columns.forEach((column, colIndex) => {
+        column.sort((a, b) => nodeLayouts.get(a.id)!.y - nodeLayouts.get(b.id)!.y);
+        column.forEach((entry, i) => {
+            const layout = nodeLayouts.get(entry.id)!;
             layout.column = columns.length - 1 - colIndex;
             layout.index = i;
-            layout.y = y;
-            y += layout.height;
-            y += MIN_ROW_GAP;
-            y = Math.ceil(y / GRID_SIZE) * GRID_SIZE;
-        }
-        colIndex++;
-    }
+        });
+    });
 
     return {
         columns: columns.reverse(),
