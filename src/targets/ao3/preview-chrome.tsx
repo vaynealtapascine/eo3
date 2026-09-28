@@ -67,6 +67,8 @@ function PostSize({ size }: { size: number }) {
 
 export function Ao3PreviewHeader({
     exportOutput,
+    workTitle,
+    author,
     part,
     posting,
     sizing,
@@ -577,9 +579,11 @@ export function Ao3PreviewHeader({
                                 <div id="work-skin" className="wrapper">
                                     <div id="workskin">
                                         <div className="preface group">
-                                            <h2 className="title heading">Fic Title</h2>
+                                            <h2 className="title heading">
+                                                {workTitle || 'Fic Title'}
+                                            </h2>
                                             <h3 className="byline heading">
-                                                <a rel="author">Author Name</a>
+                                                <a rel="author">{author || 'Author Name'}</a>
                                             </h3>
                                         </div>
 

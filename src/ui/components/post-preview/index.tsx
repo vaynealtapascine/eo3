@@ -210,6 +210,8 @@ function MarkdownRenderer<Config extends JsonValue>({
 
 export function PostPreview({
     renderId,
+    workTitle,
+    author,
     work,
     partId,
     error,
@@ -432,6 +434,8 @@ export function PostPreview({
 
     const previewProps: SiteTargetPreviewProps<any> = {
         plugin,
+        workTitle,
+        author,
         markdown,
         exportOutput,
         part: { index: partIndex, count: work.parts.length, title: part.title },
@@ -511,6 +515,8 @@ export function PostPreview({
 namespace PostPreview {
     export interface Props {
         renderId: string;
+        workTitle: string;
+        author: string;
         work: WorkOutput;
         /** The part to show; falls back to the first part if it no longer exists. */
         partId: string | null;

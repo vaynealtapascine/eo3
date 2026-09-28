@@ -108,6 +108,7 @@ export function serializeV1(doc: Document, format?: string): string {
 
     const docData: Record<string, any> = { version: 1 };
     if (doc.title) docData.title = doc.title;
+    if (doc.author) docData.author = doc.author;
     if (doc.titleInPost) docData.titleInPost = doc.titleInPost;
     const nonEmpty = <T>(map: Record<string, T>, empty: (v: T) => boolean) =>
         Object.fromEntries(Object.entries(map).filter(([, v]) => !empty(v)));
@@ -271,6 +272,7 @@ export function deserializeV1(input: string): Document {
 
     doc.init({
         title: data.title || '',
+        author: typeof data.author === 'string' ? data.author : '',
         titleInPost: data.titleInPost || false,
         modules: docModules,
         parts,

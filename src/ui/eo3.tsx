@@ -343,6 +343,7 @@ function DocumentSettings({ doc }: { doc: Document }) {
                 <textarea
                     className="i-textarea"
                     placeholder="title"
+                    aria-label="Project name"
                     rows={1}
                     maxLength={140}
                     value={doc.title}
@@ -351,6 +352,15 @@ function DocumentSettings({ doc }: { doc: Document }) {
                     }}
                 />
             </div>
+            <label className="i-doc-author">
+                <span>Author</span>
+                <input
+                    type="text"
+                    placeholder="Author Name"
+                    value={doc.author}
+                    onChange={(e) => doc.setAuthor(e.target.value)}
+                />
+            </label>
         </div>
     );
 }

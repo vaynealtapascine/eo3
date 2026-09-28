@@ -54,6 +54,11 @@ TOML sources together; the site derives its gallery from `dist/workskin-examples
 synced the built-in example index. Template content, styles, instructions, and file names
 are unchanged. The landing page copy lives in the dev.vayne.garden repository.
 
+AO3 preview metadata now uses the current project title, and the Author field under the project
+name is saved with the project and supports undo/redo. Both update the preview even with Live
+Update disabled; older projects keep an empty author and show the existing placeholder. These
+fields describe the preview; chapter HTML and Work Skin exports still contain only their content.
+
 | Phase | Scope                                                                                                          | State |
 | ----- | -------------------------------------------------------------------------------------------------------------- | ----- |
 | 1     | Canonical, sorted Work Skin; pinned-hash test; collision check                                                 | Done  |

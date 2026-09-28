@@ -58,6 +58,37 @@ function docWith(build: (doc: Document) => AnyModule[]) {
     return doc;
 }
 
+describe('work metadata', () => {
+    it.each(['toml', 'json', 'pchost'])('saves the project title and author (%s)', (format) => {
+        const doc = new Document();
+        doc.setTitle('A story <&>');
+        doc.setAuthor('Writer <&>');
+        const loaded = deserializeV1(serializeV1(doc, format));
+        expect(loaded.title).toBe(doc.title);
+        expect(loaded.author).toBe(doc.author);
+    });
+
+    it('defaults older projects to an empty author', () => {
+        const loaded = deserializeV1(
+            JSON.stringify({ version: 1, title: 'Old story', modules: [] })
+        );
+        expect(loaded.title).toBe('Old story');
+        expect(loaded.author).toBe('');
+    });
+
+    it('undoes author edits independently of the project title', () => {
+        const doc = new Document();
+        doc.setTitle('A story');
+        doc.setAuthor('Writer');
+        doc.setAuthor('Another writer');
+        doc.undo();
+        expect(doc.author).toBe('');
+        expect(doc.title).toBe('A story');
+        doc.redo();
+        expect(doc.author).toBe('Another writer');
+    });
+});
+
 describe('a single-part document', () => {
     it('evaluates like before: content joined, all CSS as work CSS', async () => {
         const doc = docWith(() => [

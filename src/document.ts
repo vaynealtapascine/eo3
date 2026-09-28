@@ -24,6 +24,7 @@ export enum ChangeType {
     UpdateModule = 'update module',
     RearrangeModules = 'rearrange modules',
     SetTitle = 'set title',
+    SetAuthor = 'set author',
     EditParts = 'edit parts',
 }
 
@@ -48,6 +49,9 @@ type HistoryChangeDesc =
           type: ChangeType.SetTitle;
       }
     | {
+          type: ChangeType.SetAuthor;
+      }
+    | {
           type: ChangeType.EditParts;
       };
 
@@ -58,6 +62,7 @@ function shouldCoalesceChanges(a: HistoryChangeDesc, b: HistoryChangeDesc) {
         if (a.module === b.module) return true;
     }
     if (a.type === ChangeType.SetTitle && a.type === b.type) return true;
+    if (a.type === ChangeType.SetAuthor && a.type === b.type) return true;
     return false;
 }
 
@@ -69,6 +74,8 @@ interface HistoryEntry {
 
 export interface DocumentState {
     title: string;
+    /** Display name for the work's author; absent in older saved projects. */
+    author?: string;
     titleInPost: boolean;
     modules: AnyModule[];
     /** The work's parts in publication order (chapters, posts, pages); never empty. */
@@ -257,6 +264,10 @@ export class Document extends EventTarget {
 
     get title(): string {
         return this.state.title;
+    }
+
+    get author(): string {
+        return this.state.author ?? '';
     }
 
     get titleInPost(): boolean {
@@ -963,6 +974,10 @@ export class Document extends EventTarget {
             },
             { type: ChangeType.EditParts }
         );
+    }
+
+    setAuthor(author: string) {
+        this.pushHistoryState({ ...this.state, author }, { type: ChangeType.SetAuthor });
     }
 
     setTitle(title: string) {

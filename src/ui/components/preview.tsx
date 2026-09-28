@@ -92,6 +92,8 @@ export function Preview({
                 <div className="i-post-preview" ref={previewContainer}>
                     <PostPreview
                         renderId={render.id}
+                        workTitle={document.title}
+                        author={document.author}
                         stale={render.rendering}
                         work={work}
                         partId={shownPart.id}

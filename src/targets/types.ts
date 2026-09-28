@@ -146,6 +146,9 @@ export interface PartPosting {
 
 export interface SiteTargetPreviewProps<Config extends JsonValue> {
     plugin: SiteTargetPlugin<Config>;
+    /** Current project metadata, independent of the last content render. */
+    workTitle: string;
+    author: string;
     markdown: string;
     /**
      * The finished artifacts for the part on screen plus the work-wide ones, keyed by
