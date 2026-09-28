@@ -1,0 +1,35 @@
+version = 1
+title = "AO3 · Social feed"
+sharedStyles = 1
+
+[[modules]]
+plugin = "source.text"
+title = "Feed · duplicate a post or reply"
+data.language = "html"
+data.contents = '''
+<div class="fic-feed">
+  <p class="fic-feed-heading">Following / Posts</p>
+  <div class="fic-feed-post"><p class="fic-feed-name">Person A <span>@person_a · 09:41</span></p><p>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p><p class="fic-feed-metrics">12 replies · 24 reposts · 128 likes</p></div>
+  <div class="fic-feed-post fic-feed-reply"><p class="fic-feed-reply-label">Replying to @person_a</p><p class="fic-feed-name">Person B <span>@person_b · 09:42</span></p><p>Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p><p class="fic-feed-metrics">2 replies · 8 likes</p></div>
+  <div class="fic-feed-post"><p class="fic-feed-name">Person C <span>@person_c · 09:44</span></p><p>Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.</p><blockquote><p><strong>Quoted post · @person_a</strong></p><p>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p></blockquote><p class="fic-feed-metrics">3 reposts · 16 likes</p></div>
+</div>
+'''
+sends = ["output"]
+
+[[modules]]
+plugin = "source.text"
+title = "Social feed workskin · posts and reply nesting"
+data.language = "css"
+data.contents = '''
+#workskin .fic-feed { max-width: 35em; margin: 2em auto; background: #fff; color: #28384b; border: 1px solid #d5dee7; border-radius: 0.8em; font-family: Arial, sans-serif; line-height: 1.55; }
+#workskin .fic-feed-heading { padding: 1em 1.2em; margin: 0; background: #eef3f8; border-bottom: 1px solid #d5dee7; border-radius: 0.8em 0.8em 0 0; font-size: 0.85em; font-weight: bold; }
+#workskin .fic-feed-post { padding: 1.2em; border-bottom: 1px solid #d5dee7; }
+#workskin .fic-feed-post:last-child { border-bottom: 0; }
+#workskin .fic-feed-name { margin-bottom: 0.7em; font-weight: bold; }
+#workskin .fic-feed-name span { display: block; font-size: 0.75em; font-weight: normal; color: #566b80; }
+#workskin .fic-feed-reply { border-left: 3px solid #7f9fb8; margin-left: 1.2em; background: #f8fafc; }
+#workskin .fic-feed-reply-label { color: #566b80; font-size: 0.7em; }
+#workskin .fic-feed-metrics { color: #566b80; font-size: 0.7em; margin-bottom: 0; }
+#workskin .fic-feed blockquote { margin: 1em 0; padding: 0.8em; border: 1px solid #d5dee7; border-radius: 0.5em; font-size: 0.85em; }
+'''
+sends = ["output"]

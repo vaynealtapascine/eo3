@@ -1,0 +1,36 @@
+version = 1
+title = "AO3 · Personal letter"
+sharedStyles = 1
+
+[[modules]]
+plugin = "source.text"
+title = "Letter · edit date, salutation and signature"
+data.language = "html"
+data.contents = '''
+<div class="fic-letter">
+  <p class="fic-letter-label">Correspondence · No. 01</p>
+  <p class="fic-letter-date">01 January<br />Lorem ipsum</p>
+  <p class="fic-letter-salutation">Lorem ipsum,</p>
+  <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+  <p>Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
+  <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.</p>
+  <p class="fic-letter-signature">Lorem ipsum,<br /><span>Person A</span></p>
+  <p class="fic-letter-postscript"><strong>P.S.</strong> Excepteur sint occaecat cupidatat non proident.</p>
+</div>
+'''
+sends = ["output"]
+
+[[modules]]
+plugin = "source.text"
+title = "Letter workskin · paper and handwriting"
+data.language = "css"
+data.contents = '''
+#workskin .fic-letter { max-width: 34em; margin: 2em auto; padding: 1.6em 1.8em; background: #fbf4e5; color: #4a3e31; border: 1px solid #d9cbb0; box-shadow: 0 4px 12px #00000012; font-family: Georgia, serif; line-height: 1.85; }
+#workskin .fic-letter-label { padding-bottom: 1em; border-bottom: 1px solid #d9cbb0; color: #77654b; font-family: Arial, sans-serif; font-size: 0.65em; text-transform: uppercase; letter-spacing: 0.15em; }
+#workskin .fic-letter-date { text-align: right; font-size: 0.8em; }
+#workskin .fic-letter-salutation { margin-top: 1.5em; font-style: italic; font-size: 1.2em; }
+#workskin .fic-letter-signature { text-align: right; margin-top: 1.6em; font-style: italic; }
+#workskin .fic-letter-signature span { font-family: "Segoe Print", "Bradley Hand", cursive; font-size: 1.4em; }
+#workskin .fic-letter-postscript { border-top: 1px solid #d9cbb0; padding-top: 1em; font-size: 0.85em; }
+'''
+sends = ["output"]

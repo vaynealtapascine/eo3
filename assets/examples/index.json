@@ -1,4 +1,60 @@
 {
+    "ao3-text-messages.toml": {
+        "title": "AO3 · Text messages",
+        "description": "Make a two-person exchange feel like texting, with alternating bubbles, timestamps, and delivery status."
+    },
+    "ao3-group-chat.toml": {
+        "title": "AO3 · Group chat",
+        "description": "Give an ensemble scene a channel, speaker accents, quoted replies, and reactions."
+    },
+    "ao3-email.toml": {
+        "title": "AO3 · Email correspondence",
+        "description": "Tell a story through inbox headers, signatures, quoted replies, and an attachment label."
+    },
+    "ao3-letter.toml": {
+        "title": "AO3 · Personal letter",
+        "description": "Set a letter apart from the surrounding narration with warm paper, a dateline, and a handwritten-style signature."
+    },
+    "ao3-journal.toml": {
+        "title": "AO3 · Journal entries",
+        "description": "Mark time passing with dated entries, crossed-out words, and a marginal note."
+    },
+    "ao3-newspaper.toml": {
+        "title": "AO3 · Newspaper clipping",
+        "description": "Deliver worldbuilding as an article, with a masthead, headline, byline, and columns that adapt to the available width."
+    },
+    "ao3-case-file.toml": {
+        "title": "AO3 · Case file",
+        "description": "Frame evidence as a formal dossier, with numbered sections, metadata, and an explicit redaction."
+    },
+    "ao3-social-thread.toml": {
+        "title": "AO3 · Social feed",
+        "description": "Show public reactions through a platform-neutral feed of posts, nested replies, and quoted posts."
+    },
+    "ao3-transcript.toml": {
+        "title": "AO3 · Recording transcript",
+        "description": "Turn an interview, voicemail, or found recording into a readable transcript with timecodes and stage directions."
+    },
+    "ao3-terminal.toml": {
+        "title": "AO3 · Terminal log",
+        "description": "Give computer logs and recovered files a terminal treatment, with readable prompts, timestamps, and warning levels."
+    },
+    "ao3-poetry.toml": {
+        "title": "AO3 · Poetry and lyrics",
+        "description": "Control stanza rhythm and indentation while keeping line breaks in the text itself."
+    },
+    "ao3-chapter-opening.toml": {
+        "title": "AO3 · Chapter opening & scene breaks",
+        "description": "Give a chapter a quiet opening: a title, epigraph, drop cap, and a clear divider between scenes."
+    },
+    "ao3-footnotes.toml": {
+        "title": "AO3 · Linked footnotes",
+        "description": "Let readers follow an annotation and return to the exact reference, without scripts or pop-up windows."
+    },
+    "ao3-collapsible-notes.toml": {
+        "title": "AO3 · Collapsible extras",
+        "description": "Keep optional translations or extra notes close to the prose, in native panels readers can open themselves."
+    },
     "default.toml": {
         "title": "Style Inlining",
         "description": "Inline a CSS stylesheet into HTML."

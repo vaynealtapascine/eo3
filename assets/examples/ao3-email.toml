@@ -1,0 +1,36 @@
+version = 1
+title = "AO3 · Email correspondence"
+sharedStyles = 1
+
+[[modules]]
+plugin = "source.text"
+title = "Email · edit headers and quoted reply"
+data.language = "html"
+data.contents = '''
+<div class="fic-email">
+  <p class="fic-email-folder">Inbox / Correspondence</p>
+  <h3>Lorem ipsum dolor sit amet</h3>
+  <div class="fic-email-headers"><p><strong>From:</strong> Person A &lt;a@example.com&gt;</p><p><strong>To:</strong> Person B &lt;b@example.com&gt;</p><p><strong>Date:</strong> 01 January · 09:41</p><p><strong>Subject:</strong> Re: Lorem ipsum</p></div>
+  <div class="fic-email-body"><p>Lorem ipsum dolor sit amet,</p><p>Consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p><p>Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p><p>Person A</p></div>
+  <blockquote><p class="fic-email-quoted">On 01 January at 09:00, Person B wrote:</p><p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.</p></blockquote>
+  <p class="fic-email-attachment">Attachment: lorem-ipsum.txt · 1 KB</p>
+</div>
+'''
+sends = ["output"]
+
+[[modules]]
+plugin = "source.text"
+title = "Email workskin · headers and thread"
+data.language = "css"
+data.contents = '''
+#workskin .fic-email { max-width: 40em; margin: 2em auto; padding: 1.5em; background: #fff; color: #29363d; border: 1px solid #d5dee2; border-top: 4px solid #426e80; border-radius: 0.3em; font-family: Arial, sans-serif; line-height: 1.6; }
+#workskin .fic-email-folder { color: #526b77; text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.7em; }
+#workskin .fic-email h3 { margin: 0.7em 0 1em; font-family: Georgia, serif; font-size: 1.5em; }
+#workskin .fic-email-headers { padding-bottom: 1em; border-bottom: 1px solid #d5dee2; font-size: 0.8em; overflow-wrap: break-word; }
+#workskin .fic-email-headers p { margin: 0.2em 0; }
+#workskin .fic-email-body { padding-top: 1.2em; }
+#workskin .fic-email blockquote { margin: 1em 0; border-left: 3px solid #b8c8d0; padding: 0.5em 1em; color: #526b77; }
+#workskin .fic-email-quoted { font-size: 0.8em; font-weight: bold; }
+#workskin .fic-email-attachment { display: inline-block; border: 1px solid #d5dee2; border-radius: 0.3em; padding: 0.4em 0.8em; font-size: 0.75em; }
+'''
+sends = ["output"]

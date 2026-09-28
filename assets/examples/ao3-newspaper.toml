@@ -1,0 +1,40 @@
+version = 1
+title = "AO3 · Newspaper clipping"
+sharedStyles = 1
+
+[[modules]]
+plugin = "source.text"
+title = "Article · edit masthead, headline and byline"
+data.language = "html"
+data.contents = '''
+<div class="fic-news">
+  <p class="fic-news-masthead">The Lorem Ipsum</p>
+  <p class="fic-news-edition">Vol. 01 · No. 01 <span>01 January · Morning edition</span></p>
+  <p class="fic-news-section">Local / Correspondence</p>
+  <h3>Lorem ipsum dolor sit amet, consectetur adipiscing elit</h3>
+  <p class="fic-news-deck">Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+  <p class="fic-news-byline">By Person A · Staff writer</p>
+  <div class="fic-news-copy"><p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p><p>Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p><p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.</p><p>Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p></div>
+  <p class="fic-news-footer">Continued on page 02</p>
+</div>
+'''
+sends = ["output"]
+
+[[modules]]
+plugin = "source.text"
+title = "Newspaper workskin · editorial typography"
+data.language = "css"
+data.contents = '''
+#workskin .fic-news { max-width: 43em; margin: 2em auto; padding: 1.5em; background: #f8f4e9; color: #292820; border: 1px solid #d7d0bd; font-family: Georgia, serif; line-height: 1.6; }
+#workskin .fic-news-masthead { text-align: center; font-size: 2.15em; font-weight: bold; letter-spacing: -0.04em; line-height: 1.1; margin: 0 0 0.5em; }
+#workskin .fic-news-edition { border-top: 3px double #292820; border-bottom: 1px solid #292820; padding: 0.6em 0; font-family: Arial, sans-serif; font-size: 0.65em; text-align: center; }
+#workskin .fic-news-edition span { display: block; }
+#workskin .fic-news-section { color: #6d5e49; text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.7em; margin-top: 1.8em; font-family: Arial, sans-serif; }
+#workskin .fic-news h3 { margin: 0.4em 0; font-size: 1.8em; line-height: 1.15; }
+#workskin .fic-news-deck { font-style: italic; font-size: 1.1em; }
+#workskin .fic-news-byline { border-bottom: 1px solid #d7d0bd; padding-bottom: 1em; font-family: Arial, sans-serif; font-size: 0.7em; }
+#workskin .fic-news-copy { column-width: 15em; column-count: 2; column-gap: 1.5em; column-rule: 1px solid #d7d0bd; }
+#workskin .fic-news-copy p { margin-top: 0; }
+#workskin .fic-news-footer { border-top: 1px solid #292820; padding-top: 0.8em; text-align: right; font-size: 0.7em; font-style: italic; }
+'''
+sends = ["output"]

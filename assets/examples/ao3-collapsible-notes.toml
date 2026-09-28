@@ -1,0 +1,34 @@
+version = 1
+title = "AO3 · Collapsible extras"
+sharedStyles = 1
+
+[[modules]]
+plugin = "source.text"
+title = "Extras · edit summary labels and expanded content"
+data.language = "html"
+data.contents = '''
+<div class="fic-extras">
+  <h3>Lorem ipsum</h3>
+  <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+  <p>Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
+  <details class="fic-extras-panel"><summary>Translation / Lorem ipsum</summary><div class="fic-extras-content"><p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.</p></div></details>
+  <details class="fic-extras-panel"><summary>Optional notes / Lorem ipsum</summary><div class="fic-extras-content"><p>Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p><p>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p></div></details>
+  <p>Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+</div>
+'''
+sends = ["output"]
+
+[[modules]]
+plugin = "source.text"
+title = "Extras workskin · native disclosure panels"
+data.language = "css"
+data.contents = '''
+/* Native details/summary stays operable with the workskin hidden. */
+#workskin .fic-extras { max-width: 37em; margin: 2em auto; font-family: Georgia, serif; line-height: 1.8; }
+#workskin .fic-extras h3 { font-size: 1.7em; }
+#workskin .fic-extras-panel { margin: 1.3em 0; border: 1px solid #c7d4cf; border-radius: 0.4em; background: #f4f8f6; color: #2f4b40; }
+#workskin .fic-extras-panel summary { padding: 0.8em 1em; cursor: pointer; font-family: Arial, sans-serif; font-weight: bold; font-size: 0.85em; }
+#workskin .fic-extras-panel summary:focus-visible { outline: 2px solid #426c61; outline-offset: 2px; }
+#workskin .fic-extras-content { padding: 0.8em 1em 0; border-top: 1px solid #c7d4cf; }
+'''
+sends = ["output"]

@@ -10,6 +10,15 @@ update it whenever a step lands (what changed, what's next, anything surprising)
 
 ## Status
 
+2026-09-28 — Added 14 AO3 workskin documents to the built-in example library, using
+standard Lorem ipsum and neutral labels. Every document has editable HTML and shared CSS,
+with distinct `fic-*` classes. Direct `?example=` links open virtual copies alongside saved
+tabs. The build exports previews, chapter fragments, CSS, TOML documents, and an offline ZIP
+for the landing page at `dev.vayne.garden/eo3/about`. `test/examples/workskins.test.ts` checks
+the examples against the existing AO3 processing pipeline, including text, classes, and
+footnote anchors. Upstream `src/ui/examples*` is unchanged. Next: maintain the catalog and
+TOML sources together; the site derives its gallery from `dist/workskin-examples`.
+
 | Phase | Scope                                                                                                          | State |
 | ----- | -------------------------------------------------------------------------------------------------------------- | ----- |
 | 1     | Canonical, sorted Work Skin; pinned-hash test; collision check                                                 | Done  |

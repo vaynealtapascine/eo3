@@ -1,0 +1,38 @@
+version = 1
+title = "AO3 · Terminal log"
+sharedStyles = 1
+
+[[modules]]
+plugin = "source.text"
+title = "Terminal · edit commands and log entries"
+data.language = "html"
+data.contents = '''
+<div class="fic-terminal">
+  <p class="fic-terminal-bar">Terminal / Session 001</p>
+  <p class="fic-terminal-command">user@localhost:~$ cat lorem.txt</p>
+  <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
+  <p>Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+  <p class="fic-terminal-command">user@localhost:~$ tail system.log</p>
+  <p><span class="fic-terminal-time">[09:41:00]</span> INFO · Ut enim ad minim veniam.</p>
+  <p><span class="fic-terminal-time">[09:41:01]</span> INFO · Quis nostrud exercitation ullamco laboris.</p>
+  <p class="fic-terminal-warning"><span class="fic-terminal-time">[09:41:02]</span> WARN · Duis aute irure dolor in reprehenderit.</p>
+  <p class="fic-terminal-command">user@localhost:~$ <span class="fic-terminal-cursor">_</span></p>
+</div>
+'''
+sends = ["output"]
+
+[[modules]]
+plugin = "source.text"
+title = "Terminal workskin · static log, no scripts"
+data.language = "css"
+data.contents = '''
+/* This is a static text log, not an executable terminal. */
+#workskin .fic-terminal { max-width: 40em; margin: 2em auto; padding: 1.2em; background: #202b28; color: #e0e9e3; border: 1px solid #405a4d; border-radius: 0.5em; font-family: "Courier New", monospace; font-size: 0.85em; line-height: 1.7; overflow-wrap: break-word; }
+#workskin .fic-terminal p { margin: 0 0 0.65em; }
+#workskin .fic-terminal-bar { color: #aec6b9; border-bottom: 1px solid #405a4d; padding-bottom: 0.7em; font-size: 0.85em; }
+#workskin .fic-terminal-command { color: #b3dfb5; padding-top: 0.7em; font-weight: bold; }
+#workskin .fic-terminal-time { color: #aec6b9; }
+#workskin .fic-terminal-warning { color: #f0cf92; }
+#workskin .fic-terminal-cursor { background: #b3dfb5; color: #202b28; }
+'''
+sends = ["output"]

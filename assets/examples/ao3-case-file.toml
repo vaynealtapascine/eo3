@@ -1,0 +1,40 @@
+version = 1
+title = "AO3 · Case file"
+sharedStyles = 1
+
+[[modules]]
+plugin = "source.text"
+title = "Case file · edit fields and report"
+data.language = "html"
+data.contents = '''
+<div class="fic-case">
+  <p class="fic-case-classification">Confidential / Fictional sample</p>
+  <h3>Case file <span>No. 0001</span></h3>
+  <dl class="fic-case-fields"><dt>Subject</dt><dd>Person A</dd><dt>Compiled by</dt><dd>Person B</dd><dt>Date</dt><dd>01 January</dd><dt>Status</dt><dd>Open</dd></dl>
+  <h4>01 / Summary</h4><p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+  <h4>02 / Statement</h4><blockquote><p>Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p></blockquote>
+  <h4>03 / Redacted excerpt</h4><p>Duis aute irure dolor <span class="fic-case-redacted">[REDACTED]</span> in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.</p>
+  <p class="fic-case-footer">File 0001 · Page 1 of 1</p>
+</div>
+'''
+sends = ["output"]
+
+[[modules]]
+plugin = "source.text"
+title = "Case file workskin · report and redaction"
+data.language = "css"
+data.contents = '''
+/* A redaction is literal text, never an invisible spoiler or hidden secret. */
+#workskin .fic-case { max-width: 38em; margin: 2em auto; padding: 1.5em; background: #f5f5f1; color: #323a37; border: 1px solid #bfc8c3; font-family: "Courier New", monospace; font-size: 0.9em; line-height: 1.7; }
+#workskin .fic-case-classification { display: inline-block; border: 2px solid #865340; padding: 0.25em 0.6em; color: #865340; font-size: 0.75em; text-transform: uppercase; letter-spacing: 0.08em; }
+#workskin .fic-case h3 { margin: 0.8em 0; font-size: 1.8em; text-transform: uppercase; border-bottom: 2px solid #323a37; padding-bottom: 0.5em; }
+#workskin .fic-case h3 span { display: block; font-size: 0.45em; letter-spacing: 0.15em; margin-top: 0.4em; }
+#workskin .fic-case-fields { border-bottom: 1px solid #bfc8c3; padding-bottom: 1em; }
+#workskin .fic-case-fields dt { font-weight: bold; font-size: 0.8em; text-transform: uppercase; }
+#workskin .fic-case-fields dd { margin: 0 0 0.5em 1em; }
+#workskin .fic-case h4 { background: #e3e8e4; padding: 0.35em 0.6em; font-size: 0.85em; }
+#workskin .fic-case blockquote { border-left: 2px solid #a2afa6; padding-left: 1em; margin: 1em 0; }
+#workskin .fic-case-redacted { background: #323a37; color: #fff; padding: 0.15em 0.4em; font-size: 0.8em; }
+#workskin .fic-case-footer { border-top: 1px solid #bfc8c3; padding-top: 0.8em; font-size: 0.75em; text-align: right; }
+'''
+sends = ["output"]

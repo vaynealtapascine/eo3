@@ -1,0 +1,35 @@
+version = 1
+title = "AO3 · Linked footnotes"
+sharedStyles = 1
+
+[[modules]]
+plugin = "source.text"
+title = "Annotations · keep each anchor name unique"
+data.language = "html"
+data.contents = '''
+<div class="fic-notes">
+  <h3>Lorem ipsum</h3>
+  <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit.<sup><a name="fic-notes-ref-1" href="#fic-notes-note-1" title="Read footnote 1">[1]</a></sup> Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+  <p>Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.<sup><a name="fic-notes-ref-2" href="#fic-notes-note-2" title="Read footnote 2">[2]</a></sup></p>
+  <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.</p>
+  <div class="fic-notes-end"><h4>Notes</h4><ol><li><a name="fic-notes-note-1"></a><p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. <a href="#fic-notes-ref-1" title="Return to reference 1">Return to text [1]</a></p></li><li><a name="fic-notes-note-2"></a><p>Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. <a href="#fic-notes-ref-2" title="Return to reference 2">Return to text [2]</a></p></li></ol></div>
+</div>
+'''
+sends = ["output"]
+
+[[modules]]
+plugin = "source.text"
+title = "Footnote workskin · reading and reference styles"
+data.language = "css"
+data.contents = '''
+/* Rename anchors when repeating this template in the same chapter. */
+#workskin .fic-notes { max-width: 37em; margin: 2em auto; font-family: Georgia, serif; line-height: 1.85; }
+#workskin .fic-notes h3 { font-size: 1.7em; margin-bottom: 1em; }
+#workskin .fic-notes sup { font-family: Arial, sans-serif; font-size: 0.65em; margin-left: 0.2em; }
+#workskin .fic-notes a { color: #426c61; text-decoration: underline; }
+#workskin .fic-notes-end { margin-top: 2em; padding: 1em 1.2em; border-top: 2px solid #a3b5ac; background: #f4f7f4; color: #344c41; font-size: 0.85em; }
+#workskin .fic-notes-end h4 { font-family: Arial, sans-serif; text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.8em; margin: 0.2em 0 1em; }
+#workskin .fic-notes-end ol { padding-left: 1.4em; }
+#workskin .fic-notes-end li { padding-left: 0.3em; margin-bottom: 1em; }
+'''
+sends = ["output"]

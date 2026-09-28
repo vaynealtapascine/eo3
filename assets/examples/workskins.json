@@ -1,0 +1,114 @@
+[
+    {
+        "id": "text-messages",
+        "file": "ao3-text-messages.toml",
+        "title": "Text messages",
+        "category": "Conversations",
+        "description": "Make a two-person exchange feel like texting, with alternating bubbles, timestamps, and delivery status.",
+        "tip": "Duplicate an incoming or outgoing block for each message. Keep the sender labels even when the colors differ."
+    },
+    {
+        "id": "group-chat",
+        "file": "ao3-group-chat.toml",
+        "title": "Group chat",
+        "category": "Conversations",
+        "description": "Give an ensemble scene a channel, speaker accents, quoted replies, and reactions.",
+        "tip": "Add one entry per message. Speaker names and quoted text carry the conversation when the skin is hidden."
+    },
+    {
+        "id": "email",
+        "file": "ao3-email.toml",
+        "title": "Email correspondence",
+        "category": "Conversations",
+        "description": "Tell a story through inbox headers, signatures, quoted replies, and an attachment label.",
+        "tip": "Edit the From, To, Date, and Subject fields. The attachment is a text label; link a real file separately if needed."
+    },
+    {
+        "id": "letter",
+        "file": "ao3-letter.toml",
+        "title": "Personal letter",
+        "category": "Documents",
+        "description": "Set a letter apart from the surrounding narration with warm paper, a dateline, and a handwritten-style signature.",
+        "tip": "Replace the salutation, body, and signature. The handwriting uses fonts on the reader's device and falls back to cursive."
+    },
+    {
+        "id": "journal",
+        "file": "ao3-journal.toml",
+        "title": "Journal entries",
+        "category": "Documents",
+        "description": "Mark time passing with dated entries, crossed-out words, and a marginal note.",
+        "tip": "Duplicate an entry for each date. Use crossed-out text only where the original words are meant to remain readable."
+    },
+    {
+        "id": "newspaper",
+        "file": "ao3-newspaper.toml",
+        "title": "Newspaper clipping",
+        "category": "Documents",
+        "description": "Deliver worldbuilding as an article, with a masthead, headline, byline, and columns that adapt to the available width.",
+        "tip": "Change the publication and headline. Column width lets the article fall back to one column on narrow screens."
+    },
+    {
+        "id": "case-file",
+        "file": "ao3-case-file.toml",
+        "title": "Case file",
+        "category": "Documents",
+        "description": "Frame evidence as a formal dossier, with numbered sections, metadata, and an explicit redaction.",
+        "tip": "Replace the report fields and statements. [REDACTED] is literal text: no secret content is concealed by the CSS."
+    },
+    {
+        "id": "social-thread",
+        "file": "ao3-social-thread.toml",
+        "title": "Social feed",
+        "category": "Conversations",
+        "description": "Show public reactions through a platform-neutral feed of posts, nested replies, and quoted posts.",
+        "tip": "Duplicate a post or reply block and edit the handles. Counts are part of the story text, not working social controls."
+    },
+    {
+        "id": "transcript",
+        "file": "ao3-transcript.toml",
+        "title": "Recording transcript",
+        "category": "Conversations",
+        "description": "Turn an interview, voicemail, or found recording into a readable transcript with timecodes and stage directions.",
+        "tip": "Keep each timecode and speaker together. Put sounds, pauses, and missing audio in literal bracketed descriptions."
+    },
+    {
+        "id": "terminal",
+        "file": "ao3-terminal.toml",
+        "title": "Terminal log",
+        "category": "Documents",
+        "description": "Give computer logs and recovered files a terminal treatment, with readable prompts, timestamps, and warning levels.",
+        "tip": "Edit the static text; commands do not execute. Keep INFO and WARN labels so color never carries the whole meaning."
+    },
+    {
+        "id": "poetry",
+        "file": "ao3-poetry.toml",
+        "title": "Poetry and lyrics",
+        "category": "Reading",
+        "description": "Control stanza rhythm and indentation while keeping line breaks in the text itself.",
+        "tip": "Use a new paragraph for a stanza and a line break for a line. This sample uses Lorem ipsum, not quoted lyrics."
+    },
+    {
+        "id": "chapter-opening",
+        "file": "ao3-chapter-opening.toml",
+        "title": "Chapter opening & scene breaks",
+        "category": "Reading",
+        "description": "Give a chapter a quiet opening: a title, epigraph, drop cap, and a clear divider between scenes.",
+        "tip": "The initial is real text, not generated CSS content. The scene break uses a semantic horizontal rule."
+    },
+    {
+        "id": "footnotes",
+        "file": "ao3-footnotes.toml",
+        "title": "Linked footnotes",
+        "category": "Reading",
+        "description": "Let readers follow an annotation and return to the exact reference, without scripts or pop-up windows.",
+        "tip": "Keep each reference and note anchor paired. Give anchors unique names when repeating the template in one chapter."
+    },
+    {
+        "id": "collapsible-notes",
+        "file": "ao3-collapsible-notes.toml",
+        "title": "Collapsible extras",
+        "category": "Reading",
+        "description": "Keep optional translations or extra notes close to the prose, in native panels readers can open themselves.",
+        "tip": "Keep essential story content outside the panels. Open and close them with a click, Enter, or Space; no script is needed."
+    }
+]

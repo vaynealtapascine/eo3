@@ -1,0 +1,37 @@
+version = 1
+title = "AO3 · Recording transcript"
+sharedStyles = 1
+
+[[modules]]
+plugin = "source.text"
+title = "Transcript · edit speakers and timecodes"
+data.language = "html"
+data.contents = '''
+<div class="fic-transcript">
+  <p class="fic-transcript-label">Recording 001 / Transcript</p>
+  <h3>Lorem ipsum</h3>
+  <p class="fic-transcript-meta">01 January · 00:00–01:12<br />Speakers: Person A, Person B</p>
+  <p class="fic-transcript-direction">[Recording begins]</p>
+  <div class="fic-transcript-turn"><p class="fic-transcript-cue">00:00 · Person A</p><p>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p></div>
+  <div class="fic-transcript-turn"><p class="fic-transcript-cue">00:18 · Person B</p><p>Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p></div>
+  <p class="fic-transcript-direction">[Pause · 00:34–00:42]</p>
+  <div class="fic-transcript-turn"><p class="fic-transcript-cue">00:42 · Person A</p><p>Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p></div>
+  <p class="fic-transcript-direction">[Recording ends · 01:12]</p>
+</div>
+'''
+sends = ["output"]
+
+[[modules]]
+plugin = "source.text"
+title = "Transcript workskin · cue and dialogue hierarchy"
+data.language = "css"
+data.contents = '''
+#workskin .fic-transcript { max-width: 38em; margin: 2em auto; padding: 1.5em; border: 1px solid #dad5ca; background: #faf9f5; color: #373933; line-height: 1.65; }
+#workskin .fic-transcript-label { font-family: "Courier New", monospace; font-size: 0.7em; letter-spacing: 0.06em; text-transform: uppercase; color: #666c5f; }
+#workskin .fic-transcript h3 { font-family: Georgia, serif; font-size: 1.7em; margin: 0.5em 0; }
+#workskin .fic-transcript-meta { font-family: Arial, sans-serif; font-size: 0.75em; padding-bottom: 1em; border-bottom: 2px solid #6e7c62; }
+#workskin .fic-transcript-turn { margin: 1.2em 0; padding-left: 1em; border-left: 2px solid #dad5ca; }
+#workskin .fic-transcript-cue { font-family: "Courier New", monospace; font-size: 0.75em; color: #526344; font-weight: bold; margin-bottom: 0.3em; }
+#workskin .fic-transcript-direction { font-style: italic; text-align: center; font-size: 0.8em; color: #666c5f; }
+'''
+sends = ["output"]

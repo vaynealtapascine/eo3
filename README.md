@@ -2,6 +2,23 @@
 A graph-based HTML generator to make fancy AO3 fics easier.
 Built upon the work of cpsdqs on [prechoster](https://github.com/cpsdqs/prechoster). Eggbug forever!
 
+[Open EO3](https://dev.vayne.garden/eo3/) · [About and workskin examples](https://dev.vayne.garden/eo3/about)
+
+## AO3 workskin examples
+
+The example library includes 14 ready-to-edit AO3 documents: text messages, group chat,
+email, a personal letter, a journal, a newspaper, a case file, a social feed, a recording
+transcript, a terminal log, verse, a chapter opening, linked footnotes, and collapsible notes.
+They use standard Lorem ipsum and neutral labels, with no generated story content or external
+images or fonts. Each has an HTML module and a shared CSS module; open one from **Examples and
+Templates**, or link directly with `?example=ao3-letter.toml`.
+
+The [gallery](https://dev.vayne.garden/eo3/about#examples) previews the actual documents,
+compares their styled and unstyled appearance, and offers a ZIP of documents, chapter HTML,
+CSS, and a usage guide. `npm run build` packages those files under `dist/workskin-examples`.
+Authored TOML files in `assets/examples` are the source of truth; `workskins.json` holds the
+gallery descriptions. Run `node scripts/export-workskin-examples.mjs` after editing them.
+
 ## Overview
 Documents are a directed graph of modules.
 Every module is JSON data associated with a plugin implementation.

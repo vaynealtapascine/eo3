@@ -1,0 +1,31 @@
+version = 1
+title = "AO3 · Journal entries"
+sharedStyles = 1
+
+[[modules]]
+plugin = "source.text"
+title = "Journal · duplicate an entry for another day"
+data.language = "html"
+data.contents = '''
+<div class="fic-journal">
+  <p class="fic-journal-label">Private journal</p>
+  <div class="fic-journal-entry"><h3>01 January <span>09:41 · Entry 01</span></h3><p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p><p>Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p><p><s>Duis aute irure dolor.</s> In reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.</p></div>
+  <div class="fic-journal-entry"><h3>02 January <span>22:14 · Entry 02</span></h3><p>Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p><p class="fic-journal-margin">Lorem ipsum dolor sit amet.</p></div>
+</div>
+'''
+sends = ["output"]
+
+[[modules]]
+plugin = "source.text"
+title = "Journal workskin · dates and marginal note"
+data.language = "css"
+data.contents = '''
+#workskin .fic-journal { max-width: 35em; margin: 2em auto; padding: 1.5em; background: #faf7ef; color: #3e4438; border: 1px solid #d8ddce; font-family: Georgia, serif; line-height: 1.85; }
+#workskin .fic-journal-label { text-align: right; color: #56674d; font-size: 0.7em; font-family: Arial, sans-serif; text-transform: uppercase; letter-spacing: 0.13em; }
+#workskin .fic-journal-entry { border-left: 2px solid #b5a0a0; padding-left: 1em; margin-top: 1.5em; }
+#workskin .fic-journal h3 { border-bottom: 1px solid #d8ddce; padding-bottom: 0.6em; font-style: italic; font-size: 1.3em; }
+#workskin .fic-journal h3 span { display: block; color: #56674d; font-size: 0.55em; margin-top: 0.3em; font-style: normal; font-family: Arial, sans-serif; letter-spacing: 0.08em; }
+#workskin .fic-journal s { color: #7b655d; }
+#workskin .fic-journal-margin { margin-left: 1em; padding-left: 0.8em; border-left: 2px solid #7b8971; font-style: italic; font-size: 0.9em; }
+'''
+sends = ["output"]

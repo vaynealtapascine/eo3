@@ -1,0 +1,39 @@
+version = 1
+title = "AO3 · Text messages"
+sharedStyles = 1
+
+[[modules]]
+plugin = "source.text"
+title = "Messages · edit names and text"
+data.language = "html"
+data.contents = '''
+<div class="fic-message">
+  <p class="fic-message-heading">Messages <span>Person A &amp; Person B</span></p>
+  <p class="fic-message-date">Monday · 09:41</p>
+  <div class="fic-message-in"><p class="fic-message-who">Person A · 09:41</p><p>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p></div>
+  <div class="fic-message-out"><p class="fic-message-who">Person B · 09:42</p><p>Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p></div>
+  <div class="fic-message-in"><p class="fic-message-who">Person A · 09:43</p><p>Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p></div>
+  <div class="fic-message-out"><p class="fic-message-who">Person B · 09:44</p><p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.</p></div>
+  <p class="fic-message-status">Delivered · 09:44</p>
+</div>
+'''
+sends = ["output"]
+
+[[modules]]
+plugin = "source.text"
+title = "Message workskin · colors and spacing"
+data.language = "css"
+data.contents = '''
+/* Keep the sender and time in the HTML: alignment alone is not enough. */
+#workskin .fic-message { max-width: 30em; margin: 2em auto; padding: 1.3em; border: 1px solid #d9e1df; border-radius: 1.2em; background: #f8faf9; color: #243a34; font-family: Arial, sans-serif; line-height: 1.5; }
+#workskin .fic-message p { margin: 0 0 0.5em; }
+#workskin .fic-message-heading { padding-bottom: 1em; border-bottom: 1px solid #d9e1df; font-size: 0.85em; font-weight: bold; }
+#workskin .fic-message-heading span { display: block; margin-top: 0.25em; font-size: 1.3em; }
+#workskin .fic-message-date { text-align: center; color: #576b64; font-size: 0.75em; padding: 1em 0; }
+#workskin .fic-message-in, #workskin .fic-message-out { max-width: 85%; padding: 0.8em 1em; margin-bottom: 1em; border-radius: 1em; }
+#workskin .fic-message-in { margin-right: auto; background: #e6ece9; border-bottom-left-radius: 0.2em; }
+#workskin .fic-message-out { margin-left: auto; background: #245f50; color: #fff; border-bottom-right-radius: 0.2em; }
+#workskin .fic-message-who { font-size: 0.72em; font-weight: bold; }
+#workskin .fic-message-status { text-align: right; color: #576b64; font-size: 0.75em; }
+'''
+sends = ["output"]

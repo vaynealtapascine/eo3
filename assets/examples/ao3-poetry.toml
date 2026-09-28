@@ -1,0 +1,33 @@
+version = 1
+title = "AO3 · Poetry and lyrics"
+sharedStyles = 1
+
+[[modules]]
+plugin = "source.text"
+title = "Verse · keep line breaks in the HTML"
+data.language = "html"
+data.contents = '''
+<div class="fic-verse">
+  <p class="fic-verse-label">I / Lorem ipsum</p>
+  <h3>Lorem ipsum</h3>
+  <p class="fic-verse-stanza">Lorem ipsum dolor sit amet,<br />consectetur adipiscing elit,<br /><span class="fic-verse-indent">sed do eiusmod tempor</span><br />incididunt ut labore<br /><span class="fic-verse-indent">et dolore magna aliqua.</span></p>
+  <p class="fic-verse-stanza">Ut enim ad minim veniam,<br /><span class="fic-verse-indent">quis nostrud exercitation</span><br />ullamco laboris nisi ut aliquip<br />ex ea commodo consequat.</p>
+  <p class="fic-verse-stanza">Duis aute irure dolor<br />in reprehenderit in voluptate<br /><span class="fic-verse-indent">velit esse cillum dolore</span><br />eu fugiat nulla pariatur.</p>
+  <p class="fic-verse-credit">— Lorem ipsum · Sample text</p>
+</div>
+'''
+sends = ["output"]
+
+[[modules]]
+plugin = "source.text"
+title = "Verse workskin · stanza rhythm and indentation"
+data.language = "css"
+data.contents = '''
+#workskin .fic-verse { max-width: 30em; margin: 2em auto; padding: 1.5em 1em; font-family: Georgia, serif; line-height: 1.9; }
+#workskin .fic-verse-label { color: #756454; font-family: Arial, sans-serif; font-size: 0.65em; text-transform: uppercase; letter-spacing: 0.15em; border-bottom: 1px solid #c4b5a3; padding-bottom: 1em; }
+#workskin .fic-verse h3 { font-size: 1.8em; font-style: italic; margin-bottom: 1em; }
+#workskin .fic-verse-stanza { margin-bottom: 1.8em; }
+#workskin .fic-verse-indent { padding-left: 1.4em; }
+#workskin .fic-verse-credit { margin-top: 2em; font-size: 0.8em; font-style: italic; }
+'''
+sends = ["output"]

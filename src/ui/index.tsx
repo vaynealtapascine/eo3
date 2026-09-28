@@ -27,6 +27,7 @@ import { shouldReduceMotion } from '../uikit/animation';
 import { DirPopover } from '../uikit/dir-popover';
 import { Button } from '../uikit/button';
 import { showAlert, showConfirm } from './dialogs';
+import { exampleFromSearch } from '../storage/example-link';
 
 let lastEo3Init = 0;
 try {
@@ -146,7 +147,13 @@ export default function ApplicationFrame({
         storage
             .getOpenDocuments()
             .then(async (docs) => {
-                if (!docs.length) {
+                const example = exampleFromSearch(location.search);
+                if (example && !new URLSearchParams(location.search).has('open-url')) {
+                    // A gallery link opens a virtual copy; existing work stays in its tabs.
+                    setOpenDocs(docs);
+                    setCurrentTab(null);
+                    openInitialExample(example);
+                } else if (!docs.length) {
                     if (await storage.hasAnySavedDocuments()) {
                         // user has documents already
                         setSidebarOpen(true);
