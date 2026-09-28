@@ -1,15 +1,15 @@
 {
     "ao3-text-messages.toml": {
         "title": "AO3 · Text messages",
-        "description": "Make a two-person exchange feel like texting, with alternating bubbles, timestamps, and delivery status."
+        "description": "Format a two-person text exchange with alternating bubbles, timestamps, and delivery status."
     },
     "ao3-group-chat.toml": {
         "title": "AO3 · Group chat",
-        "description": "Give an ensemble scene a channel, speaker accents, quoted replies, and reactions."
+        "description": "Format a group conversation with a channel heading, speaker accents, quoted replies, and reactions."
     },
     "ao3-email.toml": {
         "title": "AO3 · Email correspondence",
-        "description": "Tell a story through inbox headers, signatures, quoted replies, and an attachment label."
+        "description": "Format email correspondence with inbox headers, signatures, quoted replies, and an attachment label."
     },
     "ao3-letter.toml": {
         "title": "AO3 · Personal letter",
@@ -37,7 +37,7 @@
     },
     "ao3-terminal.toml": {
         "title": "AO3 · Terminal log",
-        "description": "Give computer logs and recovered files a terminal treatment, with readable prompts, timestamps, and warning levels."
+        "description": "Format computer logs and recovered files with prompts, timestamps, and warning levels."
     },
     "ao3-poetry.toml": {
         "title": "AO3 · Poetry and lyrics",
@@ -45,7 +45,7 @@
     },
     "ao3-chapter-opening.toml": {
         "title": "AO3 · Chapter opening & scene breaks",
-        "description": "Give a chapter a quiet opening: a title, epigraph, drop cap, and a clear divider between scenes."
+        "description": "Format a chapter opening with a title, epigraph, drop cap, and a divider between scenes."
     },
     "ao3-footnotes.toml": {
         "title": "AO3 · Linked footnotes",

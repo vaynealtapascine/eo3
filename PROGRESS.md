@@ -19,6 +19,10 @@ the examples against the existing AO3 processing pipeline, including text, class
 footnote anchors. Upstream `src/ui/examples*` is unchanged. Next: maintain the catalog and
 TOML sources together; the site derives its gallery from `dist/workskin-examples`.
 
+2026-09-28 — Revised five gallery descriptions with the requested unslop skill and
+synced the built-in example index. Template content, styles, instructions, and file names
+are unchanged. The landing page copy lives in the dev.vayne.garden repository.
+
 | Phase | Scope                                                                                                          | State |
 | ----- | -------------------------------------------------------------------------------------------------------------- | ----- |
 | 1     | Canonical, sorted Work Skin; pinned-hash test; collision check                                                 | Done  |

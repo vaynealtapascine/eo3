@@ -4,7 +4,7 @@
         "file": "ao3-text-messages.toml",
         "title": "Text messages",
         "category": "Conversations",
-        "description": "Make a two-person exchange feel like texting, with alternating bubbles, timestamps, and delivery status.",
+        "description": "Format a two-person text exchange with alternating bubbles, timestamps, and delivery status.",
         "tip": "Duplicate an incoming or outgoing block for each message. Keep the sender labels even when the colors differ."
     },
     {
@@ -12,7 +12,7 @@
         "file": "ao3-group-chat.toml",
         "title": "Group chat",
         "category": "Conversations",
-        "description": "Give an ensemble scene a channel, speaker accents, quoted replies, and reactions.",
+        "description": "Format a group conversation with a channel heading, speaker accents, quoted replies, and reactions.",
         "tip": "Add one entry per message. Speaker names and quoted text carry the conversation when the skin is hidden."
     },
     {
@@ -20,7 +20,7 @@
         "file": "ao3-email.toml",
         "title": "Email correspondence",
         "category": "Conversations",
-        "description": "Tell a story through inbox headers, signatures, quoted replies, and an attachment label.",
+        "description": "Format email correspondence with inbox headers, signatures, quoted replies, and an attachment label.",
         "tip": "Edit the From, To, Date, and Subject fields. The attachment is a text label; link a real file separately if needed."
     },
     {
@@ -76,7 +76,7 @@
         "file": "ao3-terminal.toml",
         "title": "Terminal log",
         "category": "Documents",
-        "description": "Give computer logs and recovered files a terminal treatment, with readable prompts, timestamps, and warning levels.",
+        "description": "Format computer logs and recovered files with prompts, timestamps, and warning levels.",
         "tip": "Edit the static text; commands do not execute. Keep INFO and WARN labels so color never carries the whole meaning."
     },
     {
@@ -92,7 +92,7 @@
         "file": "ao3-chapter-opening.toml",
         "title": "Chapter opening & scene breaks",
         "category": "Reading",
-        "description": "Give a chapter a quiet opening: a title, epigraph, drop cap, and a clear divider between scenes.",
+        "description": "Format a chapter opening with a title, epigraph, drop cap, and a divider between scenes.",
         "tip": "The initial is real text, not generated CSS content. The scene break uses a semantic horizontal rule."
     },
     {
