@@ -140,12 +140,16 @@ async function bundleModules(modules, main, mainId, version) {
         ],
     });
 
-    const generated = await bundle.generate({
-        format: 'iife',
-        name: mainId,
-        exports: 'named',
-    });
-    return generated.output[0].code;
+    try {
+        const generated = await bundle.generate({
+            format: 'iife',
+            name: mainId,
+            exports: 'named',
+        });
+        return generated.output[0].code;
+    } finally {
+        await bundle.close();
+    }
 }
 
 addEventListener('message', (e) => {
@@ -160,3 +164,6 @@ addEventListener('message', (e) => {
             });
     }
 });
+
+// All compiler imports are loaded and the message handler is now installed.
+postMessage({ type: 'ready' });

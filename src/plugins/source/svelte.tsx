@@ -14,10 +14,8 @@ import { SvelteComponentData } from './svelte-component';
 import { EditorView } from '@codemirror/view';
 import { html } from '@codemirror/lang-html';
 import base64js from 'base64-js';
-
-type SvelteModules = Map<string, { contents: string }>;
-
-export type SvelteVersion = 'legacy' | 'v4' | 'v5';
+import { SvelteBundler, SvelteModules, SvelteVersion } from './svelte-bundler';
+export type { SvelteVersion } from './svelte-bundler';
 
 const SVELTE_VERSION_LABELS: Record<SvelteVersion, string> = {
     legacy: 'Svelte 3.55.1 (Legacy)',
@@ -25,61 +23,13 @@ const SVELTE_VERSION_LABELS: Record<SvelteVersion, string> = {
     v5: 'Svelte 5',
 };
 
-let worker: Worker | null = null;
-
-/** Bundles Svelte modules into one Javascript file. */
-function bundleModules(
-    modules: SvelteModules,
-    main: string,
-    mainId: string,
-    version: SvelteVersion
-): Promise<string> {
-    return new Promise((resolve, reject) => {
-        if (!worker) {
-            worker = new Worker(new URL('./svelte-worker.js', import.meta.url), {
-                name: 'svelte-worker',
-                type: 'module',
-            });
-        }
-
-        let didReturn = false;
-        const messageId = Math.random().toString(36);
-
-        const onMessage = (e: MessageEvent) => {
-            if (e.data.id === messageId) {
-                if (e.data.success) {
-                    resolve(e.data.result as string);
-                } else {
-                    reject(new Error(e.data.error));
-                }
-                didReturn = true;
-                worker!.removeEventListener('message', onMessage);
-            }
-        };
-        worker.addEventListener('message', onMessage);
-        worker.addEventListener('error', () => {
-            reject(new Error('Error in svelte worker'));
-            worker?.terminate();
-            worker = null;
-        });
-
-        worker.postMessage({
-            id: messageId,
-            type: 'bundle',
-            modules,
-            main,
-            mainId,
-            version,
-        });
-
-        setTimeout(() => {
-            if (didReturn) return;
-            reject(new Error('Svelte: bundler timed out'));
-            worker?.terminate();
-            worker = null;
-        }, 5000);
-    });
-}
+const bundler = new SvelteBundler(
+    () =>
+        new Worker(new URL('./svelte-worker.js', import.meta.url), {
+            name: 'svelte-worker',
+            type: 'module',
+        })
+);
 
 export type SveltePluginData = {
     contents: string;
@@ -220,7 +170,7 @@ export default {
         userData.imports = imports;
 
         const version = svelteVersionOf(data);
-        let script = await bundleModules(
+        let script = await bundler.bundle(
             modules,
             componentName + '.svelte',
             componentName,

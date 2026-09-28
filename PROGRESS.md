@@ -10,6 +10,14 @@ update it whenever a step lands (what changed, what's next, anything surprising)
 
 ## Status
 
+2026-09-28 — Svelte bundling now waits for an explicit worker-ready message before
+posting work. Startup gets 30 seconds; compilation gets 15 seconds, with two retries
+on timeouts. Failed worker generations retire all their pending requests and timers
+without touching a replacement; compiler errors and worker crashes fail immediately.
+Rollup bundles close after generation. Tests cover slow startup, retry limits, stale
+callbacks, concurrent requests and error cleanup. A browser check in the site repo
+reproduces the old five-second cold-start failure and exercises automatic recovery.
+
 2026-09-28 — The landing page now follows AO3 and EO3's visual language, using the
 existing EO3 logo and editor typeface. The exported writing lab uses the editor's
 dark toolbar, gray controls and burgundy accents, with a matching dark theme.
