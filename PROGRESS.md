@@ -10,6 +10,11 @@ update it whenever a step lands (what changed, what's next, anything surprising)
 
 ## Status
 
+2026-09-28 — The landing page now follows AO3 and EO3's visual language, using the
+existing EO3 logo and editor typeface. The exported writing lab uses the editor's
+dark toolbar, gray controls and burgundy accents, with a matching dark theme.
+The example workskins themselves retain their distinct appearances.
+
 2026-09-28 — Workskin examples now use automatic graph positions, including their
 downloadable groups. Layout keeps writing inputs to the left of the whole renderer,
 reserves expanded group frames across every column, and places styles below the HTML
