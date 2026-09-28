@@ -652,7 +652,7 @@ export function Ao3PreviewHeader({
                             </div>
                             <div id="feedback" className="feedback">
                                 <h3 className="landmark heading">Actions</h3>
-                                <div className="post-footer-simulate" style={{ float: 'right' }}>
+                                <div className="post-footer-simulate">
                                     <PostSize size={html.length} />
                                     <SplitPrompt
                                         sizing={sizing}

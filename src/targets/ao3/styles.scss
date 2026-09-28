@@ -5031,12 +5031,44 @@ IN REVIEW: this block is very old (2008), a bit wonky and has an unexpected effe
     }
 
     .post-footer-simulate {
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        width: 100%;
+        margin-bottom: 0.5em;
         border-bottom-left-radius: inherit;
         border-bottom-right-radius: inherit;
 
         --size-meter-fg: 0 0 0;
 
+        .posted-status {
+            flex: 1 0 100%;
+            min-width: 0;
+            margin: 0;
+            justify-content: flex-end;
+
+            .i-note,
+            .skin-cleanup {
+                flex-basis: 100%;
+                min-width: 0;
+                max-width: 100%;
+                overflow-wrap: anywhere;
+                line-height: 1.5;
+            }
+        }
+
+        button {
+            flex-shrink: 0;
+            box-sizing: border-box;
+            max-width: 100%;
+            height: auto;
+            white-space: normal;
+            overflow-wrap: anywhere;
+        }
+
         .post-size-meter {
+            min-width: 0;
+            overflow-wrap: anywhere;
+            line-height: 1.5;
             padding-top: 2px;
             --size-of-max: 0;
             color: color-mix(
