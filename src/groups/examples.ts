@@ -1,4 +1,32 @@
 import type { GroupFile } from '../storage/group-file';
+import { parse } from '@ltd/j-toml';
+import catalog from '../../assets/examples/workskins.json';
+
+const workskinSources = import.meta.glob('../../assets/examples/ao3-*.toml', {
+    query: '?raw',
+    import: 'default',
+    eager: true,
+}) as Record<string, string>;
+
+function workskinExample(file: string, title: string): GroupFile {
+    const doc = parse(workskinSources['../../assets/examples/' + file], {
+        joiner: '\n',
+        bigint: false,
+    }) as any;
+    return {
+        eo3: 'group',
+        version: 1,
+        title: 'AO3 · ' + title,
+        modules: doc.modules.map((module: any) => ({
+            plugin: module.plugin,
+            title: module.title,
+            data: module.data,
+            sends: (module.sends ?? []).filter((target: unknown) => typeof target === 'number'),
+            namedSends: module.namedSends,
+            position: module.graphPos,
+        })),
+    };
+}
 
 /**
  * Example groups offered in "add node" → Groups. They are ordinary group files, imported the
@@ -28,6 +56,7 @@ function example(title: string, html: string, css: string): GroupFile {
 }
 
 export const EXAMPLE_GROUPS: GroupFile[] = [
+    ...catalog.map((item) => workskinExample(item.file, item.title)),
     example(
         'Text message thread',
         '<div class="fx-text-thread"><p><strong>Alex</strong> <span>Are you there?</span></p><p><strong>Sam</strong> <span>On my way.</span></p></div>',

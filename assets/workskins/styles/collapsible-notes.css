@@ -1,0 +1,32 @@
+/* Native details/summary stays operable with the workskin hidden. */
+#workskin .fic-extras {
+    max-width: 37em;
+    margin: 2em auto;
+    font-family: Georgia, serif;
+    line-height: 1.8;
+}
+#workskin .fic-extras h3 {
+    font-size: 1.7em;
+}
+#workskin .fic-extras-panel {
+    margin: 1.3em 0;
+    border: 1px solid #c7d4cf;
+    border-radius: 0.4em;
+    background: #f4f8f6;
+    color: #2f4b40;
+}
+#workskin .fic-extras-panel summary {
+    padding: 0.8em 1em;
+    cursor: pointer;
+    font-family: Arial, sans-serif;
+    font-weight: bold;
+    font-size: 0.85em;
+}
+#workskin .fic-extras-panel summary:focus-visible {
+    outline: 2px solid #426c61;
+    outline-offset: 2px;
+}
+#workskin .fic-extras-content {
+    padding: 0.8em 1em 0;
+    border-top: 1px solid #c7d4cf;
+}

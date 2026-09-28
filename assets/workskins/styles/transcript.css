@@ -1,0 +1,45 @@
+#workskin .fic-transcript {
+    max-width: 38em;
+    margin: 2em auto;
+    padding: 1.5em;
+    border: 1px solid #dad5ca;
+    background: #faf9f5;
+    color: #373933;
+    line-height: 1.65;
+}
+#workskin .fic-transcript-label {
+    font-family: 'Courier New', monospace;
+    font-size: 0.7em;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #666c5f;
+}
+#workskin .fic-transcript h3 {
+    font-family: Georgia, serif;
+    font-size: 1.7em;
+    margin: 0.5em 0;
+}
+#workskin .fic-transcript-meta {
+    font-family: Arial, sans-serif;
+    font-size: 0.75em;
+    padding-bottom: 1em;
+    border-bottom: 2px solid #6e7c62;
+}
+#workskin .fic-transcript-turn {
+    margin: 1.2em 0;
+    padding-left: 1em;
+    border-left: 2px solid #dad5ca;
+}
+#workskin .fic-transcript-cue {
+    font-family: 'Courier New', monospace;
+    font-size: 0.75em;
+    color: #526344;
+    font-weight: bold;
+    margin-bottom: 0.3em;
+}
+#workskin .fic-transcript-direction {
+    font-style: italic;
+    text-align: center;
+    font-size: 0.8em;
+    color: #666c5f;
+}

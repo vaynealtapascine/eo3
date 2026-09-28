@@ -1,0 +1,42 @@
+/* Rename anchors when repeating this template in the same chapter. */
+#workskin .fic-notes {
+    max-width: 37em;
+    margin: 2em auto;
+    font-family: Georgia, serif;
+    line-height: 1.85;
+}
+#workskin .fic-notes h3 {
+    font-size: 1.7em;
+    margin-bottom: 1em;
+}
+#workskin .fic-notes sup {
+    font-family: Arial, sans-serif;
+    font-size: 0.65em;
+    margin-left: 0.2em;
+}
+#workskin .fic-notes a {
+    color: #426c61;
+    text-decoration: underline;
+}
+#workskin .fic-notes-end {
+    margin-top: 2em;
+    padding: 1em 1.2em;
+    border-top: 2px solid #a3b5ac;
+    background: #f4f7f4;
+    color: #344c41;
+    font-size: 0.85em;
+}
+#workskin .fic-notes-end h4 {
+    font-family: Arial, sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-size: 0.8em;
+    margin: 0.2em 0 1em;
+}
+#workskin .fic-notes-end ol {
+    padding-left: 1.4em;
+}
+#workskin .fic-notes-end li {
+    padding-left: 0.3em;
+    margin-bottom: 1em;
+}

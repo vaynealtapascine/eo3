@@ -422,7 +422,13 @@ function AddModule({
 
 class ModuleItem extends PureComponent<ModuleItem.Props> {
     state = {
-        collapsed: false,
+        // Reusable renderer groups start folded, leaving the writing input visible.
+        collapsed:
+            this.props.document.groups.some((group) =>
+                group.moduleIds.includes(this.props.module.id)
+            ) &&
+            (this.props.module.plugin.id.startsWith('source.svelte') ||
+                (this.props.module.data as { language?: string }).language === 'javascript'),
     };
     node = createRef<HTMLDivElement>();
     header = createRef<HTMLDivElement>();

@@ -4,11 +4,22 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from '@ltd/j-toml';
+import { renderWorkskinDocument } from './render-workskin-document.mjs';
+import { workskinGroup } from './workskin-documents.mjs';
+import { examples } from '../assets/workskins/examples.mjs';
+import { buildWritingLab } from './build-writing-lab.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const output = path.resolve(process.argv[2] || path.join(root, 'dist/workskin-examples'));
 const source = path.join(root, 'assets/examples');
-const catalog = JSON.parse(fs.readFileSync(path.join(source, 'workskins.json'), 'utf8'));
+const catalog = JSON.parse(fs.readFileSync(path.join(source, 'workskins.json'), 'utf8')).map(
+    (item) => ({
+        ...item,
+        syntax: examples[item.id].syntax,
+        writingGuide: examples[item.id].guide,
+        writing: examples[item.id].writing,
+    })
+);
 fs.mkdirSync(output, { recursive: true });
 const files = [];
 const escape = (s) => s.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('"', '&quot;');
@@ -22,14 +33,7 @@ a { color: #32665a; text-underline-offset: 3px; } blockquote { margin: 1em 0; pa
 for (const item of catalog) {
     const toml = fs.readFileSync(path.join(source, item.file), 'utf8');
     const doc = parse(toml, { joiner: '\n', bigint: false });
-    const html = doc.modules
-        .filter((m) => m.data.language === 'html')
-        .map((m) => m.data.contents)
-        .join('\n');
-    const css = doc.modules
-        .filter((m) => m.data.language === 'css')
-        .map((m) => m.data.contents)
-        .join('\n');
+    const { html, css } = await renderWorkskinDocument(doc);
     const preview = `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escape(
@@ -40,6 +44,8 @@ for (const item of catalog) {
         [item.file, toml],
         [`${item.id}.html`, html + '\n'],
         [`${item.id}.css`, css + '\n'],
+        [`${item.id}.txt`, doc.modules[0].data.contents],
+        [`${item.id}.eo3group.json`, JSON.stringify(workskinGroup(item, doc), null, 2) + '\n'],
     ];
     for (const [name, text] of entries) {
         fs.writeFileSync(path.join(output, name), text);
@@ -52,20 +58,33 @@ const readme = `# EO3 workskin examples
 ${catalog.length} editable AO3 workskin examples. The sample prose is standard Lorem ipsum,
 with neutral names, labels, and dates. No generated story content or external assets.
 
-Open a .toml document with EO3's File > load control, then edit its HTML and CSS modules.
+Open a .toml document with EO3's File > load control. Edit the first "Write here"
+plain-text module; the Svelte component generates the HTML. Change colors and
+spacing in the separate Workskin module. You do not need to edit the renderer.
+Optional headers go between --- lines at the start. *Text*, **text**, ~~text~~,
+and backtick code work in prose; blank lines separate paragraphs. This is a small
+writing syntax, not full Markdown. Terminal logs are displayed literally.
+
+To reuse an example in an existing fic, import its .eo3group.json from add node >
+Groups > import. Its internal links are preserved. Connect the Compose and
+Workskin modules to the chapter output; group imports arrive unwired from chapters.
+You can connect another named text input to Compose, import it, and call the same
+component a second time. Each component takes a text prop. ChatLog also takes
+variant ("messages" or "group") and self; Footnotes takes a unique id.
+
 For AO3: copy the .css text into a new Work Skin, choose that skin on your work,
 and paste the matching .html text into the chapter's HTML editor. The .html files
 are chapter fragments, not full web pages. Preview your AO3 draft before posting.
 
 Each example uses its own fic-* class prefix and may be combined with the others.
-Keep names, timestamps, section labels, and footnotes in the HTML. Test with the
+Names, timestamps, section labels, and footnotes are rendered as real HTML. Test with the
 creator's style hidden and on a narrow screen. Workskins affect a work's contents,
 not AO3's surrounding interface. EO3 does not post your work for you.
 
 ${catalog
     .map(
         (x) =>
-            `## ${x.title}\n\n${x.description}\n\n${x.tip}\n\nFiles: ${x.file}, ${x.id}.html, ${x.id}.css\n`
+            `## ${x.title}\n\n${x.description}\n\nWriting syntax: ${x.syntax}\n\n${x.writingGuide}\n\n${x.tip}\n\nFiles: ${x.file}, ${x.id}.txt, ${x.id}.eo3group.json, ${x.id}.html, ${x.id}.css\n`
     )
     .join('\n')}
 Examples are MIT licensed, like EO3. Built on cpsdqs's prechoster.
@@ -79,6 +98,7 @@ files.push(
 fs.writeFileSync(path.join(output, 'README.md'), readme);
 fs.writeFileSync(path.join(output, 'catalog.json'), JSON.stringify(catalog, null, 2) + '\n');
 fs.writeFileSync(path.join(output, 'eo3-workskin-examples.zip'), zip(files));
+await buildWritingLab(output, catalog);
 console.log(`Packaged ${catalog.length} workskin examples into ${output}`);
 
 // Dependency-free ZIP with stored (uncompressed) entries, UTF-8 names, and CRC-32.

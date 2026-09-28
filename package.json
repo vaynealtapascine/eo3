@@ -6,7 +6,7 @@
   "scripts": {
     "fmt": "prettier --write .",
     "dev": "vite dev",
-    "build": "vite build && node scripts/export-workskin-examples.mjs",
+    "build": "node scripts/build-workskin-documents.mjs && vite build && node scripts/export-workskin-examples.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:ao3-update": "ruby test/ao3-parity/generate.rb",

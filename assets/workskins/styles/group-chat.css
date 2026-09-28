@@ -1,0 +1,66 @@
+#workskin .fic-group {
+    max-width: 36em;
+    margin: 2em auto;
+    border: 1px solid #cfd5e3;
+    border-radius: 0.6em;
+    background: #f8f9fc;
+    color: #263149;
+    font-family: Arial, sans-serif;
+    line-height: 1.55;
+}
+#workskin .fic-group p {
+    margin: 0 0 0.6em;
+}
+#workskin .fic-group-heading {
+    background: #263149;
+    color: #fff;
+    padding: 1.1em 1.3em;
+    font-weight: bold;
+    border-radius: 0.5em 0.5em 0 0;
+}
+#workskin .fic-group-heading span {
+    display: block;
+    font-size: 0.75em;
+    font-weight: normal;
+    margin-top: 0.3em;
+}
+#workskin .fic-group-event {
+    padding: 0.9em 1.6em;
+    color: #53617a;
+    font-size: 0.8em;
+    text-align: center;
+}
+#workskin .fic-group-entry {
+    margin: 1.2em;
+    padding: 0.1em 1em;
+    border-left: 3px solid #596fa3;
+}
+#workskin .fic-group-b {
+    border-left-color: #99723a;
+}
+#workskin .fic-group-c {
+    border-left-color: #39806a;
+}
+#workskin .fic-group-name {
+    font-weight: bold;
+}
+#workskin .fic-group-name span {
+    margin-left: 0.7em;
+    color: #53617a;
+    font-size: 0.75em;
+    font-weight: normal;
+}
+#workskin .fic-group blockquote {
+    padding: 0.6em 0.8em;
+    margin: 0.5em 0;
+    border-left: 2px solid #aab6cf;
+    background: #e9edf5;
+    font-size: 0.9em;
+}
+#workskin .fic-group-reaction {
+    display: inline-block;
+    padding: 0.2em 0.6em;
+    border: 1px solid #cfd5e3;
+    border-radius: 1em;
+    font-size: 0.75em;
+}

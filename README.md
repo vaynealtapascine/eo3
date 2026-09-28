@@ -10,14 +10,29 @@ The example library includes 14 ready-to-edit AO3 documents: text messages, grou
 email, a personal letter, a journal, a newspaper, a case file, a social feed, a recording
 transcript, a terminal log, verse, a chapter opening, linked footnotes, and collapsible notes.
 They use standard Lorem ipsum and neutral labels, with no generated story content or external
-images or fonts. Each has an HTML module and a shared CSS module; open one from **Examples and
+images or fonts. Each has a plain-text writing input, a shared CSS module, and a reusable
+Svelte renderer; open one from **Examples and
 Templates**, or link directly with `?example=ao3-letter.toml`.
 
 The [gallery](https://dev.vayne.garden/eo3/about#examples) previews the actual documents,
 compares their styled and unstyled appearance, and offers a ZIP of documents, chapter HTML,
-CSS, and a usage guide. `npm run build` packages those files under `dist/workskin-examples`.
-Authored TOML files in `assets/examples` are the source of truth; `workskins.json` holds the
-gallery descriptions. Run `node scripts/export-workskin-examples.mjs` after editing them.
+CSS, writing inputs, importable groups, and a usage guide. `npm run build` packages those files
+under `dist/workskin-examples`. Components, shared parsing helpers, styles and writing samples
+in `assets/workskins` are the source of truth; `workskins.json` holds the gallery descriptions.
+Run `node scripts/build-workskin-documents.mjs` to regenerate the self-contained TOML documents,
+then `node scripts/export-workskin-examples.mjs` to render the previews and package downloads.
+
+Start in **Write here**. Chat accepts `NAME: text`, optional `[09:41]` timestamps, continuations,
+`! event`, `> quote` and `+ reaction`. Letters and found documents use headers between `---`
+lines and plain paragraphs. Journal entries use `## date`; footnotes use `[^key]` references
+and definitions; optional extras use `::: title` / `:::` panels. Prose supports `*emphasis*`,
+`**strong**`, `~~crossed out~~`, and backtick code. This is a small syntax rather than full Markdown.
+
+The reusable renderer group starts folded to leave the writing input visible. Import any
+example from **add node → Groups** (all 14 are bundled there too), then connect **Compose** and
+**Workskin** to a chapter output. Internal named sends are already wired. The same Svelte
+component can take a second named text input in Compose. ChatLog accepts `variant` and `self`;
+Footnotes accepts `id` to keep anchors unique when composing multiple passages.
 
 ## Overview
 Documents are a directed graph of modules.

@@ -10,6 +10,17 @@ update it whenever a step lands (what changed, what's next, anything surprising)
 
 ## Status
 
+2026-09-28 — Rebuilt all 14 workskin examples around plain-text writing inputs,
+reusable Svelte 4 components, shared writing helpers, and separate styles. ChatLog
+supports NAME: text, optional timestamps, events, continuations, quotes and reactions.
+Other examples use headers, section headings, footnote definitions or native panel
+markers. The renderer modules start folded. All 14 also appear in add node → Groups,
+and downloads include importable groups and writing samples. Exports evaluate the
+actual module graph; the landing page's live writing lab uses the same components.
+Tests cover parsing, repeated footnotes, escaped text, component reuse, group links,
+AO3 processing, and live browser edits. Maintain assets/workskins and regenerate
+the TOML examples with scripts/build-workskin-documents.mjs.
+
 2026-09-28 — Added 14 AO3 workskin documents to the built-in example library, using
 standard Lorem ipsum and neutral labels. Every document has editable HTML and shared CSS,
 with distinct `fic-*` classes. Direct `?example=` links open virtual copies alongside saved

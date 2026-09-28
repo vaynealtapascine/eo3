@@ -6,19 +6,22 @@ import { addExample } from '../helpers/examples';
 
 // The real Text plugin pulls in editors that need a full browser; the document only needs its id.
 vi.mock('../../src/plugins', () => ({
-    MODULES: {
-        'source.text': {
-            load: async () => ({
-                id: 'source.text',
-                acceptsInputs: false,
-                acceptsNamedInputs: false,
-                component: () => null,
-                initialData: () => ({ contents: '', language: 'text' }),
-                description: () => 'Text',
-                eval: async () => null,
-            }),
-        },
-    },
+    MODULES: Object.fromEntries(
+        ['source.text', 'source.svelte', 'source.svelte-component'].map((id) => [
+            id,
+            {
+                load: async () => ({
+                    id,
+                    acceptsInputs: false,
+                    acceptsNamedInputs: false,
+                    component: () => null,
+                    initialData: () => ({ contents: '', language: 'text' }),
+                    description: () => 'Text',
+                    eval: async () => null,
+                }),
+            },
+        ])
+    ),
 }));
 
 function edit(doc: Document, id: string, contents: string) {
@@ -158,7 +161,16 @@ describe('groups', () => {
             expect(JSON.stringify(file)).not.toMatch(/\beo3-/);
             const doc = new Document();
             const group = await doc.insertGroupFile(parseGroupFile(stringifyGroupFile(file)));
-            expect(group.moduleIds).toHaveLength(2);
+            expect(group.moduleIds).toHaveLength(file.modules.length);
+            for (const id of group.moduleIds) {
+                const module = doc.findModule(id)!;
+                expect(module.sends.every((target) => group.moduleIds.includes(target))).toBe(true);
+                expect(
+                    [...module.namedSends.keys()].every((target) =>
+                        group.moduleIds.includes(target)
+                    )
+                ).toBe(true);
+            }
         }
     });
 });

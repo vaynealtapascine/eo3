@@ -5,20 +5,26 @@ import { renderAo3Content, cleanWorkskinCss } from '../../src/targets/ao3/render
 import { exampleFromSearch } from '../../src/storage/example-link';
 import catalog from '../../assets/examples/workskins.json';
 import index from '../../assets/examples/index.json';
+import { renderWorkskinDocument } from '../../scripts/render-workskin-document.mjs';
+import { workskinGroup } from '../../scripts/workskin-documents.mjs';
+import { parseGroupFile } from '../../src/storage/group-file';
 
 describe('bundled AO3 workskin examples', () => {
     for (const item of catalog) {
-        it(`${item.title}: survives AO3 processing with its text and styles intact`, () => {
+        it(`${item.title}: renders its modular inputs and survives AO3 processing`, async () => {
             const source = fs.readFileSync(`assets/examples/${item.file}`, 'utf8');
             const doc = parse(source, { joiner: '\n', bigint: false }) as any;
             expect(doc.version).toBe(1);
             expect(doc.sharedStyles).toBe(1);
-            expect(doc.modules).toHaveLength(2);
-            const [htmlModule, cssModule] = doc.modules;
-            expect(htmlModule.sends).toEqual(['output']);
+            expect(doc.modules).toHaveLength(6);
+            const [writingModule, cssModule] = doc.modules;
+            expect(writingModule.data.language).toBe('text');
+            expect(writingModule.namedSends).toEqual({ 2: ['draft'] });
             expect(cssModule.sends).toEqual(['output']);
+            expect(doc.modules[2].data.svelteVersion).toBe('v4');
+            const { html } = await renderWorkskinDocument(doc);
             const diagnostics: unknown[] = [];
-            const rendered = renderAo3Content(htmlModule.data.contents, (d) => diagnostics.push(d));
+            const rendered = renderAo3Content(html, (d) => diagnostics.push(d));
             const cleaned = cleanWorkskinCss(cssModule.data.contents, {
                 prefix: '#workskin',
                 onDiagnostic: (d) => diagnostics.push(d),
@@ -28,7 +34,7 @@ describe('bundled AO3 workskin examples', () => {
             expect(cleanWorkskinCss(cleaned, { prefix: '#workskin' })).toBe(cleaned);
             const before = document.createElement('div');
             const after = document.createElement('div');
-            before.innerHTML = htmlModule.data.contents;
+            before.innerHTML = html;
             after.innerHTML = rendered.html;
             const textNodes = (root: Element) => {
                 const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
@@ -49,8 +55,15 @@ describe('bundled AO3 workskin examples', () => {
                 expect(after.querySelector(`a[name="${target}"]`)).not.toBeNull();
             }
             expect(Object.prototype.hasOwnProperty.call(index, item.file)).toBe(true);
-            expect(htmlModule.data.contents).not.toMatch(/<(?:script|iframe|img|svg)\b|\bstyle=/i);
+            expect(html).not.toMatch(/<(?:script|iframe|img|svg)\b|\bstyle=/i);
             expect(cssModule.data.contents).not.toMatch(/url\(|@import|var\(|\.eo3-/);
+            const group = parseGroupFile(JSON.stringify(workskinGroup(item, doc)));
+            expect(group.modules).toHaveLength(6);
+            expect(group.modules[0].namedSends).toEqual({ 2: ['draft'] });
+            expect(group.modules[2].sends).toEqual([]);
+            expect(group.modules[1].sends).toEqual([]);
+            expect(group.modules[3].sends).toEqual([2]);
+            expect(group.modules[5].namedSends).toEqual({ 2: ['writing'] });
         });
     }
 });

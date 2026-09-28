@@ -1,0 +1,57 @@
+#workskin .fic-feed {
+    max-width: 35em;
+    margin: 2em auto;
+    background: #fff;
+    color: #28384b;
+    border: 1px solid #d5dee7;
+    border-radius: 0.8em;
+    font-family: Arial, sans-serif;
+    line-height: 1.55;
+}
+#workskin .fic-feed-heading {
+    padding: 1em 1.2em;
+    margin: 0;
+    background: #eef3f8;
+    border-bottom: 1px solid #d5dee7;
+    border-radius: 0.8em 0.8em 0 0;
+    font-size: 0.85em;
+    font-weight: bold;
+}
+#workskin .fic-feed-post {
+    padding: 1.2em;
+    border-bottom: 1px solid #d5dee7;
+}
+#workskin .fic-feed-post:last-child {
+    border-bottom: 0;
+}
+#workskin .fic-feed-name {
+    margin-bottom: 0.7em;
+    font-weight: bold;
+}
+#workskin .fic-feed-name span {
+    display: block;
+    font-size: 0.75em;
+    font-weight: normal;
+    color: #566b80;
+}
+#workskin .fic-feed-reply {
+    border-left: 3px solid #7f9fb8;
+    margin-left: 1.2em;
+    background: #f8fafc;
+}
+#workskin .fic-feed-reply-label {
+    color: #566b80;
+    font-size: 0.7em;
+}
+#workskin .fic-feed-metrics {
+    color: #566b80;
+    font-size: 0.7em;
+    margin-bottom: 0;
+}
+#workskin .fic-feed blockquote {
+    margin: 1em 0;
+    padding: 0.8em;
+    border: 1px solid #d5dee7;
+    border-radius: 0.5em;
+    font-size: 0.85em;
+}

@@ -1,0 +1,48 @@
+#workskin .fic-journal {
+    max-width: 35em;
+    margin: 2em auto;
+    padding: 1.5em;
+    background: #faf7ef;
+    color: #3e4438;
+    border: 1px solid #d8ddce;
+    font-family: Georgia, serif;
+    line-height: 1.85;
+}
+#workskin .fic-journal-label {
+    text-align: right;
+    color: #56674d;
+    font-size: 0.7em;
+    font-family: Arial, sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.13em;
+}
+#workskin .fic-journal-entry {
+    border-left: 2px solid #b5a0a0;
+    padding-left: 1em;
+    margin-top: 1.5em;
+}
+#workskin .fic-journal h3 {
+    border-bottom: 1px solid #d8ddce;
+    padding-bottom: 0.6em;
+    font-style: italic;
+    font-size: 1.3em;
+}
+#workskin .fic-journal h3 span {
+    display: block;
+    color: #56674d;
+    font-size: 0.55em;
+    margin-top: 0.3em;
+    font-style: normal;
+    font-family: Arial, sans-serif;
+    letter-spacing: 0.08em;
+}
+#workskin .fic-journal s {
+    color: #7b655d;
+}
+#workskin .fic-journal-margin {
+    margin-left: 1em;
+    padding-left: 0.8em;
+    border-left: 2px solid #7b8971;
+    font-style: italic;
+    font-size: 0.9em;
+}

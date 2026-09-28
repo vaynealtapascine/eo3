@@ -1,0 +1,68 @@
+#workskin .fic-news {
+    max-width: 43em;
+    margin: 2em auto;
+    padding: 1.5em;
+    background: #f8f4e9;
+    color: #292820;
+    border: 1px solid #d7d0bd;
+    font-family: Georgia, serif;
+    line-height: 1.6;
+}
+#workskin .fic-news-masthead {
+    text-align: center;
+    font-size: 2.15em;
+    font-weight: bold;
+    letter-spacing: -0.04em;
+    line-height: 1.1;
+    margin: 0 0 0.5em;
+}
+#workskin .fic-news-edition {
+    border-top: 3px double #292820;
+    border-bottom: 1px solid #292820;
+    padding: 0.6em 0;
+    font-family: Arial, sans-serif;
+    font-size: 0.65em;
+    text-align: center;
+}
+#workskin .fic-news-edition span {
+    display: block;
+}
+#workskin .fic-news-section {
+    color: #6d5e49;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-size: 0.7em;
+    margin-top: 1.8em;
+    font-family: Arial, sans-serif;
+}
+#workskin .fic-news h3 {
+    margin: 0.4em 0;
+    font-size: 1.8em;
+    line-height: 1.15;
+}
+#workskin .fic-news-deck {
+    font-style: italic;
+    font-size: 1.1em;
+}
+#workskin .fic-news-byline {
+    border-bottom: 1px solid #d7d0bd;
+    padding-bottom: 1em;
+    font-family: Arial, sans-serif;
+    font-size: 0.7em;
+}
+#workskin .fic-news-copy {
+    column-width: 15em;
+    column-count: 2;
+    column-gap: 1.5em;
+    column-rule: 1px solid #d7d0bd;
+}
+#workskin .fic-news-copy p {
+    margin-top: 0;
+}
+#workskin .fic-news-footer {
+    border-top: 1px solid #292820;
+    padding-top: 0.8em;
+    text-align: right;
+    font-size: 0.7em;
+    font-style: italic;
+}
