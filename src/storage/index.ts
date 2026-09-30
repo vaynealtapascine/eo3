@@ -1,9 +1,15 @@
 import { IDBPCursorWithValue, IDBPDatabase, IDBPObjectStore, openDB } from 'idb';
 import { deserialize, migrate, Schema, serialize, nextDocumentId } from './versions';
 import { Document } from '../document';
+import { appendCheckpoint, emptyRecovery, RecoveryState } from './checkpoints';
+
+export interface StoredWork extends DocumentInfo {
+    data: string;
+    recovery: RecoveryState;
+}
 
 export async function initStorage(): Promise<Storage> {
-    const newVersion = 1;
+    const newVersion = 2;
     const db = await openDB<Schema>('eo3_data', newVersion, {
         async upgrade(database: IDBPDatabase<any>, old, _, transaction) {
             console.log(`upgrade database ${old} → ${newVersion}`);
@@ -47,6 +53,13 @@ export interface IStorage {
     getDocument(id: string): Promise<Document | null>;
     saveDocument(id: string, doc: Document): Promise<void>;
     deleteDocument(id: string): Promise<void>;
+    getRecovery(id: string): Promise<RecoveryState>;
+    updateRecovery(
+        id: string,
+        update: (state: RecoveryState) => RecoveryState
+    ): Promise<RecoveryState>;
+    listStoredWorks(): Promise<StoredWork[]>;
+    importStoredWorks(works: StoredWork[]): Promise<void>;
     close(): void;
 
     addEventListener(event: string, handler: EventListener): void;
@@ -148,8 +161,11 @@ export class Storage extends EventTarget implements IStorage {
     }
 
     async deleteDocument(id: string) {
-        await this.db.delete('documents', id);
-        await this.db.delete('openDocuments', id);
+        const tx = this.db.transaction(['documents', 'openDocuments', 'recovery'], 'readwrite');
+        await tx.objectStore('documents').delete(id);
+        await tx.objectStore('openDocuments').delete(id);
+        await tx.objectStore('recovery').delete(id);
+        await tx.done;
         this.dispatchEvent(new CustomEvent('update-documents'));
         this.dispatchEvent(new CustomEvent('update-open-documents'));
         this.dispatchEvent(new CustomEvent('delete-document', { detail: id }));
@@ -158,11 +174,72 @@ export class Storage extends EventTarget implements IStorage {
     close() {
         this.db.close();
     }
+
+    async getRecovery(id: string): Promise<RecoveryState> {
+        return (await this.db.get('recovery', id)) ?? emptyRecovery();
+    }
+
+    async updateRecovery(id: string, update: (state: RecoveryState) => RecoveryState) {
+        const tx = this.db.transaction('recovery', 'readwrite');
+        const store = tx.objectStore('recovery');
+        try {
+            const state = update((await store.get(id)) ?? emptyRecovery());
+            await store.put(state, id);
+            await tx.done;
+            this.dispatchEvent(new CustomEvent('update-recovery', { detail: id }));
+            return state;
+        } catch (error) {
+            try {
+                tx.abort();
+            } catch {
+                /* Already aborted or completed. */
+            }
+            await tx.done.catch(() => {});
+            throw error;
+        }
+    }
+
+    async listStoredWorks(): Promise<StoredWork[]> {
+        const tx = this.db.transaction(['documents', 'recovery']);
+        const documents = await tx.objectStore('documents').getAll();
+        const works = await Promise.all(
+            documents.map(async (doc) => ({
+                ...doc,
+                recovery: (await tx.objectStore('recovery').get(doc.id)) ?? emptyRecovery(),
+            }))
+        );
+        await tx.done;
+        return works;
+    }
+
+    async importStoredWorks(works: StoredWork[]) {
+        const tx = this.db.transaction(['documents', 'recovery', 'openDocuments'], 'readwrite');
+        try {
+            for (const { recovery, ...doc } of works) {
+                // add() prevents an accidental overwrite, even if another tab imports concurrently.
+                await tx.objectStore('documents').add(doc, doc.id);
+                await tx.objectStore('recovery').add(recovery, doc.id);
+                await tx.objectStore('openDocuments').put({ id: doc.id });
+            }
+            await tx.done;
+        } catch (error) {
+            try {
+                tx.abort();
+            } catch {
+                /* Already aborted or completed. */
+            }
+            await tx.done.catch(() => {});
+            throw error;
+        }
+        this.dispatchEvent(new CustomEvent('update-documents'));
+        this.dispatchEvent(new CustomEvent('update-open-documents'));
+    }
 }
 
 export class MemoryStorage extends EventTarget implements IStorage {
     documents = new Map<string, { doc: Document; dateModified: Date }>();
     openDocuments = new Set<string>();
+    recovery = new Map<string, RecoveryState>();
 
     async addOpenDocument(doc: string): Promise<void> {
         this.openDocuments.add(doc);
@@ -175,13 +252,16 @@ export class MemoryStorage extends EventTarget implements IStorage {
 
     async deleteDocument(id: string): Promise<void> {
         this.documents.delete(id);
+        this.openDocuments.delete(id);
+        this.recovery.delete(id);
         this.dispatchEvent(new CustomEvent('update-documents'));
         this.dispatchEvent(new CustomEvent('update-open-documents'));
         this.dispatchEvent(new CustomEvent('delete-document', { detail: id }));
     }
 
     async getDocument(id: string): Promise<Document | null> {
-        return this.documents.get(id)?.doc ?? null;
+        const doc = this.documents.get(id)?.doc;
+        return doc ? deserialize(serialize(doc)) : null;
     }
 
     async getOpenDocuments(): Promise<string[]> {
@@ -226,7 +306,54 @@ export class MemoryStorage extends EventTarget implements IStorage {
     }
 
     async saveDocument(id: string, doc: Document): Promise<void> {
-        this.documents.set(id, { doc, dateModified: new Date() });
+        this.documents.set(id, { doc: deserialize(serialize(doc)), dateModified: new Date() });
         this.dispatchEvent(new CustomEvent('update-documents'));
     }
+
+    async getRecovery(id: string): Promise<RecoveryState> {
+        return structuredClone(this.recovery.get(id) ?? emptyRecovery());
+    }
+
+    async updateRecovery(id: string, update: (state: RecoveryState) => RecoveryState) {
+        const state = update(structuredClone(this.recovery.get(id) ?? emptyRecovery()));
+        this.recovery.set(id, structuredClone(state));
+        this.dispatchEvent(new CustomEvent('update-recovery', { detail: id }));
+        return state;
+    }
+
+    async listStoredWorks(): Promise<StoredWork[]> {
+        return [...this.documents].map(([id, { doc, dateModified }]) => ({
+            id,
+            title: doc.title,
+            data: serialize(doc),
+            dateModified: dateModified.toISOString(),
+            recovery: structuredClone(this.recovery.get(id) ?? emptyRecovery()),
+        }));
+    }
+
+    async importStoredWorks(works: StoredWork[]) {
+        const prepared = works.map((work) => ({ work, doc: deserialize(work.data) }));
+        if (prepared.some(({ work }) => this.documents.has(work.id))) {
+            throw new Error('An imported work already exists.');
+        }
+        for (const { work, doc } of prepared) {
+            this.documents.set(work.id, { doc, dateModified: new Date(work.dateModified) });
+            this.recovery.set(work.id, structuredClone(work.recovery));
+            this.openDocuments.add(work.id);
+        }
+        this.dispatchEvent(new CustomEvent('update-documents'));
+        this.dispatchEvent(new CustomEvent('update-open-documents'));
+    }
+}
+
+export function recordCheckpoint(
+    storage: IStorage,
+    id: string,
+    source: string,
+    elapsedMs = 0,
+    forceFull = false
+) {
+    return storage.updateRecovery(id, (state) =>
+        state.enabled || forceFull ? appendCheckpoint(state, source, elapsedMs, forceFull) : state
+    );
 }

@@ -10,6 +10,65 @@ update it whenever a step lands (what changed, what's next, anything surprising)
 
 ## Status
 
+2026-09-30 — **Completed: save recovery and opt-in checkpoints.** User requested
+mandatory visible save/error/retry handling, recoverable revisions and complete backups
+(works, My groups, custom sites), plus incremental checkpoints every minute of active
+work and full snapshots every ten active minutes. Preserve the pre-existing cleanup
+working-tree changes; do not commit or discard them.
+
+- Added `src/storage/checkpoints.ts`: serialized-text replacement diffs with base/result
+  hashes, reconstructable snapshots, one-minute/ten-minute constants, retention at 120
+  revisions / approximately 20 MiB (one oversized latest snapshot can remain), and an
+  active-work clock. Active = foreground, visible, focused editing; idle cutoff one
+  minute. No background catch-up. Initial and explicit recovery snapshots are full.
+- Database version 2 is wired (`recovery` store); document files remain version 1.
+  Storage now offers transactional history updates and atomic work/history import. The
+  memory fallback supports the same operations and snapshots drafts instead of holding
+  mutable references. Delete removes the associated history in the same transaction.
+- `storage/save-controller.ts` orders autosaves, catches failures, retries, flushes on
+  lifecycle boundaries, counts active time and restores with before/after snapshots.
+  `ui/components/save-recovery.*` shows save status, per-work opt-in, history inspection,
+  downloads, undoable restore and explicit history clearing. `ui/index.tsx` integrates it;
+  virtual documents are realized only after a successful save.
+- `storage/backup.ts` validates works/history/groups/profiles before writes, imports works
+  as new copies, keeps conflicting custom profiles separately and remaps posting history.
+  UI in `library-backup.tsx` is in the sidebar; exports include current in-memory drafts.
+  Library writes roll back if transactional work import fails. Added `fake-indexeddb` as
+  a dev dependency for migration/transaction regression coverage (only one package added).
+- Regression tests now cover database migration/reopen/transactions, diff reconstruction
+  and corruption, count/byte retention, ten-minute boundaries, opt-in/idle/background time,
+  partial-minute resume, failed writes/retry, edits during a save, restore/undo, deletion,
+  backup round-trips, conflicting target-id remapping and rollback, and recovery UI states.
+  Autosave tab closes await a successful write; failures leave the tab open. Pending writes
+  cancel on deletion. Virtual works are realized only when their latest edits are saved.
+- Validation: typecheck passed; full suite passed **574 tests, 3 skips, 25 files**
+  using direct Vitest with two thread workers; production build passed and packaged all
+  14 workskin examples. Existing mirrored-image/compiler/chunk-size build warnings remain.
+  Browser verification confirmed opt-in, revision inspection, persistence after reload,
+  and successful restoration with both sides retained. The dialog layout was inspected.
+  README now documents timing, recovery, retention and complete backup/import behavior.
+  Lifecycle tests cover failed tab closes and virtual-document realization. Flush drains
+  newer edits made during an awaited write before closing. Build-generated example files
+  had only line-ending changes and were restored; pre-existing cleanup edits are preserved.
+  Prettier checks for changed implementation/tests and `git diff --check` passed.
+  Temporary browser verification tab and preview server were closed. On the user's later
+  commit/push request, recovery and its browser-library dependencies were staged separately
+  from unrelated cleanup. The isolated staged tree passed typecheck, **558 tests, 3 skips,
+  24 files**, and production build. The full working tree's 574-test result above includes
+  the remaining cleanup tests. Commit title: `feat(storage): add opt-in checkpoints and recovery`.
+- Previous audit baseline: typecheck
+  passed; default Vitest forks timed out, but `node node_modules/vitest/vitest.mjs run
+  --pool=threads --maxWorkers=2` passed 534 tests with 3 skips. In this PowerShell setup,
+  use the direct Node Vitest command because npm consumed forwarded CLI options.
+
+2026-09-29 — Cleanup of EO3 additions: removed seven unused build plugins (150 packages
+total), shared browser-library persistence with visible save errors and cross-tab updates,
+preserved graph CSS order for inline/embedded exports, and tightened profile/group validation.
+Work evaluation now keeps one document snapshot across awaits; concurrent plugin/style-node
+requests share their work. Chapter-split candidate scanning no longer copies every suffix.
+Regression tests cover these changes. Upstream runtime code and saved-file formats remain
+unchanged. See [cleanup review](docs/cleanup-review.md) for decisions and deferred examinations.
+
 2026-09-28 — Svelte bundling now waits for an explicit worker-ready message before
 posting work. Startup gets 30 seconds; compilation gets 15 seconds, with two retries
 on timeouts. Failed worker generations retire all their pending requests and timers

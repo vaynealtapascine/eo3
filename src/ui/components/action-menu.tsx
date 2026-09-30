@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { DirPopover } from '../../uikit/dir-popover';
+import { showAlert } from '../dialogs';
 import './action-menu.css';
 
 export interface MenuAction {
@@ -52,9 +53,20 @@ export function ActionMenu({
                                     role="menuitem"
                                     className={'i-item' + (action.danger ? ' is-danger' : '')}
                                     disabled={action.disabled}
-                                    onClick={() => {
+                                    onClick={async () => {
                                         setOpen(false);
-                                        action.run();
+                                        try {
+                                            await action.run();
+                                        } catch (error) {
+                                            showAlert(
+                                                error instanceof Error
+                                                    ? error.message
+                                                    : String(error),
+                                                {
+                                                    title: 'Couldn’t complete the action',
+                                                }
+                                            );
+                                        }
                                     }}
                                 >
                                     {action.label}

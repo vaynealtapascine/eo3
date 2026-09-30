@@ -34,6 +34,36 @@ example from **add node → Groups** (all 14 are bundled there too), then connec
 component can take a second named text input in Compose. ChatLog accepts `variant` and `self`;
 Footnotes accepts `id` to keep anchors unique when composing multiple passages.
 
+## Saving and recovery
+
+The save bar shows when edits are waiting, saving, or saved in this browser. Failed
+saves stay visible with **Retry save** and **Download work** controls. Closing an editor
+tab waits for its latest edits to save; a failed save leaves the tab open.
+
+Open **Save history…** and enable **Keep checkpoints for this work** to retain earlier
+versions. This is off by default for each work. While the work is visible and focused,
+changes are checkpointed every minute of active editing, with a full snapshot every ten
+active minutes. The clock pauses after a minute without interaction and while the tab is
+hidden or unfocused. Unchanged minute checkpoints are skipped; full snapshots still run
+on the ten-minute boundaries. Disabling checkpoints keeps the existing history.
+
+History retains up to 120 revisions or approximately 20 MiB per work, preserving the
+latest revision even if it exceeds that size. Inspect or download a revision before
+restoring it. Restoration saves the current draft and restored version as new snapshots
+and can be undone. **Clear history…** removes old checkpoints; when enabled, it starts
+again with a snapshot of the current draft.
+
+The sidebar's **Backup and recovery** section downloads all works, retained checkpoint
+history, My groups, and custom sites as one JSON file, including open drafts' latest edits.
+Import validates the backup before writing and creates independent work copies. Existing
+works remain intact; conflicting custom sites are kept separately and their imported
+posting records follow the copied site. Backup import supports files up to 100 MiB.
+The browser storage request is optional and reports whether persistence was granted.
+
+Browser-local data and checkpoints are not a substitute for downloaded backups. If browser
+storage is unavailable, the save bar labels memory-only saving and the history disappears
+when the page closes. Everything runs in the browser; no application server is required.
+
 ## Overview
 Documents are a directed graph of modules.
 Every module is JSON data associated with a plugin implementation.

@@ -1,7 +1,8 @@
 import { IDBPDatabase, IDBPTransaction } from 'idb';
-import { deserializeV1, serializeV1, migrateV1, SchemaV1, nextDocumentIdV1 } from './v1';
+import { deserializeV1, serializeV1, migrateV1, nextDocumentIdV1 } from './v1';
+import { migrateV2, SchemaV2 } from './v2';
 
-export interface Schema extends SchemaV1 {}
+export interface Schema extends SchemaV2 {}
 
 export const deserialize = deserializeV1;
 export const serialize = serializeV1;
@@ -11,7 +12,7 @@ type MigrateFn = (
     db: IDBPDatabase<any>,
     transaction: IDBPTransaction<any, any, 'versionchange'>
 ) => void;
-const MIGRATIONS: MigrateFn[] = [() => {}, migrateV1];
+const MIGRATIONS: MigrateFn[] = [() => {}, migrateV1, migrateV2];
 
 export async function migrate(
     db: IDBPDatabase,

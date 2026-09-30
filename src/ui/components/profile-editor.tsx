@@ -6,7 +6,12 @@ import {
     parseProfile,
     TargetProfile,
 } from '../../targets/profile/types';
-import { deleteProfile, listProfiles, saveProfile } from '../../targets/profile/store';
+import {
+    deleteProfile,
+    listProfiles,
+    saveProfile,
+    subscribeProfiles,
+} from '../../targets/profile/store';
 import { Document } from '../../document';
 import './profile-editor.css';
 import { showConfirm } from '../dialogs';
@@ -105,6 +110,7 @@ export function ProfileEditor({
     const [isNew, setIsNew] = useState(false);
     const [message, setMessage] = useState<string | null>(null);
     const [importText, setImportText] = useState('');
+    useEffect(() => subscribeProfiles(() => setProfiles(listProfiles())), []);
     const activeTargetIds = new Set(profiles.map((profile) => `profile:${profile.id}`));
     const retiredTargetIds = [
         ...new Set([
@@ -143,7 +149,12 @@ export function ProfileEditor({
             setMessage(`A profile with the id "${result.id}" already exists.`);
             return null;
         }
-        saveProfile(result);
+        try {
+            saveProfile(result);
+        } catch (error) {
+            setMessage((error as Error).message);
+            return null;
+        }
         setProfiles(listProfiles());
         setIsNew(false);
         setMessage('Saved.');
@@ -159,7 +170,11 @@ export function ProfileEditor({
         }
         const result = parseProfile(parsed);
         if (typeof result === 'string') return setMessage(result);
-        saveProfile(result);
+        try {
+            saveProfile(result);
+        } catch (error) {
+            return setMessage((error as Error).message);
+        }
         setProfiles(listProfiles());
         setImportText('');
         edit(result);
@@ -355,7 +370,6 @@ export function ProfileEditor({
                                 </label>
                             )}
                         </details>
-                        {message && <p className="i-message">{message}</p>}
                         <div className="i-buttons">
                             <button onClick={save}>save</button>
                             {!isNew && (
@@ -388,7 +402,11 @@ export function ProfileEditor({
                                                 { confirmLabel: 'Delete', danger: true }
                                             );
                                             if (!yes) return;
-                                            deleteProfile(draft.id);
+                                            try {
+                                                deleteProfile(draft.id);
+                                            } catch (error) {
+                                                return setMessage((error as Error).message);
+                                            }
                                             setProfiles(listProfiles());
                                             setDraft(null);
                                         }}
@@ -403,6 +421,11 @@ export function ProfileEditor({
                     <p className="i-empty">Pick a site, or add a new one.</p>
                 )}
             </div>
+            {message && (
+                <p className="i-message" role="status">
+                    {message}
+                </p>
+            )}
         </dialog>
     );
 }

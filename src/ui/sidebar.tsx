@@ -11,17 +11,22 @@ import { useOptHeld } from './opt-held';
 import { Button } from '../uikit/button';
 import { DirPopover } from '../uikit/dir-popover';
 import { TextField } from '../uikit/text-field';
+import { LibraryBackupControls } from './components/library-backup';
 
 export function ApplicationSidebar({
     currentFile,
     onOpen,
     onLoad,
     isMemoryStorage,
+    liveWorks,
+    onImported,
 }: {
     currentFile: string | null;
     onOpen: (id: string) => void;
     onLoad: (doc: Document) => void;
     isMemoryStorage?: boolean;
+    liveWorks: () => Map<string, Document>;
+    onImported: (ids: string[]) => void;
 }) {
     return (
         <div className="application-sidebar">
@@ -53,6 +58,7 @@ export function ApplicationSidebar({
                 <ExamplesMenu onLoad={onLoad} />
             </div>
             <Extras />
+            <LibraryBackupControls liveWorks={liveWorks} onImported={onImported} />
         </div>
     );
 }

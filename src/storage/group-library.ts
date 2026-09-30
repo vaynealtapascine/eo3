@@ -1,4 +1,5 @@
-import { GroupFile, parseGroupFile, stringifyGroupFile } from './group-file';
+import { GroupFile, parseGroupFile } from './group-file';
+import { createBrowserListStore } from './browser-list-store';
 
 /**
  * "My groups": group files saved in this browser (localStorage) for reuse across works, in the
@@ -12,45 +13,26 @@ export interface LibraryGroup {
     file: GroupFile;
 }
 
-const listeners = new Set<() => void>();
+const store = createBrowserListStore<LibraryGroup>(
+    STORAGE_KEY,
+    (value) => {
+        if (!value || typeof value !== 'object') return null;
+        const entry = value as Record<string, unknown>;
+        if (typeof entry.id !== 'string' || !entry.id) return null;
+        return { id: entry.id, file: parseGroupFile(JSON.stringify(entry.file)) };
+    },
+    'My groups'
+);
 
-export function listLibraryGroups(): LibraryGroup[] {
-    try {
-        const raw = JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? '[]');
-        if (!Array.isArray(raw)) return [];
-        return raw.flatMap((entry) => {
-            try {
-                return [{ id: String(entry.id), file: parseGroupFile(JSON.stringify(entry.file)) }];
-            } catch {
-                return [];
-            }
-        });
-    } catch {
-        return [];
-    }
-}
-
-function write(groups: LibraryGroup[]) {
-    try {
-        window.localStorage.setItem(
-            STORAGE_KEY,
-            JSON.stringify(
-                groups.map((g) => ({ id: g.id, file: JSON.parse(stringifyGroupFile(g.file)) }))
-            )
-        );
-    } catch {
-        // storage full or blocked: nothing else to fall back to
-    }
-    for (const listener of listeners) listener();
-}
+export const listLibraryGroups = store.list;
 
 /** Adds a group at the end of the library. */
 export function saveLibraryGroup(file: GroupFile) {
-    write([...listLibraryGroups(), { id: Math.random().toString(36).slice(2), file }]);
+    store.write([...listLibraryGroups(), { id: Math.random().toString(36).slice(2), file }]);
 }
 
 export function removeLibraryGroup(id: string) {
-    write(listLibraryGroups().filter((g) => g.id !== id));
+    store.write(listLibraryGroups().filter((g) => g.id !== id));
 }
 
 /** Moves a group to `index` in the library's order. */
@@ -60,11 +42,11 @@ export function moveLibraryGroup(id: string, index: number) {
     if (from === -1) return;
     const [moved] = groups.splice(from, 1);
     groups.splice(Math.max(0, Math.min(index, groups.length)), 0, moved);
-    write(groups);
+    store.write(groups);
 }
 
 /** Calls `listener` after every change; returns an unsubscribe function. */
-export function subscribeLibraryGroups(listener: () => void): () => void {
-    listeners.add(listener);
-    return () => listeners.delete(listener);
-}
+export const subscribeLibraryGroups = store.subscribe;
+
+/** Used by complete-library backup import after validating every entry. */
+export const replaceLibraryGroups = store.write;

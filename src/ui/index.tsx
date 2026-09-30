@@ -28,6 +28,8 @@ import { DirPopover } from '../uikit/dir-popover';
 import { Button } from '../uikit/button';
 import { showAlert, showConfirm } from './dialogs';
 import { exampleFromSearch } from '../storage/example-link';
+import { SaveController, SaveState } from '../storage/save-controller';
+import { SaveRecovery } from './components/save-recovery';
 
 let lastEo3Init = 0;
 try {
@@ -41,6 +43,7 @@ interface TabState {
     undo: () => void;
     redo: () => void;
     save: () => Document;
+    flush: () => Promise<void>;
     title: string;
 }
 
@@ -105,11 +108,10 @@ export default function ApplicationFrame({
     const realizeVirtual = (doc: Document) => {
         const id = virtualIds.get(doc);
         if (!id) throw new Error('could not realize virtual document because it has no id');
-        storage.saveDocument(id, doc).then(() => {
-            if (virtualOpenDoc === doc) setVirtualOpenDoc(null);
-            openDocument(id);
-            setCurrentTab(id);
-        });
+        // SaveController has committed the draft before calling this.
+        if (virtualOpenDoc === doc) setVirtualOpenDoc(null);
+        openDocument(id);
+        setCurrentTab(id);
     };
 
     const openInitialExample = (id: string) => {
@@ -217,6 +219,20 @@ export default function ApplicationFrame({
         currentTab === null && virtualOpenDoc && virtualIds.has(virtualOpenDoc)
             ? tabStates.get(virtualIds.get(virtualOpenDoc)!)
             : tabStates.get(currentTab!);
+
+    const requestClose = async (id: string) => {
+        try {
+            await tabStates.get(id)?.flush();
+            closeDocument(id);
+        } catch (error) {
+            await showAlert(
+                `The tab stays open because its latest edits could not be saved. Retry saving or download the work.\n${String(
+                    error
+                )}`,
+                { title: 'Couldn’t close this work safely' }
+            );
+        }
+    };
 
     if (virtualOpenDoc && !virtualIds.has(virtualOpenDoc)) {
         virtualIds.set(virtualOpenDoc, nextDocumentId());
@@ -358,7 +374,7 @@ export default function ApplicationFrame({
                                 onOpen={() => {
                                     setCurrentTab(doc);
                                 }}
-                                onClose={() => closeDocument(doc)}
+                                onClose={() => void requestClose(doc)}
                             />
                         ))}
                         {virtualOpenDoc ? (
@@ -370,11 +386,31 @@ export default function ApplicationFrame({
                                 onOpen={() => {
                                     setCurrentTab(null);
                                 }}
-                                onClose={() => {
-                                    setVirtualOpenDoc(null);
-                                    if (currentTab === null) {
-                                        setCurrentTab(openDocs[openDocs.length - 1] ?? null);
+                                onClose={async () => {
+                                    const closing = virtualOpenDoc!;
+                                    const id = virtualIds.get(closing)!;
+                                    try {
+                                        await tabStates.get(id)?.flush();
+                                        await storage.removeOpenDocument(id);
+                                    } catch (error) {
+                                        await showAlert(
+                                            `The tab stays open because its latest edits could not be saved. Download the work or retry saving.\n${String(
+                                                error
+                                            )}`,
+                                            { title: 'Couldn’t close this work safely' }
+                                        );
+                                        return;
                                     }
+                                    setVirtualOpenDoc((current) =>
+                                        current === closing ? null : current
+                                    );
+                                    // A successful flush can realize a virtual work while this close awaits it.
+                                    setOpenDocs((current) => current.filter((doc) => doc !== id));
+                                    setCurrentTab((current) =>
+                                        current === null || current === id
+                                            ? openDocs.filter((doc) => doc !== id).at(-1) ?? null
+                                            : current
+                                    );
                                     if (!openDocs.length) setSidebarOpen(true);
                                 }}
                             />
@@ -398,6 +434,14 @@ export default function ApplicationFrame({
                                 closeSidebarIfOverlay();
                             }}
                             isMemoryStorage={isMemoryStorage}
+                            liveWorks={() =>
+                                new Map([...tabStates].map(([id, state]) => [id, state.save()]))
+                            }
+                            onImported={(ids) => {
+                                setOpenDocs((current) => [...new Set([...current, ...ids])]);
+                                if (ids.length) setCurrentTab(ids[ids.length - 1]);
+                                closeSidebarIfOverlay();
+                            }}
                         />
                     }
                     sidebarOpen={sidebarOpen}
@@ -414,6 +458,7 @@ export default function ApplicationFrame({
                                         initWithoutRender={shouldStartWithoutRender}
                                         isForeground={currentTab === tab}
                                         graphOpen={graphOpen}
+                                        isMemoryStorage={!!isMemoryStorage}
                                         onUpdate={(state) => {
                                             tabStates.set(
                                                 tab || virtualIds.get(virtualOpenDoc!)!,
@@ -842,6 +887,7 @@ function ApplicationTab({
     initWithoutRender,
     graphOpen,
     onUpdate,
+    isMemoryStorage,
 }: {
     documentId?: string;
     realizeVirtual?: (doc: Document) => void;
@@ -850,6 +896,7 @@ function ApplicationTab({
     initWithoutRender: boolean;
     graphOpen: boolean;
     onUpdate: (state: TabState) => void;
+    isMemoryStorage: boolean;
 }) {
     const storage = useContext(StorageContext);
     const [loading, error, document] = useDocument(documentId, virtual);
@@ -860,26 +907,59 @@ function ApplicationTab({
         if (tabNode.current) (tabNode.current as any).inert = !isForeground;
     }, [isForeground]);
 
-    const hasScheduledSave = useRef(false);
-    const scheduledDocument = useRef(document);
-    scheduledDocument.current = document;
-
-    const scheduleSave = () => {
-        if (hasScheduledSave.current) return;
-        hasScheduledSave.current = true;
-
-        setTimeout(() => {
-            hasScheduledSave.current = false;
-
-            if (documentId && scheduledDocument.current) {
-                // TODO: show status
-                storage.saveDocument(documentId, scheduledDocument.current);
+    const activeRef = useRef(isForeground);
+    activeRef.current = isForeground;
+    const realizeRef = useRef(realizeVirtual);
+    realizeRef.current = realizeVirtual;
+    const [controller, setController] = useState<SaveController | null>(null);
+    const controllerRef = useRef<SaveController | null>(null);
+    const [saveState, setSaveState] = useState<SaveState | null>(null);
+    useEffect(() => {
+        if (!document) return;
+        const id = documentId ?? virtualIds.get(document);
+        if (!id) return;
+        const writer = new SaveController(storage, id, document, {
+            persisted: !!documentId,
+            isActive: () =>
+                activeRef.current &&
+                window.document.visibilityState === 'visible' &&
+                window.document.hasFocus(),
+            onState: setSaveState,
+            onSaved: () => realizeRef.current?.(document),
+        });
+        setController(writer);
+        controllerRef.current = writer;
+        setSaveState(writer.state);
+        const boundary = () => {
+            writer.tick();
+            void writer.flush().catch(() => {});
+            void writer.checkpoint(true).catch(() => {});
+        };
+        const beforeUnload = (event: BeforeUnloadEvent) => {
+            boundary();
+            if (writer.state.status !== 'saved' && writer.state.status !== 'unsaved') {
+                event.preventDefault();
             }
-        }, 1000);
-    };
-
-    const scheduleSaveRef = useRef(scheduleSave);
-    scheduleSaveRef.current = scheduleSave;
+        };
+        window.document.addEventListener('visibilitychange', boundary);
+        window.addEventListener('blur', boundary);
+        window.addEventListener('pagehide', boundary);
+        window.addEventListener('beforeunload', beforeUnload);
+        return () => {
+            window.document.removeEventListener('visibilitychange', boundary);
+            window.removeEventListener('blur', boundary);
+            window.removeEventListener('pagehide', boundary);
+            window.removeEventListener('beforeunload', beforeUnload);
+            writer.dispose();
+        };
+    }, [document, documentId, storage]);
+    useEffect(() => {
+        if (!isForeground && controller) {
+            controller.tick();
+            void controller.flush().catch(() => {});
+            void controller.checkpoint(true).catch(() => {});
+        }
+    }, [isForeground, controller]);
 
     const update = () => {
         if (!document) return;
@@ -889,6 +969,7 @@ function ApplicationTab({
             undo: () => document.undo(),
             redo: () => document.redo(),
             save: () => document,
+            flush: () => controllerRef.current?.flush() ?? Promise.resolve(),
             title: document.title,
         });
     };
@@ -898,12 +979,6 @@ function ApplicationTab({
             update();
             const onChange = () => {
                 update();
-
-                if (realizeVirtual) {
-                    realizeVirtual(document);
-                } else {
-                    scheduleSaveRef.current();
-                }
             };
 
             document.addEventListener('change', onChange);
@@ -933,13 +1008,23 @@ function ApplicationTab({
         );
     } else if (loading || document) {
         contents = (
-            <div className="i-contents">
-                {document ? (
-                    <Eo3
-                        document={document}
-                        initWithoutRender={initWithoutRender}
-                        graphOpen={graphOpen}
+            <div className={'i-contents' + (controller && saveState ? ' has-recovery' : '')}>
+                {document && controller && saveState && (
+                    <SaveRecovery
+                        state={saveState}
+                        controller={controller}
+                        work={document}
+                        memoryOnly={isMemoryStorage}
                     />
+                )}
+                {document ? (
+                    <div className="saved-work-editor">
+                        <Eo3
+                            document={document}
+                            initWithoutRender={initWithoutRender}
+                            graphOpen={graphOpen}
+                        />
+                    </div>
                 ) : null}
                 {loading ? (
                     <div className="i-loading">
@@ -960,6 +1045,8 @@ function ApplicationTab({
             aria-hidden={!isForeground}
             className={'application-tab' + (isForeground ? ' is-foreground' : ' is-background')}
             ref={tabNode}
+            onKeyDownCapture={() => controller?.activity()}
+            onPointerDownCapture={() => controller?.activity()}
         >
             {contents}
         </div>

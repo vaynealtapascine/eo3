@@ -1,0 +1,77 @@
+.save-recovery {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5em;
+    padding: 0.4em 0.7em;
+    border-bottom: 1px solid var(--P-separator);
+    background: var(--P-dialog-bg);
+    font-size: 0.9em;
+}
+.save-error {
+    color: var(--P-error-text);
+    overflow-wrap: anywhere;
+}
+.recovery-dialog {
+    width: min(48em, calc(100vw - 2em));
+    max-height: calc(100dvh - 2em);
+    overflow: auto;
+    padding: 1em;
+    background: var(--P-dialog-bg);
+    color: rgb(var(--P-color-fg));
+    border: 1px solid var(--P-dialog-outline);
+    border-radius: 0.5em;
+    user-select: text;
+}
+.recovery-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1em;
+}
+.recovery-heading h2 {
+    margin: 0;
+}
+.recovery-dialog select {
+    display: block;
+    max-width: 100%;
+    margin: 0.5em 0;
+}
+.revision-preview {
+    margin: 1em 0;
+    padding: 0.75em;
+    border: 1px solid var(--P-separator);
+}
+.revision-preview pre {
+    max-height: 18em;
+    overflow: auto;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+.recovery-dialog button,
+.library-backup button {
+    margin: 0.25em;
+}
+.library-backup {
+    padding: 0.75em;
+    overflow-wrap: anywhere;
+}
+.library-backup h2 {
+    font-size: 1.1em;
+    margin: 0;
+}
+.application-tab > .i-contents.has-recovery {
+    grid-template-rows: auto minmax(0, 1fr);
+    > .save-recovery {
+        grid-area: 1 / 1;
+    }
+    > .saved-work-editor {
+        grid-area: 2 / 1;
+        min-height: 0;
+        min-width: 0;
+        display: grid;
+    }
+    > .i-loading {
+        grid-area: 1 / 1 / 3 / 2;
+    }
+}

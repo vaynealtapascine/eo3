@@ -148,7 +148,7 @@ function GroupsLevel({ onBack, onPick }: { onBack: () => void; onPick: (f: Group
                                     label: 'Remove from my groups',
                                     danger: true,
                                     run: () => {
-                                        showConfirm(
+                                        return showConfirm(
                                             `Remove “${entry.file.title}” from My groups? Works that use it keep their copy.`,
                                             { confirmLabel: 'Remove', danger: true }
                                         ).then((yes) => yes && removeLibraryGroup(entry.id));

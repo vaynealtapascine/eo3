@@ -42,17 +42,21 @@ export interface TargetProfile {
 
 /** Checks untrusted JSON (an imported profile) and fills defaults; returns an error message instead. */
 export function parseProfile(value: unknown): TargetProfile | string {
-    if (!value || typeof value !== 'object') return 'A profile must be a JSON object.';
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+        return 'A profile must be a JSON object.';
     const v = value as Record<string, unknown>;
     const strings = (x: unknown) => Array.isArray(x) && x.every((s) => typeof s === 'string');
     const stringLists = (x: unknown) =>
-        !!x && typeof x === 'object' && Object.values(x).every(strings);
+        !!x && typeof x === 'object' && !Array.isArray(x) && Object.values(x).every(strings);
 
     if (typeof v.id !== 'string' || !/^[\w-]+$/.test(v.id)) {
         return '"id" must be letters, digits, dashes or underscores.';
     }
     if (typeof v.title !== 'string' || !v.title.trim()) return '"title" is required.';
-    if (!((v.delivery as string) in DELIVERY_STRATEGIES)) {
+    if (
+        typeof v.delivery !== 'string' ||
+        !Object.prototype.hasOwnProperty.call(DELIVERY_STRATEGIES, v.delivery)
+    ) {
         return `"delivery" must be one of: ${Object.keys(DELIVERY_STRATEGIES).join(', ')}.`;
     }
     if (!strings(v.elements)) return '"elements" must be a list of element names.';
@@ -72,7 +76,11 @@ export function parseProfile(value: unknown): TargetProfile | string {
     }
     if (
         v.partMaxChars !== undefined &&
-        !(typeof v.partMaxChars === 'number' && v.partMaxChars > 0)
+        !(
+            typeof v.partMaxChars === 'number' &&
+            Number.isFinite(v.partMaxChars) &&
+            v.partMaxChars > 0
+        )
     ) {
         return '"partMaxChars" must be a positive number.';
     }
