@@ -4987,6 +4987,56 @@ IN REVIEW: this block is very old (2008), a bit wonky and has an unexpected effe
     margin: 0;
     padding: 0;
 
+    /* Title and byline edited in place: the hidden copy sizes the field to its text. */
+    .eo3-preface-field {
+        display: inline-grid;
+        max-width: 100%;
+        vertical-align: top;
+
+        &::after,
+        > input {
+            grid-area: 1 / 1;
+            font: inherit;
+            color: inherit;
+            letter-spacing: inherit;
+            text-align: inherit;
+            padding: 0 0.15em;
+            margin: 0;
+        }
+
+        &::after {
+            content: attr(data-value) ' ';
+            visibility: hidden;
+            white-space: pre;
+            overflow: hidden;
+        }
+
+        > input {
+            width: 100%;
+            min-width: 2em;
+            background: none;
+            border: 1px dashed transparent;
+            border-radius: 0.2em;
+            box-shadow: none;
+            text-decoration: inherit;
+
+            &::placeholder {
+                color: inherit;
+                opacity: 0.45;
+            }
+
+            &:hover {
+                border-color: #0004;
+            }
+
+            &:focus {
+                outline: none;
+                border-color: #900;
+                background: #fff8;
+            }
+        }
+    }
+
     .actions input,
     .actions select,
     .actions button,

@@ -212,6 +212,8 @@ export function PostPreview({
     renderId,
     workTitle,
     author,
+    onWorkTitleChange,
+    onAuthorChange,
     work,
     partId,
     error,
@@ -436,6 +438,8 @@ export function PostPreview({
         plugin,
         workTitle,
         author,
+        onWorkTitleChange,
+        onAuthorChange,
         markdown,
         exportOutput,
         part: { index: partIndex, count: work.parts.length, title: part.title },
@@ -517,6 +521,8 @@ namespace PostPreview {
         renderId: string;
         workTitle: string;
         author: string;
+        onWorkTitleChange: (title: string) => void;
+        onAuthorChange: (author: string) => void;
         work: WorkOutput;
         /** The part to show; falls back to the first part if it no longer exists. */
         partId: string | null;

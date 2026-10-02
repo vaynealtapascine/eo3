@@ -149,6 +149,9 @@ export interface SiteTargetPreviewProps<Config extends JsonValue> {
     /** Current project metadata, independent of the last content render. */
     workTitle: string;
     author: string;
+    /** Edit the metadata from the preview (AO3 shows them as the work's title and byline). */
+    onWorkTitleChange(title: string): void;
+    onAuthorChange(author: string): void;
     markdown: string;
     /**
      * The finished artifacts for the part on screen plus the work-wide ones, keyed by

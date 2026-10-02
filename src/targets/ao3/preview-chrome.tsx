@@ -65,10 +65,44 @@ function PostSize({ size }: { size: number }) {
     );
 }
 
+/**
+ * The work's title or byline, edited in place: it looks like the text AO3 shows (Work Skin
+ * styles apply to it too) and only shows it's a field on hover and focus.
+ */
+function PrefaceField({
+    label,
+    placeholder,
+    value,
+    maxLength,
+    onChange,
+}: {
+    label: string;
+    placeholder: string;
+    value: string;
+    maxLength?: number;
+    onChange: (value: string) => void;
+}) {
+    return (
+        <span className="eo3-preface-field" data-value={value || placeholder}>
+            <input
+                aria-label={label}
+                title={`Edit the ${label.toLowerCase()}`}
+                placeholder={placeholder}
+                value={value}
+                maxLength={maxLength}
+                size={1}
+                onChange={(e) => onChange(e.target.value)}
+            />
+        </span>
+    );
+}
+
 export function Ao3PreviewHeader({
     exportOutput,
     workTitle,
     author,
+    onWorkTitleChange,
+    onAuthorChange,
     part,
     posting,
     sizing,
@@ -580,10 +614,23 @@ export function Ao3PreviewHeader({
                                     <div id="workskin">
                                         <div className="preface group">
                                             <h2 className="title heading">
-                                                {workTitle || 'Fic Title'}
+                                                <PrefaceField
+                                                    label="Work title"
+                                                    placeholder="Fic Title"
+                                                    value={workTitle}
+                                                    maxLength={140}
+                                                    onChange={onWorkTitleChange}
+                                                />
                                             </h2>
                                             <h3 className="byline heading">
-                                                <a rel="author">{author || 'Author Name'}</a>
+                                                <a rel="author">
+                                                    <PrefaceField
+                                                        label="Author"
+                                                        placeholder="Author Name"
+                                                        value={author}
+                                                        onChange={onAuthorChange}
+                                                    />
+                                                </a>
                                             </h3>
                                         </div>
 

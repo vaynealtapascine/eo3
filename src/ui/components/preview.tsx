@@ -94,6 +94,8 @@ export function Preview({
                         renderId={render.id}
                         workTitle={document.title}
                         author={document.author}
+                        onWorkTitleChange={(title) => document.setTitle(title)}
+                        onAuthorChange={(author) => document.setAuthor(author)}
                         stale={render.rendering}
                         work={work}
                         partId={shownPart.id}

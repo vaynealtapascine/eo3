@@ -109,7 +109,7 @@ new files, update the matching section here in the same commit.
 | File                                               | What it is                                                                                                                                                                                                    |
 | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `index.tsx`                                        | `ApplicationFrame`: toolbar (new/load/download, save status, undo/redo, tabs), sidebar split, one `ApplicationTab` per open work (loads it, owns its `SaveController`, error banner, version history dialog). |
-| `eo3.tsx`                                          | `Eo3`: the editor for one work. Render scheduling, left panel (title/author, parts list, module list), preview, graph; phone layout with pane tabs.                                                           |
+| `eo3.tsx`                                          | `Eo3`: the editor for one work. Render scheduling, left panel (project title, parts list, module list), preview, graph; phone layout with pane tabs.                                                          |
 | `sidebar.tsx`                                      | Sidebar: local documents, examples menu, extras (share URL), Backups.                                                                                                                                         |
 | `dialogs.tsx`                                      | `showAlert` / `showConfirm` + `DialogHost`. **Never use native `alert/confirm/prompt`.**                                                                                                                      |
 | `update-notice.tsx`                                | "eo3 has been updated" toast and changelog (via `util/changelog.ts`).                                                                                                                                         |
@@ -210,8 +210,11 @@ Each entry: the files that implement it (most important first), its tests, and w
 ### AO3 preview page (mockup, title/author, copy buttons)
 
 -   **Files:** `src/targets/ao3/preview-chrome.tsx`, `src/targets/ao3/styles.scss`,
-    `src/ui/components/post-preview/*`, `src/ui/eo3.tsx` (`DocumentSettings`: title, author).
--   The preview shows the project title and author from the document, not from the render.
+    `src/ui/components/post-preview/*`, `src/ui/eo3.tsx` (`DocumentSettings`: project title).
+-   The work title and byline are edited in place in the AO3 mockup (`PrefaceField` in
+    `preview-chrome.tsx`, via `onWorkTitleChange` / `onAuthorChange` in
+    `SiteTargetPreviewProps`). They come from the document, not from the render, so they
+    update even with Live Update off. The author is only editable there.
 
 ### Posting state, skin record, crossposting
 
