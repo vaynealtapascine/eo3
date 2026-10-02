@@ -4,6 +4,11 @@ Notes for anyone (human or AI) working on eo3. See README.md for what the app is
 [PROGRESS.md](PROGRESS.md) for the work in flight. Design references live in
 [docs/design/](docs/design/).
 
+**Start with [docs/CODEMAP.md](docs/CODEMAP.md).** It maps every directory and feature to the
+files it touches, with recipes for common changes, so you can find what to edit without
+reading the whole codebase. Update it in the same commit when you add, move or remove files
+or change which files a feature uses.
+
 ## Commands
 
 ```sh
@@ -17,6 +22,8 @@ npm run test:wafrn-update  # re-extract wafrn's sanitizer settings (needs networ
 Run `typecheck` and `test` before committing; CI runs both plus the build on every push.
 
 ## Layout
+
+The short version; [docs/CODEMAP.md](docs/CODEMAP.md) has the full map.
 
 -   `src/document.ts` — the module graph (modules, sends, evaluation) and the work's parts
     (chapters/posts), each with its own output; `evalWork()` evaluates them all.

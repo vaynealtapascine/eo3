@@ -131,7 +131,7 @@ describe('application save lifecycle', () => {
         await act(async () => {
             await vi.advanceTimersByTimeAsync(1000);
         });
-        expect(container.textContent).toContain('Save failed');
+        expect(container.textContent).toContain('Couldn’t save this work');
         await close();
         expect(
             container.querySelector<HTMLInputElement>('input[aria-label="Work title"]')?.value

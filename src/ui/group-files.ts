@@ -5,15 +5,11 @@ import {
     parseGroupFile,
     stringifyGroupFile,
 } from '../storage/group-file';
+import { downloadFile } from '../util/download';
 
 /** Saves a group as a file in the browser's downloads. */
 export function downloadGroupFile(file: GroupFile) {
-    const a = window.document.createElement('a');
-    const blob = new Blob([stringifyGroupFile(file)], { type: 'application/json' });
-    const url = (a.href = URL.createObjectURL(blob));
-    a.download = groupFileName(file.title);
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadFile(stringifyGroupFile(file), groupFileName(file.title), 'application/json');
 }
 
 /** Asks for a group file; null if none was picked. Throws if it isn't a readable group file. */

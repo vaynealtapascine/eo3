@@ -32,14 +32,18 @@ export function splitHtml(
     };
 
     // Candidate boundaries: after each block that isn't blank text, leaving something behind.
+    // Scan backwards so checking the remaining content doesn't copy every suffix (quadratic
+    // work for long chapters). Reverse the cuts before the binary search below.
     const cuts: number[] = [];
-    for (let i = 1; i < blocks.length; i++) {
+    let hasRemainingContent = false;
+    for (let i = blocks.length - 1; i > 0; i--) {
+        const after = blocks[i];
+        hasRemainingContent ||= after.nodeType !== Node.TEXT_NODE || !!after.textContent!.trim();
         const before = blocks[i - 1];
         if (before.nodeType === Node.TEXT_NODE && !before.textContent!.trim()) continue;
-        if (blocks.slice(i).some((n) => n.nodeType !== Node.TEXT_NODE || n.textContent!.trim())) {
-            cuts.push(i);
-        }
+        if (hasRemainingContent) cuts.push(i);
     }
+    cuts.reverse();
 
     // The rendered size grows with the prefix, so binary-search the last cut that fits.
     let lo = 0;

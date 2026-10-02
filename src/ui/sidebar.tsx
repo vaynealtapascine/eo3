@@ -12,6 +12,7 @@ import { Button } from '../uikit/button';
 import { DirPopover } from '../uikit/dir-popover';
 import { TextField } from '../uikit/text-field';
 import { LibraryBackupControls } from './components/library-backup';
+import { downloadFile, safeFileName } from '../util/download';
 
 export function ApplicationSidebar({
     currentFile,
@@ -267,18 +268,7 @@ function FileItem({
     const download = () => {
         storage.getDocument(id).then((document) => {
             if (!document) return;
-            const format = 'toml';
-
-            const title = document.title || 'Untitled';
-
-            const a = window.document.createElement('a');
-            const file = new File([serialize(document, format)], title, {
-                type: 'application/octet-stream',
-            });
-            const objectURL = (a.href = URL.createObjectURL(file));
-            a.download = `${title}.${format}`;
-            a.click();
-            URL.revokeObjectURL(objectURL);
+            downloadFile(serialize(document, 'toml'), safeFileName(document.title, 'toml'));
         });
     };
 

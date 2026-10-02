@@ -29,7 +29,8 @@ import { Button } from '../uikit/button';
 import { showAlert, showConfirm } from './dialogs';
 import { exampleFromSearch } from '../storage/example-link';
 import { SaveController, SaveState } from '../storage/save-controller';
-import { SaveRecovery } from './components/save-recovery';
+import { downloadFile, safeFileName } from '../util/download';
+import { SaveErrorBanner, SaveStatus, VersionHistory } from './components/save-recovery';
 
 let lastEo3Init = 0;
 try {
@@ -45,6 +46,9 @@ interface TabState {
     save: () => Document;
     flush: () => Promise<void>;
     title: string;
+    /** Autosave state; null until the work has loaded. */
+    saveState: SaveState | null;
+    openHistory: () => void;
 }
 
 // we assign IDs to virtual documents ahead of time so that we can turn them into real documents later
@@ -183,7 +187,7 @@ export default function ApplicationFrame({
             loadOpenFromUrl();
         };
         window.addEventListener('popstate', onPopState);
-        return () => window.addEventListener('popstate', onPopState);
+        return () => window.removeEventListener('popstate', onPopState);
     }, []);
 
     // close a document if it was deleted
@@ -250,17 +254,7 @@ export default function ApplicationFrame({
     const save = (format?: string) => {
         if (!tabState) return;
         const doc = tabState.save();
-
-        const title = doc.title || 'Untitled';
-
-        const a = window.document.createElement('a');
-        const file = new File([serialize(doc, format)], title, {
-            type: 'application/octet-stream',
-        });
-        const objectURL = (a.href = URL.createObjectURL(file));
-        a.download = title + '.' + (format || 'toml');
-        a.click();
-        URL.revokeObjectURL(objectURL);
+        downloadFile(serialize(doc, format), safeFileName(doc.title, format || 'toml'));
     };
 
     const newFile = () => {
@@ -342,6 +336,13 @@ export default function ApplicationFrame({
                         <ToolbarButton onClick={newFile}>new</ToolbarButton>
                         <LoadButton onLoad={load} />
                         <SaveButton disabled={!tabState} onSave={save} />
+                        {tabState?.saveState ? (
+                            <SaveStatus
+                                state={tabState.saveState}
+                                memoryOnly={!!isMemoryStorage}
+                                onOpenHistory={tabState.openHistory}
+                            />
+                        ) : null}
 
                         <span className="i-spacer"></span>
 
@@ -758,8 +759,9 @@ function SaveButton({
                 onClick={save}
                 onMouseOver={onMouseOver}
                 onMouseOut={onMouseOut}
+                title="Download this work as a file (Alt-click to choose the format)"
             >
-                {isMouseOver && optHeld ? 'save…' : 'save'}
+                {isMouseOver && optHeld ? 'download…' : 'download'}
             </ToolbarButton>
             <DirPopover
                 anchor={button.current}
@@ -914,6 +916,7 @@ function ApplicationTab({
     const [controller, setController] = useState<SaveController | null>(null);
     const controllerRef = useRef<SaveController | null>(null);
     const [saveState, setSaveState] = useState<SaveState | null>(null);
+    const [historyOpen, setHistoryOpen] = useState(false);
     useEffect(() => {
         if (!document) return;
         const id = documentId ?? virtualIds.get(document);
@@ -971,20 +974,18 @@ function ApplicationTab({
             save: () => document,
             flush: () => controllerRef.current?.flush() ?? Promise.resolve(),
             title: document.title,
+            saveState,
+            openHistory: () => setHistoryOpen(true),
         });
     };
 
     useEffect(() => {
         if (document) {
             update();
-            const onChange = () => {
-                update();
-            };
-
-            document.addEventListener('change', onChange);
-            return () => document.removeEventListener('change', onChange);
+            document.addEventListener('change', update);
+            return () => document.removeEventListener('change', update);
         }
-    }, [document]);
+    }, [document, saveState]);
 
     let contents = null;
     if (!loading && error) {
@@ -1008,14 +1009,27 @@ function ApplicationTab({
         );
     } else if (loading || document) {
         contents = (
-            <div className={'i-contents' + (controller && saveState ? ' has-recovery' : '')}>
+            <div
+                className={
+                    'i-contents' +
+                    (saveState?.error || saveState?.recoveryError ? ' has-save-banner' : '')
+                }
+            >
                 {document && controller && saveState && (
-                    <SaveRecovery
-                        state={saveState}
-                        controller={controller}
-                        work={document}
-                        memoryOnly={isMemoryStorage}
-                    />
+                    <>
+                        <SaveErrorBanner
+                            state={saveState}
+                            controller={controller}
+                            work={document}
+                        />
+                        <VersionHistory
+                            open={historyOpen}
+                            onClose={() => setHistoryOpen(false)}
+                            state={saveState}
+                            controller={controller}
+                            memoryOnly={isMemoryStorage}
+                        />
+                    </>
                 )}
                 {document ? (
                     <div className="saved-work-editor">

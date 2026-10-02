@@ -20,10 +20,13 @@ const store = createBrowserListStore<TargetProfile>(
 
 export const listProfiles = store.list;
 
-/** Adds the profile, or replaces the one with the same id. */
+/** Adds the profile at the end, or replaces the one with the same id where it is. */
 export function saveProfile(profile: TargetProfile) {
-    const profiles = listProfiles().filter((p) => p.id !== profile.id);
-    store.write([...profiles, profile]);
+    const profiles = listProfiles();
+    const index = profiles.findIndex((p) => p.id === profile.id);
+    if (index === -1) profiles.push(profile);
+    else profiles[index] = profile;
+    store.write(profiles);
 }
 
 export function deleteProfile(id: string) {

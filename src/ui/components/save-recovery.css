@@ -1,77 +1,288 @@
-.save-recovery {
+/* Toolbar save indicator (inside .application-frame > .i-toolbar). */
+.save-status {
+    align-self: center;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+    margin: 0 0.25em;
+    padding: 0.2em 0.5em;
+    font: inherit;
+    color: rgb(var(--P-toolbar-fg) / 0.75);
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 0.5em;
+    white-space: nowrap;
+    cursor: pointer;
+
+    &:hover {
+        background: var(--P-toolbar-fade-button-hover);
+        border-color: var(--P-toolbar-fade-button-outline);
+    }
+
+    > .i-dot {
+        width: 0.5em;
+        height: 0.5em;
+        border-radius: 50%;
+        background: #4a4;
+        flex-shrink: 0;
+    }
+
+    &.is-unsaved > .i-dot,
+    &.is-pending > .i-dot,
+    &.is-saving > .i-dot {
+        background: rgb(var(--P-color-warning));
+    }
+
+    &.has-problem {
+        color: rgb(var(--P-color-danger-fg));
+        background: rgb(var(--P-color-danger));
+
+        > .i-dot {
+            background: currentColor;
+        }
+    }
+}
+
+/* Editor banner, shown only while saving fails. */
+.save-error-banner {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 0.5em;
     padding: 0.4em 0.7em;
-    border-bottom: 1px solid var(--P-separator);
-    background: var(--P-dialog-bg);
+    background: rgb(var(--P-color-danger));
+    color: rgb(var(--P-color-danger-fg));
     font-size: 0.9em;
+
+    > .i-message {
+        flex: 1;
+        min-width: 12em;
+        overflow-wrap: anywhere;
+    }
+
+    > button {
+        font: inherit;
+        color: inherit;
+        background: rgb(0 0 0 / 0.15);
+        border: 1px solid currentColor;
+        border-radius: 0.5em;
+        padding: 0.15em 0.6em;
+        cursor: pointer;
+    }
 }
-.save-error {
-    color: var(--P-error-text);
-    overflow-wrap: anywhere;
+
+.application-tab > .i-contents > .saved-work-editor {
+    min-height: 0;
+    min-width: 0;
+    display: grid;
 }
-.recovery-dialog {
-    width: min(48em, calc(100vw - 2em));
-    max-height: calc(100dvh - 2em);
-    overflow: auto;
-    padding: 1em;
-    background: var(--P-dialog-bg);
-    color: rgb(var(--P-color-fg));
-    border: 1px solid var(--P-dialog-outline);
-    border-radius: 0.5em;
-    user-select: text;
-}
-.recovery-heading {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1em;
-}
-.recovery-heading h2 {
-    margin: 0;
-}
-.recovery-dialog select {
-    display: block;
-    max-width: 100%;
-    margin: 0.5em 0;
-}
-.revision-preview {
-    margin: 1em 0;
-    padding: 0.75em;
-    border: 1px solid var(--P-separator);
-}
-.revision-preview pre {
-    max-height: 18em;
-    overflow: auto;
-    white-space: pre-wrap;
-    overflow-wrap: anywhere;
-}
-.recovery-dialog button,
-.library-backup button {
-    margin: 0.25em;
-}
-.library-backup {
-    padding: 0.75em;
-    overflow-wrap: anywhere;
-}
-.library-backup h2 {
-    font-size: 1.1em;
-    margin: 0;
-}
-.application-tab > .i-contents.has-recovery {
+
+.application-tab > .i-contents.has-save-banner {
     grid-template-rows: auto minmax(0, 1fr);
-    > .save-recovery {
+
+    > .save-error-banner {
         grid-area: 1 / 1;
     }
     > .saved-work-editor {
         grid-area: 2 / 1;
-        min-height: 0;
-        min-width: 0;
-        display: grid;
     }
     > .i-loading {
         grid-area: 1 / 1 / 3 / 2;
+    }
+}
+
+.version-history {
+    width: min(42em, calc(100vw - 32px));
+    max-height: calc(100dvh - 32px);
+    padding: 1em 1.2em;
+    border: none;
+    border-radius: 0.75em;
+    background: var(--P-dialog-bg);
+    color: rgb(var(--P-color-fg));
+    box-shadow: 0 0.5em 1em rgba(0, 0, 0, 0.3), 0 0 0 1px var(--P-dialog-outline);
+    user-select: text;
+
+    &::backdrop {
+        background: rgba(0, 0, 0, 0.3);
+    }
+
+    &[open] {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75em;
+    }
+
+    p {
+        margin: 0;
+    }
+
+    button {
+        font: inherit;
+        color: inherit;
+        background: none;
+        border: 1px solid var(--P-separator);
+        border-radius: 0.5em;
+        padding: 0.3em 0.8em;
+        cursor: pointer;
+
+        &:disabled {
+            opacity: 0.5;
+            cursor: default;
+        }
+
+        &.is-primary {
+            background: rgb(var(--P-color-accent));
+            border-color: transparent;
+            color: rgb(var(--P-color-accent-fg));
+        }
+
+        &.is-danger {
+            color: var(--P-error-text);
+        }
+    }
+
+    > .i-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+
+        h2 {
+            margin: 0;
+            font-size: 1.2em;
+        }
+
+        > .i-close {
+            border: none;
+            font-size: 1.4em;
+            line-height: 1;
+            padding: 0 0.3em;
+        }
+    }
+
+    .i-warning {
+        color: var(--P-error-text);
+        overflow-wrap: anywhere;
+    }
+
+    .i-empty {
+        opacity: 0.7;
+    }
+
+    > .i-toggle {
+        display: flex;
+        gap: 0.6em;
+        align-items: flex-start;
+        padding: 0.6em 0.75em;
+        border-radius: 0.5em;
+        background: var(--P-info-box-bg);
+        cursor: pointer;
+
+        > input {
+            margin-top: 0.2em;
+        }
+
+        > span {
+            display: flex;
+            flex-direction: column;
+            gap: 0.2em;
+        }
+
+        small {
+            opacity: 0.8;
+        }
+    }
+
+    > .i-browser {
+        display: grid;
+        grid-template-columns: minmax(12em, 2fr) 3fr;
+        gap: 0.75em;
+        min-height: 0;
+
+        @media (max-width: 600px) {
+            grid-template-columns: 100%;
+        }
+    }
+
+    .i-versions {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        max-height: 22em;
+        overflow: auto;
+        border: 1px solid var(--P-separator);
+        border-radius: 0.5em;
+
+        li + li {
+            border-top: 1px solid var(--P-separator);
+        }
+
+        button {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            text-align: left;
+            border: none;
+            border-radius: 0;
+            padding: 0.4em 0.6em;
+
+            &:hover {
+                background: var(--P-item-bg);
+            }
+
+            &[aria-pressed='true'] {
+                background: rgb(var(--P-color-accent));
+                color: rgb(var(--P-color-accent-fg));
+            }
+        }
+
+        .i-detail {
+            font-size: 0.85em;
+            opacity: 0.75;
+        }
+    }
+
+    .i-version {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5em;
+        min-width: 0;
+
+        h3 {
+            margin: 0;
+            font-size: 1.05em;
+            overflow-wrap: anywhere;
+        }
+
+        .i-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4em;
+        }
+
+        pre {
+            max-height: 14em;
+            overflow: auto;
+            margin: 0.4em 0 0;
+            padding: 0.5em;
+            background: var(--P-info-box-bg);
+            border-radius: 0.4em;
+            font-size: 0.8em;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+        }
+    }
+
+    > .i-footer {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.75em;
+        padding-top: 0.75em;
+        border-top: 1px solid var(--P-separator);
+
+        .i-hint {
+            font-size: 0.85em;
+            opacity: 0.7;
+        }
     }
 }

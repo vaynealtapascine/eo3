@@ -36,33 +36,30 @@ Footnotes accepts `id` to keep anchors unique when composing multiple passages.
 
 ## Saving and recovery
 
-The save bar shows when edits are waiting, saving, or saved in this browser. Failed
-saves stay visible with **Retry save** and **Download work** controls. Closing an editor
-tab waits for its latest edits to save; a failed save leaves the tab open.
+Works save in this browser as you edit. The indicator next to **download** in the toolbar
+shows whether the latest changes are saved. When a save fails, a red bar above the editor
+offers **Retry save** and **Download work**, and closing the tab waits until the work is
+saved (a failed save leaves the tab open).
 
-Open **Save history…** and enable **Keep checkpoints for this work** to retain earlier
-versions. This is off by default for each work. While the work is visible and focused,
-changes are checkpointed every minute of active editing, with a full snapshot every ten
-active minutes. The clock pauses after a minute without interaction and while the tab is
-hidden or unfocused. Unchanged minute checkpoints are skipped; full snapshots still run
-on the ten-minute boundaries. Disabling checkpoints keeps the existing history.
+Click the indicator for **Version history**. Turn on **Keep versions of this work** to keep
+earlier versions (off by default, per work). While the work is on screen and you are editing,
+a version is recorded for every minute of editing, skipping minutes with no changes; every
+ten minutes of editing it stores a full copy instead of only the changes. Time stops counting
+after a minute without input and while the tab is hidden or unfocused. The newest 120
+versions (or about 20 MiB) are kept; the latest is always kept. Pick a version to see what it
+contains, download it, or restore it. Restoring keeps the current draft as a version too and
+can be undone. Turning history off keeps the versions you have; **Delete all versions…**
+removes them.
 
-History retains up to 120 revisions or approximately 20 MiB per work, preserving the
-latest revision even if it exceeds that size. Inspect or download a revision before
-restoring it. Restoration saves the current draft and restored version as new snapshots
-and can be undone. **Clear history…** removes old checkpoints; when enabled, it starts
-again with a snapshot of the current draft.
+The sidebar's **Backups** section downloads all works, their version history, My groups and
+custom sites as one JSON file, including the latest edits of open works. **restore…**
+validates a backup before writing anything and adds its works as copies; nothing existing is
+replaced, and custom sites that conflict with yours are kept as separate sites. Backups up to
+100 MiB can be restored. The section can also ask the browser to keep eo3's data.
 
-The sidebar's **Backup and recovery** section downloads all works, retained checkpoint
-history, My groups, and custom sites as one JSON file, including open drafts' latest edits.
-Import validates the backup before writing and creates independent work copies. Existing
-works remain intact; conflicting custom sites are kept separately and their imported
-posting records follow the copied site. Backup import supports files up to 100 MiB.
-The browser storage request is optional and reports whether persistence was granted.
-
-Browser-local data and checkpoints are not a substitute for downloaded backups. If browser
-storage is unavailable, the save bar labels memory-only saving and the history disappears
-when the page closes. Everything runs in the browser; no application server is required.
+Browser storage is not a substitute for downloaded backups. If it is unavailable, the toolbar
+says so, the indicator reads **Saved in memory**, and everything disappears when the page
+closes. Everything runs in the browser; no application server is required.
 
 ## Overview
 Documents are a directed graph of modules.

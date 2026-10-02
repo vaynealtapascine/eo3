@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Document } from '../../src/document';
 import { MemoryStorage } from '../../src/storage';
 import { SaveController, SaveState } from '../../src/storage/save-controller';
-import { SaveRecovery } from '../../src/ui/components/save-recovery';
+import { SaveErrorBanner, SaveStatus, VersionHistory } from '../../src/ui/components/save-recovery';
 
 vi.mock('../../src/ui/dialogs', () => ({ showConfirm: vi.fn(async () => true) }));
 let container: HTMLDivElement;
@@ -50,15 +50,36 @@ async function setup(memoryOnly = false) {
     work.setTitle('Original title');
     const storage = new MemoryStorage();
     await storage.saveDocument('work', work);
-    const render = (state: SaveState) =>
+    let historyOpen = false;
+    let latest: SaveState;
+    const render = (state: SaveState) => {
+        latest = state;
         root.render(
-            createElement(SaveRecovery, {
-                state,
-                controller: writer!,
-                work,
-                memoryOnly,
-            })
+            createElement(
+                'div',
+                null,
+                createElement(SaveStatus, {
+                    state,
+                    memoryOnly,
+                    onOpenHistory: () => {
+                        historyOpen = true;
+                        render(latest);
+                    },
+                }),
+                createElement(SaveErrorBanner, { state, controller: writer!, work }),
+                createElement(VersionHistory, {
+                    open: historyOpen,
+                    onClose: () => {
+                        historyOpen = false;
+                        render(latest);
+                    },
+                    state,
+                    controller: writer!,
+                    memoryOnly,
+                })
+            )
         );
+    };
     writer = new SaveController(storage, 'work', work, {
         persisted: true,
         isActive: () => true,
@@ -89,18 +110,19 @@ describe('save recovery controls', () => {
             work.setTitle('Latest writing');
             await vi.advanceTimersByTimeAsync(1000);
         });
-        expect(container.textContent).toContain('Save failed');
+        expect(container.querySelector('.save-status')?.textContent).toBe('Not saved');
         expect(container.textContent).toContain('Storage full');
         expect(container.textContent).toContain('Download work');
         save.mockImplementation(original);
         await click('Retry save');
-        expect(container.textContent).toContain('Saved in this browser');
+        expect(container.querySelector('.save-status')?.textContent).toBe('Saved');
+        expect(container.querySelector('.save-error-banner')).toBeNull();
         expect((await storage.getDocument('work'))?.title).toBe('Latest writing');
     });
 
     it('opts in, inspects without executing and restores with retained history', async () => {
         const { work } = await setup();
-        await click('Save history…');
+        await click('Saved');
         const checkbox = container.querySelector<HTMLInputElement>('input[type="checkbox"]')!;
         expect(checkbox.checked).toBe(false);
         await act(async () => {
@@ -112,21 +134,22 @@ describe('save recovery controls', () => {
             work.setTitle('Changed title');
             await writer!.flush();
         });
-        await act(async () => {
-            Simulate.change(container.querySelector('select')!, { target: { value: id } } as any);
-        });
+        const versions = [...container.querySelectorAll<HTMLButtonElement>('.i-versions button')];
+        expect(versions).toHaveLength(writer!.state.recovery.entries.length);
+        // Newest first: the oldest version is the one taken when history was turned on.
+        expect(writer!.state.recovery.entries[0].id).toBe(id);
+        await act(async () => versions.at(-1)!.click());
         expect(container.querySelector('pre')?.textContent).toContain('Original title');
         expect(work.title).toBe('Changed title');
-        await click('Restore as a new revision');
+        await click('Restore this version');
         expect(work.title).toBe('Original title');
         expect(writer!.state.recovery.entries).toHaveLength(3);
-        expect(container.textContent).toContain('Revision restored and saved');
+        expect(container.textContent).toContain('Restored.');
     });
 
     it('clearly labels the memory-only fallback', async () => {
         await setup(true);
-        await click('Save history…');
-        expect(container.textContent).toContain('Saved in memory only');
+        await click('Saved in memory');
         expect(container.textContent).toContain('history disappears when you close the page');
     });
 });

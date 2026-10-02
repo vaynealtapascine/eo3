@@ -10,6 +10,34 @@ update it whenever a step lands (what changed, what's next, anything surprising)
 
 ## Status
 
+2026-10-02 — **Audit, refinement of recent features, codebase map.** Working tree also
+contains the 2026-09-29 cleanup edits (uncommitted until now); nothing is committed yet.
+
+-   **Codebase map:** [docs/CODEMAP.md](docs/CODEMAP.md) maps directories and features to
+    files, with recipes and invariants. AGENTS.md points to it; keep it current.
+-   **Save and version history UI rebuilt** (`ui/components/save-recovery.tsx`). The
+    always-visible save bar is gone: the toolbar shows a small status (Saved / Edited /
+    Saving… / Not saved) next to **download** (the old "save" button, which only ever
+    downloaded a file). A red banner appears above the editor only while saving fails, with
+    Retry and Download. Clicking the status opens **Version history**: one toggle ("Keep
+    versions of this work", still opt-in per work), a newest-first list of versions with
+    plain dates and editing time, and restore / download / show file for the selected one.
+    Storage behavior (`save-controller.ts`, `checkpoints.ts`) is unchanged.
+-   **Backups** sidebar section restyled like the other sections, shorter copy, uikit buttons.
+-   **Chapter breaks** can now be inserted from the rich text editor too (previously code mode
+    only, which hid the feature from the default chapter editor).
+-   **Custom sites editor:** "save and preview" also works for new sites; switching sites
+    asks before discarding unsaved edits; saving a site no longer moves it to the end of the
+    list (`profile/store.ts`).
+-   **Fixes:** group-file and saved-document plugin lookups ignore inherited object keys
+    (`moduleDef` in `document.ts`; this was the failing test left by the cleanup);
+    `popstate` listener leak in `ui/index.tsx`; four copies of "download a file" merged into
+    `util/download.ts` (some revoked the URL before the download started).
+-   Sass/Less compile on the main thread in `main`; a worker offload exists only in
+    `git stash@{0}` ("WS4-WS5"), never applied. Decide whether to revive it.
+-   Validation: typecheck, 574 tests (3 skipped), production build; UI checked in the
+    browser at desktop and phone widths.
+
 2026-09-30 — **Completed: save recovery and opt-in checkpoints.** User requested
 mandatory visible save/error/retry handling, recoverable revisions and complete backups
 (works, My groups, custom sites), plus incremental checkpoints every minute of active

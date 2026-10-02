@@ -35,6 +35,14 @@ describe('splitHtml', () => {
     it('returns null when there is only one block', () => {
         expect(splitHtml('<p>only</p>', () => true)).toBeNull();
     });
+
+    it('does not count trailing whitespace as a remaining part', () => {
+        expect(splitHtml('<p>one</p> \n <p>two</p> \n ', () => true)).toEqual({
+            first: '<p>one</p>',
+            second: '<p>two</p>',
+        });
+        expect(splitHtml('<p>only</p> \n ', () => true)).toBeNull();
+    });
 });
 
 describe('splitHtmlAtMarker', () => {

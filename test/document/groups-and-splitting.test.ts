@@ -53,6 +53,21 @@ function chain(doc: Document) {
 }
 
 describe('groups', () => {
+    it('reports inherited object keys as unknown module types without editing the document', async () => {
+        const doc = new Document();
+        for (const plugin of ['constructor', '__proto__', 'toString']) {
+            await expect(
+                doc.insertGroupFile({
+                    eo3: 'group',
+                    version: 1,
+                    title: 'Invalid',
+                    modules: [{ plugin, data: null }],
+                })
+            ).rejects.toThrow('module type this version of eo3 doesn’t have');
+        }
+        expect(doc.modules).toEqual([]);
+        expect(doc.history).toHaveLength(1);
+    });
     it('groups any selection, wired to anything, and keeps its layout', () => {
         const doc = new Document();
         const { source, result } = chain(doc);

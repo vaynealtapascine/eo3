@@ -15,6 +15,20 @@ function run(profile: TargetProfile, source: string, workCss = '') {
 }
 
 describe('parseProfile', () => {
+    it.each(['toString', 'constructor', '__proto__', null, ['inline']])(
+        'rejects non-strategy delivery values (%s)',
+        (delivery) => {
+            expect(parseProfile({ ...newProfile('x'), delivery })).toMatch(/delivery/);
+        }
+    );
+
+    it('rejects arrays used as maps and non-finite limits', () => {
+        expect(parseProfile({ ...newProfile('x'), attributes: [] })).toMatch(/attributes/);
+        expect(parseProfile({ ...newProfile('x'), protocols: [['https']] })).toMatch(/protocols/);
+        expect(parseProfile({ ...newProfile('x'), partMaxChars: Infinity })).toMatch(
+            /partMaxChars/
+        );
+    });
     it('accepts a new profile and rejects malformed ones with a reason', () => {
         expect(parseProfile(newProfile('mine'))).toMatchObject({ id: 'mine', delivery: 'inline' });
         expect(parseProfile({ ...newProfile('x'), delivery: 'fax' })).toMatch(/delivery/);
@@ -42,6 +56,52 @@ describe('profile editor fields', () => {
 });
 
 describe('a target built from a profile', () => {
+    it.each(['inline', 'embedded-style'] as const)(
+        'preserves CSS module order for %s delivery and excludes other parts’ CSS',
+        (delivery) => {
+            const target = createProfileTarget({ ...newProfile('s'), delivery });
+            const parts = ['one', 'two'].map((id) => ({
+                id,
+                title: '',
+                source: '<p>hi</p>',
+                html: null,
+                css: 'p { color: red; }',
+            }));
+            const output = target.export(
+                {
+                    parts,
+                    workCss: 'p { color: blue; }',
+                    cssSources: [
+                        { id: 'first', css: 'p { color: red; }', partIds: ['one'] },
+                        { id: 'second', css: 'p { color: blue; }', partIds: ['one', 'two'] },
+                        { id: 'third', css: 'p { color: green; }', partIds: ['two'] },
+                    ],
+                    config: {},
+                },
+                () => {}
+            );
+            const one = output.parts.get('one')!.get('html')!;
+            const two = output.parts.get('two')!.get('html')!;
+            if (delivery === 'inline') {
+                expect(one).toBe('<p style="color:blue">hi</p>');
+                expect(two).toBe('<p style="color:green">hi</p>');
+            } else {
+                expect(one.indexOf('red')).toBeLessThan(one.indexOf('blue'));
+                expect(one).not.toContain('green');
+                expect(two.indexOf('blue')).toBeLessThan(two.indexOf('green'));
+                expect(two).not.toContain('red');
+            }
+        }
+    );
+
+    it('removes embedded styles even when a plain profile allowlists style elements', () => {
+        const { html, errors } = run(
+            { ...newProfile('s'), delivery: 'plain', elements: ['p', 'style'] },
+            '<style>p { color: red }</style><p>hi</p>'
+        );
+        expect(html).toBe('<p>hi</p>');
+        expect(errors).toContainEqual({ id: 'styling-dropped', props: { count: 1 } });
+    });
     it('keeps only the allowed elements, attributes and protocols', () => {
         const { html } = run(
             newProfile('s'),

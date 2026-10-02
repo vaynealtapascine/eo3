@@ -107,6 +107,8 @@ export function ProfileEditor({
     const dialog = useRef<HTMLDialogElement>(null);
     const [profiles, setProfiles] = useState(listProfiles);
     const [draft, setDraft] = useState<Draft | null>(null);
+    /** The draft as last loaded or saved, to tell whether switching would lose edits. */
+    const [savedDraft, setSavedDraft] = useState<Draft | null>(null);
     const [isNew, setIsNew] = useState(false);
     const [message, setMessage] = useState<string | null>(null);
     const [importText, setImportText] = useState('');
@@ -128,8 +130,19 @@ export function ProfileEditor({
         } else if (!open && dialog.current?.open) dialog.current.close();
     }, [open]);
 
-    const edit = (profile: TargetProfile, fresh = false) => {
-        setDraft(toDraft(profile));
+    const dirty = !!draft && (isNew || JSON.stringify(draft) !== JSON.stringify(savedDraft));
+    const edit = async (profile: TargetProfile, fresh = false) => {
+        if (
+            dirty &&
+            !(await showConfirm('Discard your changes to this site?', {
+                confirmLabel: 'Discard',
+                danger: true,
+            }))
+        )
+            return;
+        const next = toDraft(profile);
+        setDraft(next);
+        setSavedDraft(next);
         setIsNew(fresh);
         setMessage(null);
     };
@@ -157,6 +170,7 @@ export function ProfileEditor({
         }
         setProfiles(listProfiles());
         setIsNew(false);
+        setSavedDraft(draft);
         setMessage('Saved.');
         return result;
     };
@@ -177,7 +191,10 @@ export function ProfileEditor({
         }
         setProfiles(listProfiles());
         setImportText('');
-        edit(result);
+        const next = toDraft(result);
+        setDraft(next);
+        setSavedDraft(next);
+        setIsNew(false);
         setMessage(`Imported "${result.title}".`);
     };
 
@@ -372,16 +389,16 @@ export function ProfileEditor({
                         </details>
                         <div className="i-buttons">
                             <button onClick={save}>save</button>
+                            <button
+                                onClick={() => {
+                                    const saved = save();
+                                    if (saved) onUse(saved.id);
+                                }}
+                            >
+                                save and preview with it
+                            </button>
                             {!isNew && (
                                 <>
-                                    <button
-                                        onClick={() => {
-                                            const saved = save();
-                                            if (saved) onUse(saved.id);
-                                        }}
-                                    >
-                                        save and preview with it
-                                    </button>
                                     <button
                                         onClick={() => {
                                             const result = fromDraft(draft);
@@ -409,6 +426,7 @@ export function ProfileEditor({
                                             }
                                             setProfiles(listProfiles());
                                             setDraft(null);
+                                            setSavedDraft(null);
                                         }}
                                     >
                                         delete

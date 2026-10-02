@@ -1,5 +1,5 @@
 import { Component, FunctionComponent } from 'react';
-import { MODULES } from './plugins';
+import { ModuleDef, MODULES } from './plugins';
 import type { GroupFile } from './storage/group-file';
 
 export type JsonValue = null | boolean | number | string | JsonValue[] | { [k: string]: JsonValue };
@@ -140,10 +140,14 @@ export function isPartOutput(id: ModuleId): boolean {
 
 const PART_OUTPUT_PREFIX = 'output:';
 
+/** Looks up a module type by id from saved or imported data; inherited object keys don't count. */
+function moduleDef(id: string): ModuleDef | undefined {
+    return Object.hasOwn(MODULES, id) ? MODULES[id] : undefined;
+}
+
 /** Text-module languages whose contents are HTML (and so can be split at block boundaries). */
 const HTML_LANGUAGES = new Set(['html', 'html-contenteditable']);
 
-/** Modules that produce CSS rather than content: CSS text, Sass and Less sources. */
 /**
  * A module's generated name. For "All chapters" it counts the parts it reaches, so a chapter
  * unwired from it shows as "3 of 4 chapters".
@@ -571,7 +575,7 @@ export class Document extends EventTarget {
      * position. One undo step. Throws when a module type isn't available in this eo3.
      */
     async insertGroupFile(file: GroupFile, at?: { x: number; y: number }): Promise<ModuleGroup> {
-        const missing = file.modules.filter((mod) => !MODULES[mod.plugin]);
+        const missing = file.modules.filter((mod) => !moduleDef(mod.plugin));
         if (missing.length) {
             throw new Error(
                 `This group uses a module type this version of eo3 doesn’t have: ${missing
@@ -579,7 +583,7 @@ export class Document extends EventTarget {
                     .join(', ')}`
             );
         }
-        const plugins = await Promise.all(file.modules.map((mod) => MODULES[mod.plugin].load()));
+        const plugins = await Promise.all(file.modules.map((mod) => moduleDef(mod.plugin)!.load()));
         const modules = file.modules.map((entry, i) => {
             const mod = new Module(plugins[i], structuredClone(entry.data));
             mod.title = entry.title ?? '';
@@ -806,6 +810,8 @@ export class Document extends EventTarget {
         const plugin = await MODULES['source.text'].load();
         const part = this.findPart(partId);
         if (!part) return null;
+        // Another request may have created it while the plugin was loading.
+        if (part.stylesModuleId) return part.stylesModuleId;
         const module = new Module(plugin, { contents: '', language: 'css' });
         module.title = title;
         module.sends = [part.outputId];
@@ -1083,14 +1089,18 @@ export class Document extends EventTarget {
         nodes: Map<ModuleId, Data>;
         userData: Map<ModuleId, UserData>;
     }> {
+        // Evaluation can outlive an edit. Keep part identities, CSS order and posting metadata
+        // from the same state as the graph whose inputs we start evaluating below.
+        const snapshot = this.state;
+        const { parts, modules } = snapshot;
         const state: DocEvalState = {
             steps: 0,
             asyncCache: new Map(),
             cache: new Map(),
             userData: new Map(),
         };
-        const pending = this.parts.map((part) =>
-            this.modules.flatMap((mod) =>
+        const pending = parts.map((part) =>
+            modules.flatMap((mod) =>
                 mod.sends
                     .filter((target) => target === part.outputId)
                     .map(() => ({ source: mod.id, data: this.cacheEvalModule(mod, state) }))
@@ -1117,7 +1127,7 @@ export class Document extends EventTarget {
                 }
                 const output = data.asMdOutput();
                 if (output === null) {
-                    const where = this.parts.length > 1 ? `, part ${partIndex + 1}` : '';
+                    const where = parts.length > 1 ? `, part ${partIndex + 1}` : '';
                     throw new Error(
                         'output received data type that could not be converted to markdown: ' +
                             data.constructor.name +
@@ -1128,39 +1138,39 @@ export class Document extends EventTarget {
             });
             for (const source of cssSources) {
                 const reached = partsReached.get(source) ?? new Set<string>();
-                reached.add(this.parts[partIndex].id);
+                reached.add(parts[partIndex].id);
                 partsReached.set(source, reached);
             }
             return { content: contentParts.join('\n'), cssSources };
         });
 
         const inModuleOrder = (sources: Set<ModuleId>) =>
-            this.modules
+            modules
                 .filter((mod) => sources.has(mod.id))
                 .map((mod) => cssBySource.get(mod.id)!)
                 .join('\n');
         const workSources = new Set(
             [...partsReached]
-                .filter(([, reached]) => reached.size === this.parts.length)
+                .filter(([, reached]) => reached.size === parts.length)
                 .map(([id]) => id)
         );
 
         return {
             work: {
                 workCss: inModuleOrder(workSources),
-                skinRecords: this.state.skinRecords,
-                protectedSkinClasses: this.state.protectedSkinClasses,
-                skinBaselines: this.state.skinBaselines,
-                cssSources: this.modules
+                skinRecords: snapshot.skinRecords,
+                protectedSkinClasses: snapshot.protectedSkinClasses,
+                skinBaselines: snapshot.skinBaselines,
+                cssSources: modules
                     .filter((mod) => partsReached.has(mod.id))
                     .map((mod) => ({
                         id: mod.id,
                         css: cssBySource.get(mod.id)!,
-                        partIds: this.parts
+                        partIds: parts
                             .filter((part) => partsReached.get(mod.id)!.has(part.id))
                             .map((part) => part.id),
                     })),
-                parts: this.parts.map((part, i) => ({
+                parts: parts.map((part, i) => ({
                     id: part.id,
                     title: part.title,
                     content: contents[i].content,
@@ -1230,8 +1240,9 @@ export class Document extends EventTarget {
     async resolveUnloaded() {
         for (const module of this.modules) {
             if (module.plugin instanceof UnloadedPlugin) {
-                if (MODULES[module.plugin.id]) {
-                    module.plugin = await MODULES[module.plugin.id].load();
+                const def = moduleDef(module.plugin.id);
+                if (def) {
+                    module.plugin = await def.load();
                 } else {
                     throw new Error(`Unknown plugin ${module.plugin.id}`);
                 }

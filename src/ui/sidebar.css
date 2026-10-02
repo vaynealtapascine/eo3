@@ -252,7 +252,11 @@
                     }
 
                     &:hover > .i-label {
-                        background: color-mix(in lab, var(--P-danger), var(--P-danger-content-fg) 25%);
+                        background: color-mix(
+                            in lab,
+                            var(--P-danger),
+                            var(--P-danger-content-fg) 25%
+                        );
                     }
                     > .i-label:hover {
                         background: var(--P-danger-content-fg);
@@ -351,6 +355,56 @@
             .uikit-text-field {
                 width: 32em;
             }
+        }
+    }
+}
+
+.application-sidebar > .i-backup {
+    > .i-title {
+        font-size: 1.2em;
+        padding: 0.75em;
+        margin: 0;
+    }
+
+    > .i-card {
+        margin: 0.5em;
+        padding: 0.5em 0.75em;
+        border-radius: 0.5em;
+        border: 1px solid var(--P-separator);
+
+        > p {
+            margin-top: 0;
+        }
+    }
+
+    .i-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4em;
+    }
+
+    .i-confirm {
+        margin-top: 0.75em;
+        padding-top: 0.75em;
+        border-top: 1px solid var(--P-separator);
+    }
+
+    .i-persist {
+        margin-top: 0.75em;
+        font-size: 0.9em;
+
+        > summary {
+            cursor: pointer;
+            opacity: 0.8;
+        }
+    }
+
+    .i-message {
+        margin-bottom: 0;
+        overflow-wrap: anywhere;
+
+        &.is-error {
+            color: var(--P-error-text);
         }
     }
 }

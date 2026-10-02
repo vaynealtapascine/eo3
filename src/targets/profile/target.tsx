@@ -7,6 +7,7 @@ import { makeSanitizeConfig, SanitizeConfig } from '../ao3/render/archive-config
 import { sanitizeFragment } from '../ao3/render/sanitize';
 import { liftInlineStyles } from '../ao3/render/lift-styles';
 import { exportInline } from '../delivery/inline';
+import { partCss } from '../delivery/part-css';
 import { exportSharedStylesheet } from '../delivery/shared-stylesheet';
 import {
     ErrorMessage,
@@ -110,10 +111,7 @@ export function createProfileTarget(
                 const parts = new Map(
                     input.parts.map((part) => {
                         const html = part.html ?? renderQuietly(part.source);
-                        const css = filterSheet(
-                            [input.workCss, part.css].filter(Boolean).join('\n'),
-                            pushError
-                        ).trim();
+                        const css = filterSheet(partCss(input, part), pushError).trim();
                         const packaged = css ? `<style>\n${css}\n</style>\n${html}` : html;
                         return [part.id, new Map([['html', packaged]])];
                     })
@@ -127,6 +125,10 @@ export function createProfileTarget(
                         const { root } = render(part.html ?? part.source, () => {});
                         for (const node of root.querySelectorAll('[style]')) {
                             node.removeAttribute('style');
+                            dropped++;
+                        }
+                        for (const node of root.querySelectorAll('style')) {
+                            node.remove();
                             dropped++;
                         }
                         return [part.id, new Map([['html', root.innerHTML]])];

@@ -47,8 +47,16 @@ class TextEditor extends PureComponent<ModulePluginProps<TextPluginData>> {
     memoizedExtensions: any = null;
     modeSelectId = Math.random().toString(36);
     codeEditor = createRef<CodeEditor>();
+    richEditor = createRef<RichEditor>();
 
+    /** Inserts the invisible chapter-break marker at the cursor, in either editor. */
     insertSplitMarker = () => {
+        const rich = this.richEditor.current?.editor.current?.getEditor();
+        if (rich) {
+            rich.insertContent(SPLIT_MARKER);
+            rich.focus();
+            return;
+        }
         const view = this.codeEditor.current?.editor.current?.view;
         if (!view) return;
         const { from, to } = view.state.selection.main;
@@ -106,9 +114,12 @@ class TextEditor extends PureComponent<ModulePluginProps<TextPluginData>> {
                         <label htmlFor={useRichTextCheckboxId}>Rich Text Editor</label>
                     </span>
                 ) : null}
-                {(data.language === 'html' ||
-                    (data.language === HTML_CONTENTEDITABLE && !this.state.editingRichText)) && (
-                    <button type="button" onClick={this.insertSplitMarker}>
+                {(data.language === 'html' || data.language === HTML_CONTENTEDITABLE) && (
+                    <button
+                        type="button"
+                        onClick={this.insertSplitMarker}
+                        title="Marks where this chapter should be split in two. Then choose “Split at chapter break” in the chapter’s menu."
+                    >
                         insert chapter break
                     </button>
                 )}
@@ -119,6 +130,7 @@ class TextEditor extends PureComponent<ModulePluginProps<TextPluginData>> {
         if (data.language === HTML_CONTENTEDITABLE && this.state.editingRichText) {
             editor = (
                 <RichEditor
+                    ref={this.richEditor}
                     value={data.contents}
                     onChange={(contents) => onChange({ ...data, contents })}
                     footer={footer}

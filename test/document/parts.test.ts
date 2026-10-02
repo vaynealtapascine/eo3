@@ -105,6 +105,54 @@ describe('a single-part document', () => {
 });
 
 describe('a multi-part document', () => {
+    it('finishes with the original parts, styles and posting metadata when edited during evaluation', async () => {
+        let release!: () => void;
+        const waiting = new Promise<void>((resolve) => {
+            release = resolve;
+        });
+        const slow = {
+            ...html,
+            eval: async () => {
+                await waiting;
+                return new HtmlData('original');
+            },
+        };
+        const doc = new Document();
+        const first = doc.parts[0];
+        const second = doc.addPart('Second');
+        const styles = mod(css, 'p { color: red; }', [first.outputId]);
+        doc.insertModule(mod(slow, '', [first.outputId, second.outputId]));
+        doc.insertModule(styles);
+        const pending = doc.evalWork();
+        doc.removePart(first.id);
+        doc.addPart('New');
+        doc.removeModule(styles.id);
+        doc.setPartPosted('ao3', second.id, {
+            at: '2026-09-29',
+            classes: [],
+            htmlHash: 'new',
+            skinCss: 'new',
+        });
+        release();
+        const { work } = await pending;
+        expect(work.parts.map((part) => part.id)).toEqual([first.id, second.id]);
+        expect(work.parts.map((part) => part.content)).toEqual(['original', 'original']);
+        expect(work.parts[0].css).toBe('p { color: red; }');
+        expect(work.parts[1].postedTo).toEqual({});
+        expect(work.skinBaselines).toEqual({});
+        expect(work.cssSources).toEqual([
+            { id: styles.id, css: 'p { color: red; }', partIds: [first.id] },
+        ]);
+    });
+
+    it('does not try to attach old results to a newly added part', async () => {
+        const doc = docWith(() => [mod(html, 'original', [MOD_OUTPUT])]);
+        const pending = doc.evalWork();
+        doc.addPart('Added while rendering');
+        const { work } = await pending;
+        expect(work.parts).toHaveLength(1);
+        expect(work.parts[0].content).toBe('original');
+    });
     function twoParts() {
         const doc = new Document();
         const second = doc.addPart('Chapter 2');
@@ -225,6 +273,20 @@ describe('saving and loading parts', () => {
 });
 
 describe('managed part modules', () => {
+    it('creates only one styles module for concurrent requests, in one undo step', async () => {
+        const doc = new Document();
+        const part = doc.parts[0];
+        const [first, second] = await Promise.all([
+            doc.partStyles(part.id, 'Styles'),
+            doc.partStyles(part.id, 'Styles'),
+        ]);
+        expect(first).toBe(second);
+        expect(doc.modules).toHaveLength(1);
+        expect(doc.findPart(part.id)?.stylesModuleId).toBe(first);
+        doc.undo();
+        expect(doc.modules).toHaveLength(0);
+        expect(doc.findPart(part.id)?.stylesModuleId).toBeNull();
+    });
     it('adds a part with a text module wired to it, undone in one step', async () => {
         const doc = new Document();
         const part = await doc.addPartWithText('Chapter text');
