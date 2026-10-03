@@ -1,6 +1,8 @@
 import { PureComponent } from 'react';
 import { SplitPanel } from './components/split-panel';
 import { ModuleList } from './components/module-list';
+import { SimpleEditor } from './components/simple-editor';
+import type { EditorView } from './editor-view';
 import { PartsList } from './components/parts-list';
 import { ModuleGraph, EdgeId } from './components/module-graph';
 import { Preview } from './components/preview';
@@ -192,13 +194,22 @@ export class Eo3 extends PureComponent<Eo3.Props, Eo3State> {
                     onSelectPart={(partId) => this.setState({ partId })}
                     copiedParts={this.state.copiedParts}
                     onSelectModule={(selected) => this.setState({ selected })}
+                    removesContent={this.props.view === 'simple'}
                 />
-                <ModuleList
-                    document={doc}
-                    selected={this.state.selected}
-                    onSelect={(selected) => this.setState({ selected })}
-                    userData={this.state.render.output?.userData}
-                />
+                {this.props.view === 'simple' ? (
+                    <SimpleEditor
+                        document={doc}
+                        partId={this.state.partId}
+                        userData={this.state.render.output?.userData}
+                    />
+                ) : (
+                    <ModuleList
+                        document={doc}
+                        selected={this.state.selected}
+                        onSelect={(selected) => this.setState({ selected })}
+                        userData={this.state.render.output?.userData}
+                    />
+                )}
             </div>
         );
     }
@@ -253,7 +264,7 @@ export class Eo3 extends PureComponent<Eo3.Props, Eo3State> {
 
     /** Phone layout: one full-size pane at a time, switched from a bottom tab bar. */
     compactLayout() {
-        const { graphOpen } = this.props;
+        const graphOpen = this.props.view === 'nodes';
         const current = this.state.pane === 'graph' && !graphOpen ? 'edit' : this.state.pane;
         const panes: CompactPane[] = graphOpen ? ['edit', 'preview', 'graph'] : ['edit', 'preview'];
         const pane = (id: CompactPane, contents: React.ReactNode) => (
@@ -309,7 +320,7 @@ export class Eo3 extends PureComponent<Eo3.Props, Eo3State> {
                                     initialPos={Math.max(0.6, 1 - 300 / innerHeight)}
                                 >
                                     {this.previewPane()}
-                                    {this.props.graphOpen ? this.graphPane() : null}
+                                    {this.props.view === 'nodes' ? this.graphPane() : null}
                                 </SplitPanel>
                             </SplitPanel>
                         )}
@@ -323,7 +334,7 @@ namespace Eo3 {
     export interface Props {
         document: Document;
         initWithoutRender: boolean;
-        graphOpen: boolean;
+        view: EditorView;
     }
 }
 

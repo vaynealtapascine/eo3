@@ -10,6 +10,13 @@ export interface GroupFile {
     version: 1;
     title: string;
     modules: GroupFileModule[];
+    /** Members filled in when the group is used as a block in the simple editor, by index. */
+    inputs?: GroupFileInput[];
+}
+
+export interface GroupFileInput {
+    module: number;
+    label: string;
 }
 
 export interface GroupFileModule {
@@ -67,12 +74,28 @@ export function parseGroupFile(text: string): GroupFile {
         }
         return result;
     });
+    const inputs = parseGroupInputs(data.inputs, count);
     return {
         eo3: 'group',
         version: 1,
         title: typeof data.title === 'string' && data.title ? data.title : 'Group',
         modules,
+        ...(inputs.length ? { inputs } : {}),
     };
+}
+
+/** Group inputs from a file or a saved work, skipping entries that don't name a member. */
+export function parseGroupInputs(value: unknown, count: number): GroupFileInput[] {
+    if (!Array.isArray(value)) return [];
+    const seen = new Set<number>();
+    return value.flatMap((input: any) => {
+        const module = input?.module;
+        if (!Number.isInteger(module) || module < 0 || module >= count || seen.has(module)) {
+            return [];
+        }
+        seen.add(module);
+        return [{ module, label: typeof input.label === 'string' ? input.label : '' }];
+    });
 }
 
 export function stringifyGroupFile(file: GroupFile): string {

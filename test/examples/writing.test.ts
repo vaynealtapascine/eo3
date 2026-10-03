@@ -10,6 +10,8 @@ async function render(id: string, text: string, compose?: string) {
         bigint: false,
     }) as any;
     doc.modules[0].data.contents = text;
+    // Test the text on its own, without the example's details form.
+    doc.modules[6].data.values = {};
     if (compose) doc.modules[2].data.contents = compose;
     const result = await renderWorkskinDocument(doc);
     const root = document.createElement('div');

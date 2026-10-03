@@ -6,7 +6,8 @@ import { exampleFromSearch } from '../../src/storage/example-link';
 import catalog from '../../assets/examples/workskins.json';
 import index from '../../assets/examples/index.json';
 import { renderWorkskinDocument } from '../../scripts/render-workskin-document.mjs';
-import { workskinGroup } from '../../scripts/workskin-documents.mjs';
+import { sampleWriting, workskinGroup } from '../../scripts/workskin-documents.mjs';
+import { normalize, withSettings } from '../../assets/workskins/writing.js';
 import { parseGroupFile } from '../../src/storage/group-file';
 
 describe('bundled AO3 workskin examples', () => {
@@ -16,10 +17,22 @@ describe('bundled AO3 workskin examples', () => {
             const doc = parse(source, { joiner: '\n', bigint: false }) as any;
             expect(doc.version).toBe(1);
             expect(doc.sharedStyles).toBe(1);
-            expect(doc.modules).toHaveLength(6);
+            expect(doc.modules).toHaveLength(7);
             const [writingModule, cssModule] = doc.modules;
+            const settingsModule = doc.modules[6];
             expect(writingModule.data.language).toBe('text');
             expect(writingModule.namedSends).toEqual({ 2: ['draft'] });
+            expect(settingsModule.plugin).toBe('source.settings');
+            expect(settingsModule.namedSends).toEqual({ 2: ['settings'] });
+            // The details form plus the text rebuild the sample exactly.
+            expect(withSettings(writingModule.data.contents, settingsModule.data.values)).toBe(
+                normalize(sampleWriting(item))
+            );
+            expect(doc.groups[0].modules).toEqual([0, 2, 3, 4, 5, 6]);
+            expect(doc.groups[0].inputs).toEqual([
+                { module: 6, label: 'Details' },
+                { module: 0, label: 'Your text' },
+            ]);
             expect(cssModule.sends).toEqual(['output']);
             expect(doc.modules[2].data.svelteVersion).toBe('v4');
             const { html } = await renderWorkskinDocument(doc);
@@ -58,7 +71,8 @@ describe('bundled AO3 workskin examples', () => {
             expect(html).not.toMatch(/<(?:script|iframe|img|svg)\b|\bstyle=/i);
             expect(cssModule.data.contents).not.toMatch(/url\(|@import|var\(|\.eo3-/);
             const group = parseGroupFile(JSON.stringify(workskinGroup(item, doc)));
-            expect(group.modules).toHaveLength(6);
+            expect(group.modules).toHaveLength(7);
+            expect(group.inputs).toEqual(doc.groups[0].inputs);
             expect(group.modules[0].namedSends).toEqual({ 2: ['draft'] });
             expect(group.modules[2].sends).toEqual([]);
             expect(group.modules[1].sends).toEqual([]);

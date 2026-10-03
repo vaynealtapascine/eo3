@@ -7,7 +7,7 @@ import { addExample } from '../helpers/examples';
 // The real Text plugin pulls in editors that need a full browser; the document only needs its id.
 vi.mock('../../src/plugins', () => ({
     MODULES: Object.fromEntries(
-        ['source.text', 'source.svelte', 'source.svelte-component'].map((id) => [
+        ['source.text', 'source.svelte', 'source.svelte-component', 'source.settings'].map((id) => [
             id,
             {
                 load: async () => ({

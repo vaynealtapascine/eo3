@@ -21,6 +21,11 @@ export const MODULES: { [k: string]: ModuleDef } = {
         load: lazy(() => import('./source/shared-styles')),
         managed: true,
     },
+    'source.settings': {
+        title: 'Settings',
+        description: 'A form of named values (text, colors, choices), for Svelte to read.',
+        load: lazy(() => import('./source/settings')),
+    },
     'source.lesscss': {
         title: 'LessCSS',
         description: 'LessCSS source. Outputs compiled CSS.',

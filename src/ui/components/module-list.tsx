@@ -107,6 +107,8 @@ export class ModuleList extends PureComponent<ModuleList.Props, ModuleListState>
     componentDidMount() {
         this.props.document.addEventListener('change', this.onDocumentChange);
         this.select(this.props.selected);
+        // Switching to the nodes view mounts the list on a loaded work, with no update to follow.
+        this.layoutItems();
     }
 
     componentDidUpdate(prevProps: ModuleList.Props) {

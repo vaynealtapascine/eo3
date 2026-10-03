@@ -38,6 +38,9 @@ new files, update the matching section here in the same commit.
 -   **Parts** are the work's chapters/posts. Each part has an output pseudo-module id
     (`output` for the first, `output:<partId>` for the rest). What a part publishes is
     whatever is sent to its output.
+-   **Views.** The nodes view edits the graph directly. The simple view (default) shows each
+    part as an ordered list and derives the wiring from the order (`src/linear.ts`); a
+    graph it can't express just isn't listable, and the author switches to nodes.
 -   **Targets** (sites) turn evaluated output into what you paste on the site, and draw the
     preview. Built-in: AO3 (exact port of its sanitizer), wafrn, cohost (legacy). Custom sites
     are data ("profiles") turned into targets at runtime.
@@ -50,27 +53,29 @@ new files, update the matching section here in the same commit.
 
 ### `src/` top level
 
-| File                  | What it is                                                                                                                                                                                                                                                                   |
-| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `index.tsx`           | Entry point. Opens IndexedDB (falls back to memory storage), mounts `ApplicationFrame`, `DialogHost`, `UpdateNotice`.                                                                                                                                                        |
-| `document.ts`         | **The model.** `Document` (state + undo history + every edit operation), `Module`, `Part`, `ModuleGroup`, `PostedSnapshot`, `Data` classes (`HtmlData`, `CssData`, …), the evaluator (`cacheEvalModule`, `evalWork`, `eval`). Almost every feature reads or edits this file. |
-| `storage-context.tsx` | React context carrying the `IStorage`.                                                                                                                                                                                                                                       |
-| `globals.d.ts`        | Module declarations (`*.css`, `eo3:config` build values).                                                                                                                                                                                                                    |
+| File                  | What it is                                                                                                                                                                                                                                                                         |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `index.tsx`           | Entry point. Opens IndexedDB (falls back to memory storage), mounts `ApplicationFrame`, `DialogHost`, `UpdateNotice`.                                                                                                                                                              |
+| `document.ts`         | **The model.** `Document` (state + undo history + every edit operation), `Module`, `Part`, `ModuleGroup`, `PostedSnapshot`, `Data` classes (`HtmlData`, `CssData`, …), the evaluator (`cacheEvalModule`, `evalWork`, `eval`). Almost every feature reads or edits this file.       |
+| `linear.ts`           | The simple editor's rules: `linearLayout` reads each part as an ordered list of items (modules and blocks) from the graph, or says why it can't; `applyLinearLayout` rewrites the graph from a list. Nothing is saved; `Document.linear` / `Document.applyLinearLayout` wrap them. |
+| `storage-context.tsx` | React context carrying the `IStorage`.                                                                                                                                                                                                                                             |
+| `globals.d.ts`        | Module declarations (`*.css`, `eo3:config` build values).                                                                                                                                                                                                                          |
 
 ### `src/plugins/` — module types
 
-| File                              | What it is                                                                                                |
-| --------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `index.ts`                        | `MODULES` registry: id → title, description, lazy `load()`, `managed` (hidden from "add node").           |
-| `source/text.tsx`                 | Text module: HTML / rich text (TinyMCE) / CSS / JS / plain text. Also "insert chapter break".             |
-| `source/shared-styles.tsx`        | "All chapters" CSS module (managed; wired to every part).                                                 |
-| `source/sass.tsx`, `lesscss.tsx`  | Sass and Less compilers (run on the main thread; only Svelte uses a worker).                              |
-| `source/svelte*.ts(x)`            | Svelte 3/4/5 component and context modules; `svelte-bundler.ts` + `svelte-worker.js` compile in a worker. |
-| `source/file-data*.tsx`           | File upload as data / data URL.                                                                           |
-| `source/external-url.tsx`         | Fetches a script or stylesheet by URL.                                                                    |
-| `transform/style-inliner.tsx`     | HTML + CSS → inline styles; the algorithm is `inline-styles-core.ts` (also used by `delivery/inline.ts`). |
-| `transform/svg-to-background.tsx` | Turns `data-background` SVGs into CSS backgrounds.                                                        |
-| `transform/svgo.tsx`, `to-*.tsx`  | SVG optimizer, data URL and blob URL converters.                                                          |
+| File                                        | What it is                                                                                                                                                                    |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `index.ts`                                  | `MODULES` registry: id → title, description, lazy `load()`, `managed` (hidden from "add node").                                                                               |
+| `source/text.tsx`                           | Text module: HTML / rich text (TinyMCE) / CSS / JS / plain text. Also "insert chapter break".                                                                                 |
+| `source/shared-styles.tsx`                  | "All chapters" CSS module (managed; wired to every part).                                                                                                                     |
+| `source/settings.tsx`, `settings-values.ts` | Settings module: a form of named values (fields + values), evaluated to a JS module `export default {…}` for Svelte. `SettingsForm` is reused by blocks in the simple editor. |
+| `source/sass.tsx`, `lesscss.tsx`            | Sass and Less compilers (run on the main thread; only Svelte uses a worker).                                                                                                  |
+| `source/svelte*.ts(x)`                      | Svelte 3/4/5 component and context modules; `svelte-bundler.ts` + `svelte-worker.js` compile in a worker.                                                                     |
+| `source/file-data*.tsx`                     | File upload as data / data URL.                                                                                                                                               |
+| `source/external-url.tsx`                   | Fetches a script or stylesheet by URL.                                                                                                                                        |
+| `transform/style-inliner.tsx`               | HTML + CSS → inline styles; the algorithm is `inline-styles-core.ts` (also used by `delivery/inline.ts`).                                                                     |
+| `transform/svg-to-background.tsx`           | Turns `data-background` SVGs into CSS backgrounds.                                                                                                                            |
+| `transform/svgo.tsx`, `to-*.tsx`            | SVG optimizer, data URL and blob URL converters.                                                                                                                              |
 
 ### `src/storage/` — persistence
 
@@ -106,35 +111,37 @@ new files, update the matching section here in the same commit.
 
 ### `src/ui/` — the application shell
 
-| File                                               | What it is                                                                                                                                                                                                    |
-| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `index.tsx`                                        | `ApplicationFrame`: toolbar (new/load/download, save status, undo/redo, tabs), sidebar split, one `ApplicationTab` per open work (loads it, owns its `SaveController`, error banner, version history dialog). |
-| `eo3.tsx`                                          | `Eo3`: the editor for one work. Render scheduling, left panel (project title, parts list, module list), preview, graph; phone layout with pane tabs.                                                          |
-| `sidebar.tsx`                                      | Sidebar: local documents, examples menu, extras (share URL), Backups.                                                                                                                                         |
-| `dialogs.tsx`                                      | `showAlert` / `showConfirm` + `DialogHost`. **Never use native `alert/confirm/prompt`.**                                                                                                                      |
-| `update-notice.tsx`                                | "eo3 has been updated" toast and changelog (via `util/changelog.ts`).                                                                                                                                         |
-| `group-files.ts`                                   | Pick / download group files.                                                                                                                                                                                  |
-| `viewport.ts`, `opt-held.tsx`, `render-context.ts` | On-screen keyboard sizing; Alt-key hook; context to schedule a re-render.                                                                                                                                     |
-| `examples.tsx`, `examples.css`                     | Examples menu. **Upstream prechoster code: don't modify.**                                                                                                                                                    |
+| File                                               | What it is                                                                                                                                                                                                                         |
+| -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `index.tsx`                                        | `ApplicationFrame`: toolbar (simple/nodes switch, new/load/download, save status, undo/redo, tabs), sidebar split, one `ApplicationTab` per open work (loads it, owns its `SaveController`, error banner, version history dialog). |
+| `eo3.tsx`                                          | `Eo3`: the editor for one work. Render scheduling, left panel (project title, parts list, then the simple editor or the module list), preview, graph (nodes view only); phone layout with pane tabs.                               |
+| `editor-view.tsx`                                  | Simple / nodes preference (localStorage `eo3-editor-view`, default simple), `EditorViewSwitch` (toolbar), `EditorViewWelcome` (asked once on first launch).                                                                        |
+| `sidebar.tsx`                                      | Sidebar: local documents, examples menu, extras (share URL), Backups.                                                                                                                                                              |
+| `dialogs.tsx`                                      | `showAlert` / `showConfirm` + `DialogHost`. **Never use native `alert/confirm/prompt`.**                                                                                                                                           |
+| `update-notice.tsx`                                | "eo3 has been updated" toast and changelog (via `util/changelog.ts`).                                                                                                                                                              |
+| `group-files.ts`                                   | Pick / download group files.                                                                                                                                                                                                       |
+| `viewport.ts`, `opt-held.tsx`, `render-context.ts` | On-screen keyboard sizing; Alt-key hook; context to schedule a re-render.                                                                                                                                                          |
+| `examples.tsx`, `examples.css`                     | Examples menu. **Upstream prechoster code: don't modify.**                                                                                                                                                                         |
 
 ### `src/ui/components/`
 
-| File                                                                                                          | What it is                                                                                                                                                                                                                                                     |
-| ------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `parts-list.tsx`                                                                                              | Chapters list in the left panel: select, rename, ⋯ menu (styles, split at break, move, remove), posted badges.                                                                                                                                                 |
-| `ao3-import.tsx`                                                                                              | "Import existing AO3 work": paste Work Skin, then chapters.                                                                                                                                                                                                    |
-| `module-list.tsx`                                                                                             | The module editor list (each module's plugin UI, sends, named sends, reorder by drag).                                                                                                                                                                         |
-| `module-picker.tsx`                                                                                           | "add node": module types and the Groups level (import, My groups, examples).                                                                                                                                                                                   |
-| `module-graph/`                                                                                               | React Flow graph. `index.tsx` (`ModuleGraph`: nodes, edges, connect, drag, grouping), `auto-layout.ts`, `group-cards.ts` (collapsed group rows and edge routing), `module-node.tsx`, `output-node.tsx`, `part-styles-node.tsx`, `group-node.tsx`, `consts.ts`. |
-| `preview.tsx`                                                                                                 | Preview pane: output/part/site selectors, live toggle, error display; wires `PostPreview` to document actions (mark posted, split, prune).                                                                                                                     |
-| `post-preview/index.tsx`                                                                                      | `PostPreview`: runs the target's fallback render and `export()`, builds `posting`/`sizing`, injects CSS, renders header/footer. Also `RenderConfigEditor`.                                                                                                     |
-| `post-preview/posted-status.tsx`, `split-prompt.tsx`, `copy-to-clipboard-button.tsx`, `dark-theme-button.tsx` | Shared controls targets use in their chrome.                                                                                                                                                                                                                   |
-| `profile-editor.tsx`                                                                                          | Custom sites dialog (create/edit/import/export/delete profiles; forget retired sites' history).                                                                                                                                                                |
-| `save-recovery.tsx`                                                                                           | `SaveStatus` (toolbar), `SaveErrorBanner`, `VersionHistory` dialog.                                                                                                                                                                                            |
-| `library-backup.tsx`                                                                                          | Sidebar Backups section.                                                                                                                                                                                                                                       |
-| `action-menu.tsx`, `name-popover.tsx`                                                                         | "⋯" menus; in-app naming popover (instead of `prompt()`).                                                                                                                                                                                                      |
-| `code-editor.tsx`, `codemirror.tsx`, `rich-editor.tsx`, `tiny-rich-editor.tsx`, `tiny-plugins/`               | CodeMirror and TinyMCE wrappers.                                                                                                                                                                                                                               |
-| `split-panel.tsx`, `data-preview.tsx`, `icons.tsx`, `module-status.tsx`                                       | Layout and small widgets.                                                                                                                                                                                                                                      |
+| File                                                                                                          | What it is                                                                                                                                                                                                                                                                   |
+| ------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `parts-list.tsx`                                                                                              | Chapters list in the left panel: select, rename, ⋯ menu (styles, split at break, move, remove), posted badges.                                                                                                                                                               |
+| `ao3-import.tsx`                                                                                              | "Import existing AO3 work": paste Work Skin, then chapters.                                                                                                                                                                                                                  |
+| `module-list.tsx`                                                                                             | The module editor list (each module's plugin UI, sends, named sends, reorder by drag).                                                                                                                                                                                       |
+| `module-picker.tsx`                                                                                           | "add node": module types and the Groups level (import, My groups, examples).                                                                                                                                                                                                 |
+| `simple-editor.tsx`                                                                                           | Simple view: the selected part as a list (pinned managed styles, draggable items with in-place names and ⋯ menus, blocks showing their inputs with the rest under Customize), "+ add" menu (text, styles, blocks, all module types). Shows a notice for works it can't list. |
+| `module-graph/`                                                                                               | React Flow graph. `index.tsx` (`ModuleGraph`: nodes, edges, connect, drag, grouping), `auto-layout.ts`, `group-cards.ts` (collapsed group rows and edge routing), `module-node.tsx`, `output-node.tsx`, `part-styles-node.tsx`, `group-node.tsx`, `consts.ts`.               |
+| `preview.tsx`                                                                                                 | Preview pane: output/part/site selectors, live toggle, error display; wires `PostPreview` to document actions (mark posted, split, prune).                                                                                                                                   |
+| `post-preview/index.tsx`                                                                                      | `PostPreview`: runs the target's fallback render and `export()`, builds `posting`/`sizing`, injects CSS, renders header/footer. Also `RenderConfigEditor`.                                                                                                                   |
+| `post-preview/posted-status.tsx`, `split-prompt.tsx`, `copy-to-clipboard-button.tsx`, `dark-theme-button.tsx` | Shared controls targets use in their chrome.                                                                                                                                                                                                                                 |
+| `profile-editor.tsx`                                                                                          | Custom sites dialog (create/edit/import/export/delete profiles; forget retired sites' history).                                                                                                                                                                              |
+| `save-recovery.tsx`                                                                                           | `SaveStatus` (toolbar), `SaveErrorBanner`, `VersionHistory` dialog.                                                                                                                                                                                                          |
+| `library-backup.tsx`                                                                                          | Sidebar Backups section.                                                                                                                                                                                                                                                     |
+| `action-menu.tsx`, `name-popover.tsx`                                                                         | "⋯" menus; in-app naming popover (instead of `prompt()`).                                                                                                                                                                                                                    |
+| `code-editor.tsx`, `codemirror.tsx`, `rich-editor.tsx`, `tiny-rich-editor.tsx`, `tiny-plugins/`               | CodeMirror and TinyMCE wrappers.                                                                                                                                                                                                                                             |
+| `split-panel.tsx`, `data-preview.tsx`, `icons.tsx`, `module-status.tsx`                                       | Layout and small widgets.                                                                                                                                                                                                                                                    |
 
 ### Other source
 
@@ -188,6 +195,23 @@ Each entry: the files that implement it (most important first), its tests, and w
 -   **Tests:** `test/util/split-html.test.ts`, split cases in
     `test/document/groups-and-splitting.test.ts`.
 -   **Limit** comes from the target's `partMaxChars`.
+
+### Simple view, blocks and Settings
+
+-   **Files:** `src/linear.ts` (rules, read and write), `src/document.ts` (`linear`,
+    `applyLinearLayout`, `setGroupInputs`, `instantiateGroupFile`, `GroupInput`),
+    `src/ui/components/simple-editor.tsx`, `src/ui/editor-view.tsx`, `src/ui/eo3.tsx`,
+    `src/ui/index.tsx` (toolbar switch, welcome), `src/plugins/source/settings*.ts(x)`,
+    `v1.ts` and `group-file.ts` (group `inputs`).
+-   **Tests:** `test/document/linear.test.ts` (rules, rewiring, inputs round trip, every bundled
+    AO3 example has a layout).
+-   **Rules:** sources send to their part; a `transform.*` module takes everything above it back
+    to the previous transform; a block (group) is wired through its sinks; managed modules are
+    pinned and left alone. Group `inputs` pick the members a block shows up front. An item
+    listed in several parts is a mirror: one module or group sending to each of those parts.
+    `applyLinearLayout` orders modules by merging the parts' lists and throws
+    `LinearOrderError` when mirrors are in opposite orders. `Document.removePartAndContent`
+    removes a part with the items only it lists.
 
 ### Groups and My groups
 
@@ -345,7 +369,7 @@ schema, append it to `MIGRATIONS` in `versions/index.ts`, and implement the stor
 
 | Folder               | Covers                                                                    |
 | -------------------- | ------------------------------------------------------------------------- |
-| `test/document/`     | Parts, groups, splitting, shared styles, evaluation.                      |
+| `test/document/`     | Parts, groups, splitting, shared styles, evaluation, simple view layout.  |
 | `test/ao3/`          | AO3 export, lift-styles naming.                                           |
 | `test/ao3-parity/`   | The AO3 port against otwarchive's Ruby (`expected.json` is generated).    |
 | `test/wafrn-parity/` | wafrn target against the real sanitize-html with wafrn's config.          |

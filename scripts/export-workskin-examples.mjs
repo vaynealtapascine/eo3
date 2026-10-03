@@ -44,7 +44,8 @@ for (const item of catalog) {
         [item.file, toml],
         [`${item.id}.html`, html + '\n'],
         [`${item.id}.css`, css + '\n'],
-        [`${item.id}.txt`, doc.modules[0].data.contents],
+        // The plain-text download keeps the details as a header, so it works on its own.
+        [`${item.id}.txt`, examples[item.id].writing],
         [`${item.id}.eo3group.json`, JSON.stringify(workskinGroup(item, doc), null, 2) + '\n'],
     ];
     for (const [name, text] of entries) {

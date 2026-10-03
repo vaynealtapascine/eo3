@@ -19,6 +19,21 @@ export function documentText(text) {
     return { meta, body: [...unrecognized, source.slice(header[0].length)].join('\n') };
 }
 
+/**
+ * Puts settings (`{ Date: '01 January' }`) in the text's header, before the text's own header
+ * lines, so a header written in the text wins. Empty and switched-off settings are left out.
+ */
+export function withSettings(text, settings = {}) {
+    const lines = Object.entries(settings ?? {})
+        .filter(([, value]) => value !== '' && value !== false && value != null)
+        .map(([key, value]) => `${key}: ${String(value).replace(/\s*\n\s*/g, ' ')}`);
+    const source = normalize(text);
+    if (!lines.length) return source;
+    const header = source.match(/^---\n([\s\S]*?)\n---(?:\n|$)/);
+    if (!header) return `---\n${lines.join('\n')}\n---\n${source}`;
+    return `---\n${lines.join('\n')}\n${header[1]}\n---\n${source.slice(header[0].length)}`;
+}
+
 export function sections(text) {
     const result = [];
     for (const line of normalize(text).split('\n')) {

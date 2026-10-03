@@ -20,18 +20,22 @@ import {
 // Only port capabilities are needed here; the real plugins import browser editors.
 vi.mock('../../src/plugins', () => ({
     MODULES: Object.fromEntries(
-        ['source.text', 'source.shared-styles', 'source.svelte', 'source.svelte-component'].map(
-            (id) => [
-                id,
-                {
-                    load: async () => ({
-                        id,
-                        acceptsInputs: id === 'source.svelte' || id === 'source.shared-styles',
-                        acceptsNamedInputs: id === 'source.svelte',
-                    }),
-                },
-            ]
-        )
+        [
+            'source.text',
+            'source.shared-styles',
+            'source.svelte',
+            'source.svelte-component',
+            'source.settings',
+        ].map((id) => [
+            id,
+            {
+                load: async () => ({
+                    id,
+                    acceptsInputs: id === 'source.svelte' || id === 'source.shared-styles',
+                    acceptsNamedInputs: id === 'source.svelte',
+                }),
+            },
+        ])
     ),
 }));
 
@@ -89,10 +93,10 @@ describe('workskin example layouts', () => {
             await doc.resolveUnloaded();
             expect(doc.modules.every((mod) => mod.graphPos === null)).toBe(true);
             const [writing, styles, compose] = doc.modules;
+            const settings = doc.modules[6];
             const output = doc.parts[0].outputId;
             const collapsed = checkLayout(doc, []);
             const card = collapsed.boxes.get(collapsed.groups.cards[0].nodeId)!;
-            expect(collapsed.boxes.get(writing.id)!.right).toBeLessThan(card.left);
             expect(card.right).toBeLessThan(collapsed.boxes.get(output)!.left);
             expect(collapsed.boxes.get(styles.id)!.top).toBeGreaterThan(card.bottom);
 
@@ -101,9 +105,12 @@ describe('workskin example layouts', () => {
                 doc.groups.map((group) => group.id)
             );
             const members = doc.groups[0].moduleIds.map((id) => expanded.boxes.get(id)!);
-            expect(expanded.boxes.get(writing.id)!.right).toBeLessThan(
-                Math.min(...members.map((box) => box.left))
-            );
+            // The block's inputs (its text and its details) come before the renderer.
+            for (const input of [writing, settings]) {
+                expect(expanded.boxes.get(input.id)!.right).toBeLessThan(
+                    expanded.boxes.get(compose.id)!.left
+                );
+            }
             expect(expanded.boxes.get(compose.id)!.right).toBeLessThan(
                 expanded.boxes.get(output)!.left
             );

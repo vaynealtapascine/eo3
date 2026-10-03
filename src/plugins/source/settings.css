@@ -1,0 +1,85 @@
+.plugin-settings-editor,
+.i-settings-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6em;
+}
+
+.i-settings-form {
+    .i-setting {
+        display: grid;
+        grid-template-columns: minmax(6em, 1fr) 2fr;
+        align-items: center;
+        gap: 0.25em 0.75em;
+
+        @media (max-width: 500px) {
+            grid-template-columns: 1fr;
+        }
+
+        > label {
+            font-weight: 600;
+        }
+
+        .uikit-text-field,
+        select,
+        .i-paragraph {
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .i-paragraph {
+            font: inherit;
+            resize: vertical;
+            padding: 0.4em 0.5em;
+            border: 1px solid var(--P-separator);
+            border-radius: 0.3em;
+            background: rgb(var(--P-card-bg));
+            color: inherit;
+        }
+
+        .i-hint {
+            grid-column: 2;
+            opacity: 0.7;
+            font-size: 0.9em;
+
+            @media (max-width: 500px) {
+                grid-column: 1;
+            }
+        }
+    }
+}
+
+.plugin-settings-editor {
+    .i-empty,
+    .i-hint {
+        opacity: 0.7;
+    }
+
+    .i-fields-editor {
+        summary {
+            cursor: pointer;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 0.5em 0;
+        }
+
+        th {
+            text-align: left;
+            font-weight: normal;
+            opacity: 0.7;
+            font-size: 0.9em;
+        }
+
+        td {
+            padding: 0.15em 0.25em 0.15em 0;
+            vertical-align: top;
+        }
+
+        [aria-invalid='true'] {
+            outline: 1px solid var(--P-error);
+        }
+    }
+}

@@ -16,6 +16,7 @@ export function PartsList({
     copiedParts,
     onSelectPart,
     onSelectModule,
+    removesContent = false,
 }: PartsList.Props) {
     const target = useSiteTarget();
     const label = target.plugin?.partLabel ?? 'Part';
@@ -39,13 +40,17 @@ export function PartsList({
         if (moduleId) onSelectModule(moduleId);
     };
 
-    const removePart = (id: string, index: number) => {
-        const message =
-            `Remove ${label} ${index + 1}? Its managed styles are removed too; ` +
-            'other modules stay, unwired from it.';
-        showConfirm(message, { confirmLabel: 'Remove', danger: true }).then(
-            (yes) => yes && document.removePart(id)
-        );
+    const removePart = async (id: string, index: number) => {
+        const linear = document.linear;
+        const withContent = removesContent && 'layout' in linear;
+        const message = withContent
+            ? `Remove ${label} ${index + 1} and what’s in it? Mirrored items stay in their ` +
+              `other ${label.toLowerCase()}s.`
+            : `Remove ${label} ${index + 1}? Its managed styles are removed too; ` +
+              'other modules stay, unwired from it.';
+        if (!(await showConfirm(message, { confirmLabel: 'Remove', danger: true }))) return;
+        if (withContent) document.removePartAndContent(id);
+        else document.removePart(id);
     };
 
     const splitAtBreak = (id: string) => {
@@ -210,5 +215,10 @@ namespace PartsList {
         copiedParts: string[];
         onSelectPart: (partId: string) => void;
         onSelectModule: (moduleId: ModuleId) => void;
+        /**
+         * Removing a part also removes the items only it lists: the simple view, where unwired
+         * modules would have nowhere to show.
+         */
+        removesContent?: boolean;
     }
 }

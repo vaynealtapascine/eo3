@@ -10,9 +10,9 @@ The example library includes 14 ready-to-edit AO3 documents: text messages, grou
 email, a personal letter, a journal, a newspaper, a case file, a social feed, a recording
 transcript, a terminal log, verse, a chapter opening, linked footnotes, and collapsible notes.
 They use standard Lorem ipsum and neutral labels, with no generated story content or external
-images or fonts. Each has a plain-text writing input, a shared CSS module, and a reusable
-Svelte renderer; open one from **Examples and
-Templates**, or link directly with `?example=ao3-letter.toml`.
+images or fonts. Each is one block: a **Details** form (date, names, labels), a plain-text
+writing input, and a reusable Svelte renderer, plus a shared CSS module; open one from
+**Examples and Templates**, or link directly with `?example=ao3-letter.toml`.
 
 The [gallery](https://dev.vayne.garden/eo3/about#examples) previews the actual documents,
 compares their styled and unstyled appearance, and offers a ZIP of documents, chapter HTML,
@@ -22,17 +22,48 @@ in `assets/workskins` are the source of truth; `workskins.json` holds the galler
 Run `node scripts/build-workskin-documents.mjs` to regenerate the self-contained TOML documents,
 then `node scripts/export-workskin-examples.mjs` to render the previews and package downloads.
 
-Start in **Write here**. Chat accepts `NAME: text`, optional `[09:41]` timestamps, continuations,
-`! event`, `> quote` and `+ reaction`. Letters and found documents use headers between `---`
+Fill in **Details**, then write in **Your text** (in the nodes view, **Write here**). The
+details become the text's header, and a header written in the text itself wins. Chat accepts
+`NAME: text`, optional `[09:41]` timestamps, continuations, `! event`, `> quote` and
+`+ reaction`. Letters and found documents use headers between `---`
 lines and plain paragraphs. Journal entries use `## date`; footnotes use `[^key]` references
 and definitions; optional extras use `::: title` / `:::` panels. Prose supports `*emphasis*`,
 `**strong**`, `~~crossed out~~`, and backtick code. This is a small syntax rather than full Markdown.
 
-The reusable renderer group starts folded to leave the writing input visible. Import any
+In the simple view, add any example to a chapter from **+ add → Blocks**. In the nodes view,
+the reusable renderer group starts folded to leave the writing input visible; import any
 example from **add node → Groups** (all 14 are bundled there too), then connect **Compose** and
 **Workskin** to a chapter output. Internal named sends are already wired. The same Svelte
 component can take a second named text input in Compose. ChatLog accepts `variant` and `self`;
 Footnotes accepts `id` to keep anchors unique when composing multiple passages.
+
+## Simple and nodes views
+
+eo3 opens in the **simple** view: each chapter is a list of text, styles and ready-made blocks,
+top to bottom, and the wiring follows from the order. Text and styles go to the chapter. An
+effect (Style Inliner, SVG to backgrounds…) applies to everything above it, back to the previous
+effect. A block is a group of modules used as one item: it shows the members its author marked
+as inputs (its text, a **Settings** form) and folds the rest under **Customize**. "All chapters"
+and chapter styles stay pinned at the top.
+
+Any text, styles or block can be **mirrored** into other chapters (⋯ → **Mirror in…**, or
+**+ add → Mirror from other chapters**). A mirror is the same item, not a copy: in the nodes
+view it is one node (or group) wired to each of those chapters, editing it anywhere changes
+it everywhere, and its CSS goes into the Work Skin once. **Make a separate copy here** splits a
+chapter's mirror off to edit on its own. Mirrored items keep the same order relative to each
+other in every chapter they share, since a chapter's content follows the work's module order.
+
+The **nodes** view is the full graph. The first time eo3 opens it asks which you prefer; switch
+any time with **simple / nodes** in the toolbar, and that choice is kept for every work. Works
+wired in ways a list can't show (named inputs from outside a block, an effect sent to two
+chapters, an effect that skips something above it) open in the simple view with a note and a
+button to switch. Nothing about the simple view is saved in the work: it reads the graph and
+rewrites it (`src/linear.ts`).
+
+To make your own block, group the modules in the nodes view, then in the simple view choose
+**show up front** on the members a writer should fill in (and **fold away** to hide them
+again). A **Settings** module, sent to a Svelte module as a named input, is a form in the block
+(`import settings from './settings'`). Group inputs are saved with the work and in group files.
 
 ## Saving and recovery
 

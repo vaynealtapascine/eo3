@@ -2,19 +2,13 @@
 version = 1
 title = "AO3 · Text messages"
 sharedStyles = 1
-groups = [{ id = "fic-text-messages-renderer", title = "Text messages · reusable renderer", modules = [2, 3, 4, 5] }]
+groups = [{ id = "fic-text-messages-renderer", title = "Text messages · reusable renderer", modules = [0, 2, 3, 4, 5, 6], inputs = [{ module = 6, label = "Details" }, { module = 0, label = "Your text" }] }]
 
 [[modules]]
 plugin = "source.text"
 title = "Write here · NAME: text"
 data.language = "text"
 data.contents = '''
----
-Title: Messages
-Self: Person B
-Date: Monday · 09:41
-Status: Delivered · 09:44
----
 Person A [09:41]: Lorem ipsum dolor sit amet, consectetur adipiscing elit.
 Person B [09:42]: Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
 Person A [09:43]: *Ut enim ad minim veniam.*
@@ -170,11 +164,13 @@ data.svelteVersion = "v4"
 data.contents = '''
 <script>
     import draft from './draft';
+    import settings from './settings';
+    import { withSettings } from './writing';
     import ChatLog from './ChatLog.svelte';
 </script>
 
-<!-- Reuse this component with another named text input, or change its props here. -->
-<ChatLog text={draft} variant="messages"/>
+<!-- The details fill in the text's header; a header written in the text itself wins. -->
+<ChatLog text={withSettings(draft, settings)} variant="messages"/>
 '''
 sends = ["output"]
 
@@ -276,6 +272,21 @@ export function documentText(text) {
         else if (line.trim()) unrecognized.push(line);
     }
     return { meta, body: [...unrecognized, source.slice(header[0].length)].join('\n') };
+}
+
+/**
+ * Puts settings (`{ Date: '01 January' }`) in the text's header, before the text's own header
+ * lines, so a header written in the text wins. Empty and switched-off settings are left out.
+ */
+export function withSettings(text, settings = {}) {
+    const lines = Object.entries(settings ?? {})
+        .filter(([, value]) => value !== '' && value !== false && value != null)
+        .map(([key, value]) => `${key}: ${String(value).replace(/\s*\n\s*/g, ' ')}`);
+    const source = normalize(text);
+    if (!lines.length) return source;
+    const header = source.match(/^---\n([\s\S]*?)\n---(?:\n|$)/);
+    if (!header) return `---\n${lines.join('\n')}\n---\n${source}`;
+    return `---\n${lines.join('\n')}\n${header[1]}\n---\n${source.slice(header[0].length)}`;
 }
 
 export function sections(text) {
@@ -440,3 +451,10 @@ export function slug(text) {
 }
 '''
 namedSends = { "2" = ["writing"] }
+
+[[modules]]
+plugin = "source.settings"
+title = "Details · text messages"
+data.fields = [{ key = "Title" }, { key = "Self" }, { key = "Date" }, { key = "Status" }]
+data.values = { "Title" = "Messages", "Self" = "Person B", "Date" = "Monday · 09:41", "Status" = "Delivered · 09:44" }
+namedSends = { "2" = ["settings"] }

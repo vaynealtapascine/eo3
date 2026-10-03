@@ -1,0 +1,67 @@
+.editor-view-switch {
+    display: inline-flex;
+    border: 1px solid rgb(255 255 255 / 0.25);
+    border-radius: 0.5em;
+    overflow: hidden;
+    flex-shrink: 0;
+
+    button {
+        font: inherit;
+        color: inherit;
+        background: none;
+        border: none;
+        padding: 0.2em 0.6em;
+        cursor: pointer;
+        opacity: 0.75;
+
+        &.is-active {
+            background: rgb(255 255 255 / 0.2);
+            opacity: 1;
+        }
+
+        &:focus-visible {
+            outline: 2px solid rgb(var(--P-color-accent));
+            outline-offset: -2px;
+        }
+    }
+}
+
+.editor-view-welcome {
+    width: min(30em, calc(100vw - 32px));
+
+    .i-choices {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5em;
+        margin-bottom: 0.75em;
+    }
+
+    .i-choice {
+        display: flex;
+        flex-direction: column;
+        gap: 0.2em;
+        text-align: left;
+        font: inherit;
+        color: inherit;
+        background: rgb(var(--P-card-bg));
+        border: 1px solid var(--P-separator);
+        border-radius: 0.6em;
+        padding: 0.7em 0.9em;
+        cursor: pointer;
+
+        &.is-primary {
+            border-color: rgb(var(--P-color-accent));
+            box-shadow: 0 0 0 1px rgb(var(--P-color-accent));
+        }
+
+        span {
+            opacity: 0.8;
+        }
+    }
+
+    .i-note {
+        margin: 0;
+        opacity: 0.7;
+        font-size: 0.9em;
+    }
+}

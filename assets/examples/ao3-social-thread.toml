@@ -2,19 +2,13 @@
 version = 1
 title = "AO3 · Social feed"
 sharedStyles = 1
-groups = [{ id = "fic-social-thread-renderer", title = "Social feed · reusable renderer", modules = [2, 3, 4, 5] }]
+groups = [{ id = "fic-social-thread-renderer", title = "Social feed · reusable renderer", modules = [0, 2, 3, 4, 5, 6], inputs = [{ module = 6, label = "Details" }, { module = 0, label = "Your text" }] }]
 
 [[modules]]
 plugin = "source.text"
 title = "Write here · Name: / Handle: / Reply: · --- post ---"
 data.language = "text"
 data.contents = '''
----
-Name: Person A
-Handle: @person_a
-Time: 09:41
-Metrics: 12 replies · 24 reposts · 128 likes
----
 Lorem ipsum dolor sit amet, consectetur adipiscing elit.
 
 --- post ---
@@ -113,11 +107,13 @@ data.svelteVersion = "v4"
 data.contents = '''
 <script>
     import draft from './draft';
+    import settings from './settings';
+    import { withSettings } from './writing';
     import SocialFeed from './SocialFeed.svelte';
 </script>
 
-<!-- Reuse this component with another named text input, or change its props here. -->
-<SocialFeed text={draft} />
+<!-- The details fill in the text's header; a header written in the text itself wins. -->
+<SocialFeed text={withSettings(draft, settings)} />
 '''
 sends = ["output"]
 
@@ -206,6 +202,21 @@ export function documentText(text) {
         else if (line.trim()) unrecognized.push(line);
     }
     return { meta, body: [...unrecognized, source.slice(header[0].length)].join('\n') };
+}
+
+/**
+ * Puts settings (`{ Date: '01 January' }`) in the text's header, before the text's own header
+ * lines, so a header written in the text wins. Empty and switched-off settings are left out.
+ */
+export function withSettings(text, settings = {}) {
+    const lines = Object.entries(settings ?? {})
+        .filter(([, value]) => value !== '' && value !== false && value != null)
+        .map(([key, value]) => `${key}: ${String(value).replace(/\s*\n\s*/g, ' ')}`);
+    const source = normalize(text);
+    if (!lines.length) return source;
+    const header = source.match(/^---\n([\s\S]*?)\n---(?:\n|$)/);
+    if (!header) return `---\n${lines.join('\n')}\n---\n${source}`;
+    return `---\n${lines.join('\n')}\n${header[1]}\n---\n${source.slice(header[0].length)}`;
 }
 
 export function sections(text) {
@@ -370,3 +381,10 @@ export function slug(text) {
 }
 '''
 namedSends = { "2" = ["writing"] }
+
+[[modules]]
+plugin = "source.settings"
+title = "Details · social feed"
+data.fields = [{ key = "Name" }, { key = "Handle" }, { key = "Time" }, { key = "Metrics" }]
+data.values = { "Name" = "Person A", "Handle" = "@person_a", "Time" = "09:41", "Metrics" = "12 replies · 24 reposts · 128 likes" }
+namedSends = { "2" = ["settings"] }

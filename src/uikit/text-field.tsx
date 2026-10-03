@@ -34,10 +34,10 @@ export class TextField extends PureComponent<TextField.Props> {
     }
 
     render() {
-        const { className: pClassName, value, onChange, ...extra } = this.props;
+        const { className: pClassName, value, onChange, narrow, ...extra } = this.props;
         let className = 'uikit-text-field ';
         if (this.state.focused) className += 'is-focused ';
-        if (this.props.narrow) className += 'is-narrow ';
+        if (narrow) className += 'is-narrow ';
         className += pClassName || '';
 
         return (

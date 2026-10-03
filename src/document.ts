@@ -1,6 +1,7 @@
 import { Component, FunctionComponent } from 'react';
 import { ModuleDef, MODULES } from './plugins';
 import type { GroupFile } from './storage/group-file';
+import { applyLinearLayout, LinearLayout, linearLayout, LinearResult } from './linear';
 
 export type JsonValue = null | boolean | number | string | JsonValue[] | { [k: string]: JsonValue };
 
@@ -108,6 +109,16 @@ export interface ModuleGroup {
     id: string;
     title: string;
     moduleIds: ModuleId[];
+    /**
+     * Members the author fills in when the group is used as one block in the simple editor
+     * (its text, its settings), in the order shown. The other members stay folded away.
+     */
+    inputs?: GroupInput[];
+}
+
+export interface GroupInput {
+    moduleId: ModuleId;
+    label: string;
 }
 
 /** One unit of the work: a chapter, a post in a thread, a page — whatever the target calls it. */
@@ -168,6 +179,60 @@ export function isCssModule(mod: AnyModule): boolean {
         mod.plugin.id === 'source.text' &&
         (mod.data as { language?: unknown } | null)?.language === 'css'
     );
+}
+
+/**
+ * New, unwired modules and their group from a group file; with `at`, laid out from that graph
+ * position. Throws when a module type isn't available in this eo3.
+ */
+export async function instantiateGroupFile(
+    file: GroupFile,
+    at?: { x: number; y: number }
+): Promise<{ modules: AnyModule[]; group: ModuleGroup }> {
+    const missing = file.modules.filter((mod) => !moduleDef(mod.plugin));
+    if (missing.length) {
+        throw new Error(
+            `This group uses a module type this version of eo3 doesn’t have: ${missing
+                .map((mod) => mod.plugin)
+                .join(', ')}`
+        );
+    }
+    const plugins = await Promise.all(file.modules.map((mod) => moduleDef(mod.plugin)!.load()));
+    const modules = file.modules.map((entry, i) => {
+        const mod = new Module(plugins[i], structuredClone(entry.data));
+        mod.title = entry.title ?? '';
+        if (at && entry.position) {
+            mod.graphPos = { x: at.x + entry.position[0], y: at.y + entry.position[1] };
+        }
+        return mod;
+    });
+    file.modules.forEach((entry, i) => {
+        modules[i].sends = (entry.sends ?? []).map((t) => modules[t].id);
+        modules[i].namedSends = new Map(
+            Object.entries(entry.namedSends ?? {}).map(([t, names]) => [
+                modules[+t].id,
+                new Set(names),
+            ])
+        );
+    });
+    const group: ModuleGroup = {
+        id: Module.genModuleId(),
+        title: file.title,
+        moduleIds: modules.map((mod) => mod.id),
+    };
+    const inputs = (file.inputs ?? [])
+        .filter((input) => modules[input.module])
+        .map((input) => ({ moduleId: modules[input.module].id, label: input.label }));
+    if (inputs.length) group.inputs = inputs;
+    return { modules, group };
+}
+
+const linearCache = new WeakMap<DocumentState, LinearResult>();
+
+function withoutMember(group: ModuleGroup, moduleId: ModuleId): ModuleGroup {
+    const result = { ...group, moduleIds: group.moduleIds.filter((id) => id !== moduleId) };
+    if (group.inputs) result.inputs = group.inputs.filter((input) => input.moduleId !== moduleId);
+    return result;
 }
 
 function newPart(outputId?: ModuleId): Part {
@@ -463,10 +528,7 @@ export class Document extends EventTarget {
                 ...(this.sharedStylesModuleId === moduleId ? { sharedStylesModuleId: null } : {}),
                 // A group of one is just a module again.
                 groups: this.groups
-                    .map((group) => ({
-                        ...group,
-                        moduleIds: group.moduleIds.filter((id) => id !== moduleId),
-                    }))
+                    .map((group) => withoutMember(group, moduleId))
                     .filter((group) => group.moduleIds.length > 1),
             },
             { type: ChangeType.RemoveModule }
@@ -521,6 +583,24 @@ export class Document extends EventTarget {
         );
     }
 
+    /** Sets which members a block shows up front in the simple editor, in order. */
+    setGroupInputs(id: string, inputs: GroupInput[]) {
+        this.pushHistoryState(
+            {
+                ...this.state,
+                groups: this.groups.map((group) => {
+                    if (group.id !== id) return group;
+                    const valid = inputs.filter((input) =>
+                        group.moduleIds.includes(input.moduleId)
+                    );
+                    const { inputs: _, ...rest } = group;
+                    return valid.length ? { ...rest, inputs: valid } : rest;
+                }),
+            },
+            { type: ChangeType.EditParts }
+        );
+    }
+
     /** Dissolves a group; its modules stay where they are, wired as they were. */
     ungroup(id: string) {
         this.pushHistoryState(
@@ -538,10 +618,15 @@ export class Document extends EventTarget {
         const placed = members.filter((mod) => mod.graphPos);
         const left = Math.min(...placed.map((mod) => mod.graphPos!.x));
         const top = Math.min(...placed.map((mod) => mod.graphPos!.y));
+        const inputs = (group.inputs ?? []).map((input) => ({
+            module: index.get(input.moduleId)!,
+            label: input.label,
+        }));
         return {
             eo3: 'group',
             version: 1,
             title: group.title,
+            ...(inputs.length ? { inputs } : {}),
             modules: members.map((mod) => {
                 const sends = mod.sends.filter((t) => index.has(t)).map((t) => index.get(t)!);
                 const namedSends = [...mod.namedSends].filter(([t]) => index.has(t));
@@ -575,37 +660,7 @@ export class Document extends EventTarget {
      * position. One undo step. Throws when a module type isn't available in this eo3.
      */
     async insertGroupFile(file: GroupFile, at?: { x: number; y: number }): Promise<ModuleGroup> {
-        const missing = file.modules.filter((mod) => !moduleDef(mod.plugin));
-        if (missing.length) {
-            throw new Error(
-                `This group uses a module type this version of eo3 doesn’t have: ${missing
-                    .map((mod) => mod.plugin)
-                    .join(', ')}`
-            );
-        }
-        const plugins = await Promise.all(file.modules.map((mod) => moduleDef(mod.plugin)!.load()));
-        const modules = file.modules.map((entry, i) => {
-            const mod = new Module(plugins[i], structuredClone(entry.data));
-            mod.title = entry.title ?? '';
-            if (at && entry.position) {
-                mod.graphPos = { x: at.x + entry.position[0], y: at.y + entry.position[1] };
-            }
-            return mod;
-        });
-        file.modules.forEach((entry, i) => {
-            modules[i].sends = (entry.sends ?? []).map((t) => modules[t].id);
-            modules[i].namedSends = new Map(
-                Object.entries(entry.namedSends ?? {}).map(([t, names]) => [
-                    modules[+t].id,
-                    new Set(names),
-                ])
-            );
-        });
-        const group: ModuleGroup = {
-            id: Module.genModuleId(),
-            title: file.title,
-            moduleIds: modules.map((mod) => mod.id),
-        };
+        const { modules, group } = await instantiateGroupFile(file, at);
         this.pushHistoryState(
             {
                 ...this.state,
@@ -615,6 +670,28 @@ export class Document extends EventTarget {
             { type: ChangeType.EditParts }
         );
         return group;
+    }
+
+    /** The simple editor's view of this work, or why it has none (see `linear.ts`). */
+    get linear(): LinearResult {
+        let result = linearCache.get(this.state);
+        if (!result) {
+            result = linearLayout(this.state);
+            linearCache.set(this.state, result);
+        }
+        return result;
+    }
+
+    /**
+     * Rewrites the work to match a simple-editor layout, adding `added` modules and groups and
+     * removing listed modules the layout leaves out. One undo step.
+     */
+    applyLinearLayout(
+        layout: LinearLayout,
+        added: { modules?: AnyModule[]; groups?: ModuleGroup[] } = {}
+    ) {
+        const { modules, groups } = applyLinearLayout(this.state, layout, added);
+        this.pushHistoryState({ ...this.state, modules, groups }, { type: ChangeType.EditParts });
     }
 
     /** Wires "All chapters" and the imported Work Skin to a new part. */
@@ -961,10 +1038,24 @@ export class Document extends EventTarget {
      * Removes a part and every send to its output. Its managed styles module is removed too;
      * a detached one is left alone. The last part can't be removed.
      */
-    removePart(id: string) {
+    /**
+     * Removes a part and the simple editor's items only it lists; items mirrored in other parts
+     * stay there. Needs a layout (see `linear`); otherwise it's `removePart`. One undo step.
+     */
+    removePartAndContent(id: string) {
+        const linear = this.linear;
+        if (!('layout' in linear)) return this.removePart(id);
+        const { modules, groups } = applyLinearLayout(this.state, {
+            parts: { ...linear.layout.parts, [id]: [] },
+        });
+        this.removePart(id, { ...this.state, modules, groups });
+    }
+
+    /** Removes a part, unwiring what was sent to it; `base` is the state to remove it from. */
+    removePart(id: string, base: DocumentState = this.state) {
         const part = this.findPart(id);
         if (!part || this.parts.length <= 1) return;
-        const modules = this.modules
+        const modules = base.modules
             .filter((mod) => mod.id !== part.stylesModuleId)
             .map((mod) => {
                 if (!mod.sends.includes(part.outputId)) return mod;
@@ -974,7 +1065,7 @@ export class Document extends EventTarget {
             });
         this.pushHistoryState(
             {
-                ...this.state,
+                ...base,
                 parts: this.parts.filter((p) => p.id !== id),
                 modules,
             },

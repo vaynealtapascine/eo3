@@ -21,7 +21,12 @@ export async function renderWorkskinDocument(doc) {
                 '/' + name,
                 module.data.language === 'javascript'
                     ? module.data.contents
-                    : `export default ${JSON.stringify(module.data.contents)};`
+                    : // Generated Settings modules hold a value for every field.
+                      `export default ${JSON.stringify(
+                          module.plugin === 'source.settings'
+                              ? module.data.values
+                              : module.data.contents
+                      )};`
             );
     }
     const bundle = await rollup({

@@ -14,14 +14,7 @@ import React, {
 import { deserialize, getExampleDocument, IStorage, nextDocumentId, serialize } from '../storage';
 import { ApplicationSidebar } from './sidebar';
 import './index.css';
-import {
-    GraphPanelActiveIcon,
-    GraphPanelIcon,
-    RedoIcon,
-    SidebarActiveIcon,
-    SidebarIcon,
-    UndoIcon,
-} from './components/icons';
+import { RedoIcon, SidebarActiveIcon, SidebarIcon, UndoIcon } from './components/icons';
 import { useOptHeld } from './opt-held';
 import { shouldReduceMotion } from '../uikit/animation';
 import { DirPopover } from '../uikit/dir-popover';
@@ -31,6 +24,7 @@ import { exampleFromSearch } from '../storage/example-link';
 import { SaveController, SaveState } from '../storage/save-controller';
 import { downloadFile, safeFileName } from '../util/download';
 import { SaveErrorBanner, SaveStatus, VersionHistory } from './components/save-recovery';
+import { EditorView, EditorViewSwitch, EditorViewWelcome, useEditorView } from './editor-view';
 
 let lastEo3Init = 0;
 try {
@@ -72,7 +66,7 @@ export default function ApplicationFrame({
     const [openFromUrl, setOpenFromUrl] = useState<string | null>(null);
 
     const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth > 1400);
-    const [graphOpen, setGraphOpen] = useState(true);
+    const view = useEditorView();
     // on phones the sidebar covers the document (see index.css), so get it out of the way
     const closeSidebarIfOverlay = () => {
         if (window.matchMedia('(max-width: 700px)').matches) setSidebarOpen(false);
@@ -312,6 +306,7 @@ export default function ApplicationFrame({
     return (
         <StorageContext.Provider value={storage}>
             <div role="application" className="application-frame">
+                <EditorViewWelcome />
                 <header className="i-toolbar" role="toolbar">
                     <div className="i-buttons">
                         <ToolbarButton
@@ -322,14 +317,7 @@ export default function ApplicationFrame({
                         >
                             {sidebarOpen ? <SidebarActiveIcon /> : <SidebarIcon />}
                         </ToolbarButton>
-                        <ToolbarButton
-                            className="is-icon"
-                            onClick={() => setGraphOpen(!graphOpen)}
-                            aria-label={graphOpen ? 'hide graph' : 'show graph'}
-                            title={graphOpen ? 'hide graph' : 'show graph'}
-                        >
-                            {graphOpen ? <GraphPanelActiveIcon /> : <GraphPanelIcon />}
-                        </ToolbarButton>
+                        <EditorViewSwitch view={view} />
 
                         <span className="i-section">File</span>
 
@@ -458,7 +446,7 @@ export default function ApplicationFrame({
                                         realizeVirtual={tab ? undefined : realizeVirtual}
                                         initWithoutRender={shouldStartWithoutRender}
                                         isForeground={currentTab === tab}
-                                        graphOpen={graphOpen}
+                                        view={view}
                                         isMemoryStorage={!!isMemoryStorage}
                                         onUpdate={(state) => {
                                             tabStates.set(
@@ -887,7 +875,7 @@ function ApplicationTab({
     virtual,
     isForeground,
     initWithoutRender,
-    graphOpen,
+    view,
     onUpdate,
     isMemoryStorage,
 }: {
@@ -896,7 +884,7 @@ function ApplicationTab({
     virtual?: Document;
     isForeground: boolean;
     initWithoutRender: boolean;
-    graphOpen: boolean;
+    view: EditorView;
     onUpdate: (state: TabState) => void;
     isMemoryStorage: boolean;
 }) {
@@ -1036,7 +1024,7 @@ function ApplicationTab({
                         <Eo3
                             document={document}
                             initWithoutRender={initWithoutRender}
-                            graphOpen={graphOpen}
+                            view={view}
                         />
                     </div>
                 ) : null}

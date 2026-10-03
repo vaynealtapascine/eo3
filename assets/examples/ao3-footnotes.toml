@@ -2,17 +2,13 @@
 version = 1
 title = "AO3 · Linked footnotes"
 sharedStyles = 1
-groups = [{ id = "fic-footnotes-renderer", title = "Linked footnotes · reusable renderer", modules = [2, 3, 4, 5] }]
+groups = [{ id = "fic-footnotes-renderer", title = "Linked footnotes · reusable renderer", modules = [0, 2, 3, 4, 5, 6], inputs = [{ module = 6, label = "Details" }, { module = 0, label = "Your text" }] }]
 
 [[modules]]
 plugin = "source.text"
 title = "Write here · text[^key] · [^key]: note"
 data.language = "text"
 data.contents = '''
----
-Title: Lorem ipsum
-Id: fic-notes
----
 Lorem ipsum dolor sit amet, consectetur adipiscing elit.[^lorem] Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
 
 Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.[^ipsum]
@@ -81,11 +77,13 @@ data.svelteVersion = "v4"
 data.contents = '''
 <script>
     import draft from './draft';
+    import settings from './settings';
+    import { withSettings } from './writing';
     import Footnotes from './Footnotes.svelte';
 </script>
 
-<!-- Reuse this component with another named text input, or change its props here. -->
-<Footnotes text={draft} />
+<!-- The details fill in the text's header; a header written in the text itself wins. -->
+<Footnotes text={withSettings(draft, settings)} />
 '''
 sends = ["output"]
 
@@ -174,6 +172,21 @@ export function documentText(text) {
         else if (line.trim()) unrecognized.push(line);
     }
     return { meta, body: [...unrecognized, source.slice(header[0].length)].join('\n') };
+}
+
+/**
+ * Puts settings (`{ Date: '01 January' }`) in the text's header, before the text's own header
+ * lines, so a header written in the text wins. Empty and switched-off settings are left out.
+ */
+export function withSettings(text, settings = {}) {
+    const lines = Object.entries(settings ?? {})
+        .filter(([, value]) => value !== '' && value !== false && value != null)
+        .map(([key, value]) => `${key}: ${String(value).replace(/\s*\n\s*/g, ' ')}`);
+    const source = normalize(text);
+    if (!lines.length) return source;
+    const header = source.match(/^---\n([\s\S]*?)\n---(?:\n|$)/);
+    if (!header) return `---\n${lines.join('\n')}\n---\n${source}`;
+    return `---\n${lines.join('\n')}\n${header[1]}\n---\n${source.slice(header[0].length)}`;
 }
 
 export function sections(text) {
@@ -338,3 +351,10 @@ export function slug(text) {
 }
 '''
 namedSends = { "2" = ["writing"] }
+
+[[modules]]
+plugin = "source.settings"
+title = "Details · linked footnotes"
+data.fields = [{ key = "Title" }, { key = "Id" }]
+data.values = { "Title" = "Lorem ipsum", "Id" = "fic-notes" }
+namedSends = { "2" = ["settings"] }

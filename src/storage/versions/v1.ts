@@ -19,6 +19,7 @@ import {
     inline as tomlInline,
 } from '@ltd/j-toml';
 import { deserializeV0 } from './v0';
+import { parseGroupInputs } from '../group-file';
 
 type TomlValue =
     | null
@@ -129,6 +130,14 @@ export function serializeV1(doc: Document, format?: string): string {
             id: group.id,
             title: group.title,
             modules: group.moduleIds.map((id) => moduleIndices.get(id)),
+            ...(group.inputs?.length
+                ? {
+                      inputs: group.inputs.map((input) => ({
+                          module: moduleIndices.get(input.moduleId),
+                          label: input.label,
+                      })),
+                  }
+                : {}),
         }));
     }
     // A single untouched part is implied by older files, so it isn't written.
@@ -376,6 +385,17 @@ function readGroups(data: any, moduleIdAssignments: Map<number, ModuleId>): Modu
         );
         if (moduleIds.length < 2 || moduleIds.some((id: ModuleId | undefined) => !id)) return [];
         const title = entry.title ?? titles.get(String(entry.definitionId)) ?? 'Group';
-        return [{ id: String(entry.id), title: String(title), moduleIds }];
+        const group: ModuleGroup = { id: String(entry.id), title: String(title), moduleIds };
+        // Inputs name members by their index in the work, like `modules`.
+        const members: number[] = entry.modules;
+        const inputs = parseGroupInputs(
+            (Array.isArray(entry.inputs) ? entry.inputs : []).map((input: any) => ({
+                ...input,
+                module: members.indexOf(input?.module),
+            })),
+            members.length
+        ).map((input) => ({ moduleId: moduleIds[input.module], label: input.label }));
+        if (inputs.length) group.inputs = inputs;
+        return [group];
     });
 }

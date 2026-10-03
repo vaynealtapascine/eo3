@@ -10,6 +10,50 @@ update it whenever a step lands (what changed, what's next, anything surprising)
 
 ## Status
 
+2026-10-03 — **Simple view (linear editor), configurable blocks, Settings module.** Not
+committed yet; branch `claude/low-complexity-linear-editor-2af9c9`.
+
+-   **Model** (`src/linear.ts`): each part as an ordered list of items read from the graph.
+    Sources send to their part; a `transform.*` takes everything above it back to the previous
+    transform; a group is one block wired through its sinks (members sending to no other
+    member); managed modules ("All chapters", imported skin, part styles) are pinned and never
+    rewired. `linearLayout` returns a layout only if the order reproduces the current wiring
+    exactly, otherwise a reason; `applyLinearLayout` rewrites order and sends from a layout and
+    drops listed modules left out. No saved state: `Document.linear` is cached per state.
+-   **Blocks:** `ModuleGroup.inputs` (`{ moduleId, label }[]`) picks the members shown up front;
+    saved in work files (`groups[].inputs`, module indices) and group files (`inputs`,
+    in-file indices). Older eo3 ignores the field. `setGroupInputs`, `instantiateGroupFile`
+    (split out of `insertGroupFile`).
+-   **Settings module** (`source.settings`): fields + values → JS module `export default {…}`.
+-   **Workskin examples** regenerated: the header fields moved into a Settings module
+    ("Details"), the draft holds only the body, and the group now contains draft + settings +
+    renderer (inputs: Details, Your text). Compose calls `withSettings(draft, settings)` (new in
+    `writing.js`); a header typed in the draft still wins. The CSS stays the managed
+    "All chapters" module. The `.txt` download keeps the full header text.
+-   **UI:** toolbar **simple / nodes** switch replaces the show/hide graph button (one global
+    preference in localStorage `eo3-editor-view`, default simple); a one-time welcome dialog
+    asks everyone on first launch. Simple view = parts list + `SimpleEditor` (no graph pane).
+    Works that aren't listable show the reason and a "Switch to nodes view" button.
+    `ModuleList` now lays out on mount (it used to rely on a later update; it now mounts when
+    switching views).
+-   **Validation:** typecheck, 602 tests (3 skipped), production build; checked in the browser
+    at desktop and phone widths (welcome, letter block details → preview, add block, move,
+    move to chapter, switch views, non-listable notice).
+-   **Follow-up (same day):** cards reorder by dragging a three-line handle, as in the nodes
+    view's list (cards fold to their headers while dragging; arrow keys on the focused handle
+    also move them). Names are edited in place like module titles: card names, block input
+    labels and Customize members (Enter or leaving the field saves, Escape cancels).
+-   **Mirrored items:** a source or block listed in several parts is one module/group sending
+    to each part (seamless in the nodes view; its CSS is one source reaching those parts, so
+    the Work Skin has it once). `linear.ts` reads multiple targets per item (one per part;
+    effects can't be mirrored) and `applyLinearLayout` merges the parts' lists into one module
+    order (`itemOrder`, a topological merge), throwing `LinearOrderError` for opposite orders.
+    UI: "mirrored · Chapters 1, 3" badge, ⋯ "Mirror in…", "Make a separate copy here",
+    "Remove from this chapter", and "+ add → Mirror from other chapters". Removing a chapter
+    in the simple view removes what only it lists (`removePartAndContent`, one undo step).
+-   **Next / open:** per-chapter text with a shared look (mirror the renderer, not the
+    text) would be a further model change.
+
 2026-10-02 — **Audit, refinement of recent features, codebase map.** Working tree also
 contains the 2026-09-29 cleanup edits (uncommitted until now); nothing is committed yet.
 

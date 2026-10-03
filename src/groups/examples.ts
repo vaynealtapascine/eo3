@@ -17,6 +17,8 @@ function workskinExample(file: string, title: string): GroupFile {
         eo3: 'group',
         version: 1,
         title: 'AO3 · ' + title,
+        // Every module of the document is in the file, so its indices are the file's too.
+        inputs: doc.groups?.[0]?.inputs,
         modules: doc.modules.map((module: any) => ({
             plugin: module.plugin,
             title: module.title,
