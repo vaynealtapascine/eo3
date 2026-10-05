@@ -5,6 +5,43 @@
     gap: 0.6em;
 }
 
+.i-settings-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6em;
+    min-width: 0;
+    margin: 0;
+    padding: 0.75em 0 0;
+    border: 0;
+    border-top: 1px solid var(--P-separator);
+}
+.i-settings-section legend {
+    padding: 0 0.5em 0 0;
+    font-weight: 600;
+}
+.i-settings-advanced > summary,
+.i-field-options > summary {
+    cursor: pointer;
+    padding: 0.4em 0;
+}
+.i-settings-advanced > .i-settings-form {
+    margin-top: 0.5em;
+}
+.i-field-options > label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3em;
+    margin: 0.65em 0;
+}
+.i-field-options > .i-advanced-option {
+    flex-direction: row;
+    align-items: center;
+}
+.i-settings-form .i-setting > *,
+.i-field-options .uikit-text-field {
+    min-width: 0;
+}
+
 .i-settings-form {
     .i-setting {
         display: grid;

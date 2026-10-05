@@ -8,6 +8,7 @@ groups = [{ id = "fic-group-chat-renderer", title = "Group chat · reusable rend
 plugin = "source.text"
 title = "Write here · NAME: text · ! event · > quote · + reaction"
 data.language = "text"
+data.help = { "summary" = "Edit Details above, then write here. Clear optional fields to omit them.", "examples" = [{ "syntax" = "Alex [09:41]: Hello", "description" = "One speaker per line. The time is optional." }, { "syntax" = "A second line", "description" = "A line without a speaker continues the previous message." }, { "syntax" = "! Someone joined", "description" = "An event on its own line." }, { "syntax" = "> Quoted message\n+ Like (2)", "description" = "Put a quote or reaction below its message." }, { "syntax" = "*italic* · **bold** · ~~struck out~~ · `code`", "description" = "Inline formatting; HTML is treated as text." }, { "syntax" = "---\nKey: value\n---", "description" = "Headers override Details. Use them at the start of each later item." }] }
 data.contents = '''
 ! 09:41 · Person C joined the conversation.
 Person A [09:42]: Lorem ipsum dolor sit amet, consectetur adipiscing elit.
@@ -156,6 +157,29 @@ data.contents = '''
     border-radius: 1em;
     font-size: 0.75em;
 }
+
+/* Per-block choices; keep all variants so mirrored blocks can differ. */
+#workskin .fx-size-larger > div {
+    font-size: 1.15em;
+}
+#workskin .fx-size-largest > div {
+    font-size: 1.3em;
+}
+#workskin .fx-width-narrow > div {
+    max-width: 28em;
+}
+#workskin .fx-width-wide > div {
+    max-width: 52em;
+}
+#workskin .fx-font-serif > div {
+    font-family: Georgia, serif;
+}
+#workskin .fx-font-sans > div {
+    font-family: Arial, sans-serif;
+}
+#workskin .fx-font-mono > div {
+    font-family: monospace;
+}
 '''
 sends = ["output"]
 
@@ -169,10 +193,16 @@ data.contents = '''
     import settings from './settings';
     import { withSettings } from './writing';
     import ChatLog from './ChatLog.svelte';
+    const { _size, _width, _font, ...details } = settings;
+    const sizes = { Larger: 'fx-size-larger', Largest: 'fx-size-largest' };
+    const widths = { Narrow: 'fx-width-narrow', Wide: 'fx-width-wide' };
+    const fonts = { Serif: 'fx-font-serif', 'Sans serif': 'fx-font-sans', Monospace: 'fx-font-mono' };
 </script>
 
 <!-- The details fill in the text's header; a header written in the text itself wins. -->
-<ChatLog text={withSettings(draft, settings)} variant="group"/>
+<div class={['fx-appearance', sizes[_size], widths[_width], fonts[_font]].filter(Boolean).join(' ')}>
+<ChatLog text={withSettings(draft, details)} variant="group"/>
+</div>
 '''
 sends = ["output"]
 
@@ -457,6 +487,6 @@ namedSends = { "2" = ["writing"] }
 [[modules]]
 plugin = "source.settings"
 title = "Details · group chat"
-data.fields = [{ key = "Title" }, { key = "Date" }, { key = "Status" }]
-data.values = { "Title" = "# general", "Date" = "Monday", "Status" = "End of conversation · 09:45" }
+data.fields = [{ key = "Title", default = "# general", section = "", label = "Channel" }, { key = "Date", default = "Monday", section = "" }, { key = "Status", default = "End of conversation · 09:45", section = "Extras", advanced = true }, { key = "Participants", default = "", section = "Extras", advanced = true, hint = "Leave blank to use the speakers in your text." }, { key = "_size", label = "Text size", type = "choice", options = ["Original", "Larger", "Largest"], default = "Original", section = "Appearance", advanced = true }, { key = "_width", label = "Width", type = "choice", options = ["Original", "Narrow", "Wide"], default = "Original", section = "Appearance", advanced = true }, { key = "_font", label = "Typeface", type = "choice", options = ["Original", "Serif", "Sans serif", "Monospace"], default = "Original", section = "Appearance", advanced = true }]
+data.values = { "Title" = "# general", "Date" = "Monday", "Status" = "End of conversation · 09:45", "Participants" = "", "_size" = "Original", "_width" = "Original", "_font" = "Original" }
 namedSends = { "2" = ["settings"] }

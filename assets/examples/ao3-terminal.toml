@@ -8,6 +8,7 @@ groups = [{ id = "fic-terminal-renderer", title = "Terminal log · reusable rend
 plugin = "source.text"
 title = "Write here · $ command · [time] INFO / WARN / ERROR"
 data.language = "text"
+data.help = { "summary" = "Edit Details above, then write here. Clear optional fields to omit them.", "examples" = [{ "syntax" = "$ cat notes.txt", "description" = "A command prompt, displayed only; nothing is executed." }, { "syntax" = "[09:41] WARN Connection lost", "description" = "WARN and ERROR highlight warning lines." }, { "syntax" = "Line one\n\nLine three", "description" = "Line breaks and blank lines are preserved. Formatting marks stay literal." }, { "syntax" = "---\nKey: value\n---", "description" = "Headers override Details. Use them at the start of each later item." }] }
 data.contents = '''
 $ cat lorem.txt
 Lorem ipsum dolor sit amet, consectetur adipiscing elit.
@@ -64,6 +65,29 @@ data.contents = '''
     background: #b3dfb5;
     color: #202b28;
 }
+
+/* Per-block choices; keep all variants so mirrored blocks can differ. */
+#workskin .fx-size-larger > div {
+    font-size: 1.15em;
+}
+#workskin .fx-size-largest > div {
+    font-size: 1.3em;
+}
+#workskin .fx-width-narrow > div {
+    max-width: 28em;
+}
+#workskin .fx-width-wide > div {
+    max-width: 52em;
+}
+#workskin .fx-font-serif > div {
+    font-family: Georgia, serif;
+}
+#workskin .fx-font-sans > div {
+    font-family: Arial, sans-serif;
+}
+#workskin .fx-font-mono > div {
+    font-family: monospace;
+}
 '''
 sends = ["output"]
 
@@ -77,10 +101,16 @@ data.contents = '''
     import settings from './settings';
     import { withSettings } from './writing';
     import Terminal from './Terminal.svelte';
+    const { _size, _width, _font, ...details } = settings;
+    const sizes = { Larger: 'fx-size-larger', Largest: 'fx-size-largest' };
+    const widths = { Narrow: 'fx-width-narrow', Wide: 'fx-width-wide' };
+    const fonts = { Serif: 'fx-font-serif', 'Sans serif': 'fx-font-sans', Monospace: 'fx-font-mono' };
 </script>
 
 <!-- The details fill in the text's header; a header written in the text itself wins. -->
-<Terminal text={withSettings(draft, settings)} />
+<div class={['fx-appearance', sizes[_size], widths[_width], fonts[_font]].filter(Boolean).join(' ')}>
+<Terminal text={withSettings(draft, details)} />
+</div>
 '''
 sends = ["output"]
 
@@ -346,6 +376,6 @@ namedSends = { "2" = ["writing"] }
 [[modules]]
 plugin = "source.settings"
 title = "Details · terminal log"
-data.fields = [{ key = "Title" }]
-data.values = { "Title" = "Terminal / Session 001" }
+data.fields = [{ key = "Title", default = "Terminal / Session 001", section = "", label = "Window title" }, { key = "_size", label = "Text size", type = "choice", options = ["Original", "Larger", "Largest"], default = "Original", section = "Appearance", advanced = true }, { key = "_width", label = "Width", type = "choice", options = ["Original", "Narrow", "Wide"], default = "Original", section = "Appearance", advanced = true }, { key = "_font", label = "Typeface", type = "choice", options = ["Original", "Serif", "Sans serif", "Monospace"], default = "Original", section = "Appearance", advanced = true }]
+data.values = { "Title" = "Terminal / Session 001", "_size" = "Original", "_width" = "Original", "_font" = "Original" }
 namedSends = { "2" = ["settings"] }

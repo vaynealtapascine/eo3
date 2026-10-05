@@ -10,6 +10,29 @@ update it whenever a step lands (what changed, what's next, anything surprising)
 
 ## Status
 
+2026-10-05 — **All AO3 examples: settings and writing help.** All 14 bundled examples
+now have defaulted, labeled fields with optional details folded away, plus shared
+text-size, width, and typeface choices. Per-block classes use AO3-compatible CSS.
+Text module data can carry a Writing help disclosure (literal syntax plus explanations),
+preserved in work and group files and included in downloadable guides.
+Validation: typecheck, 613 passing tests (3 skipped), production build and regenerated
+downloads; all 14 examples tested with appearance overrides through AO3 sanitization.
+Browser checked at desktop and 390px, including help disclosure and live size changes.
+
+2026-10-04 — **Three simpler example forms.** Letter, Email, and Text Messages now use
+field labels, defaults, sections, and Advanced settings for extras. No new examples or
+fields; short guides. Metadata lives in `assets/workskins/examples.mjs` and survives
+the document/group generator.
+
+2026-10-04 — **Programmable group settings.** Extended the existing Settings form with
+sections, advanced disclosure, defaults, numeric bounds, and conditional visibility.
+Field Options in the nodes editor configures the same metadata that group authors can
+generate as JSON. Hidden fields retain their values and remain in the evaluated export.
+The simple editor reuses the form; no new dependency or document format version.
+Authoring guide: `docs/group-settings.md`.
+Validation: typecheck, 613 passing tests (3 skipped), production build, formatting,
+and desktop/mobile form checks in headless Chromium (375px without horizontal overflow).
+
 2026-10-03 — **Simple view (linear editor), configurable blocks, Settings module.** Not
 committed yet; branch `claude/low-complexity-linear-editor-2af9c9`.
 

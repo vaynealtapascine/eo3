@@ -1,3 +1,29 @@
+.i-writing-help {
+    margin-bottom: 0.6em;
+    font-size: 0.95em;
+}
+.i-writing-help summary {
+    cursor: pointer;
+    padding: 0.4em 0;
+}
+.i-writing-help p {
+    margin: 0.5em 0;
+}
+.i-writing-help dl {
+    margin: 0;
+}
+.i-writing-help dl > div {
+    padding: 0.6em 0;
+    border-top: 1px solid var(--P-separator);
+}
+.i-writing-help code {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+.i-writing-help dd {
+    margin: 0.3em 0 0;
+}
+
 .plugin-text-rich-text-editor {
     contain: layout;
     border: 1px solid var(--P-separator);

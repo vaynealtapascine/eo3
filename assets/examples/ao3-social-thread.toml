@@ -8,6 +8,7 @@ groups = [{ id = "fic-social-thread-renderer", title = "Social feed · reusable 
 plugin = "source.text"
 title = "Write here · Name: / Handle: / Reply: · --- post ---"
 data.language = "text"
+data.help = { "summary" = "Edit Details above, then write here. Clear optional fields to omit them.", "examples" = [{ "syntax" = "--- post ---", "description" = "Start another post. Details applies to the first post." }, { "syntax" = "---\nName: Alex\nHandle: @alex\nReply: @sam\n---", "description" = "Give later posts their own headers. Reply is optional." }, { "syntax" = "> Quoted post", "description" = "Quote a post inside the current one." }, { "syntax" = "A paragraph\n\nAnother paragraph", "description" = "Leave a blank line between paragraphs." }, { "syntax" = "*italic* · **bold** · ~~struck out~~ · `code`", "description" = "Inline formatting; HTML is treated as text." }, { "syntax" = "---\nKey: value\n---", "description" = "Headers override Details. Use them at the start of each later item." }] }
 data.contents = '''
 Lorem ipsum dolor sit amet, consectetur adipiscing elit.
 
@@ -97,6 +98,29 @@ data.contents = '''
     border-radius: 0.5em;
     font-size: 0.85em;
 }
+
+/* Per-block choices; keep all variants so mirrored blocks can differ. */
+#workskin .fx-size-larger > div {
+    font-size: 1.15em;
+}
+#workskin .fx-size-largest > div {
+    font-size: 1.3em;
+}
+#workskin .fx-width-narrow > div {
+    max-width: 28em;
+}
+#workskin .fx-width-wide > div {
+    max-width: 52em;
+}
+#workskin .fx-font-serif > div {
+    font-family: Georgia, serif;
+}
+#workskin .fx-font-sans > div {
+    font-family: Arial, sans-serif;
+}
+#workskin .fx-font-mono > div {
+    font-family: monospace;
+}
 '''
 sends = ["output"]
 
@@ -110,10 +134,16 @@ data.contents = '''
     import settings from './settings';
     import { withSettings } from './writing';
     import SocialFeed from './SocialFeed.svelte';
+    const { _size, _width, _font, ...details } = settings;
+    const sizes = { Larger: 'fx-size-larger', Largest: 'fx-size-largest' };
+    const widths = { Narrow: 'fx-width-narrow', Wide: 'fx-width-wide' };
+    const fonts = { Serif: 'fx-font-serif', 'Sans serif': 'fx-font-sans', Monospace: 'fx-font-mono' };
 </script>
 
 <!-- The details fill in the text's header; a header written in the text itself wins. -->
-<SocialFeed text={withSettings(draft, settings)} />
+<div class={['fx-appearance', sizes[_size], widths[_width], fonts[_font]].filter(Boolean).join(' ')}>
+<SocialFeed text={withSettings(draft, details)} />
+</div>
 '''
 sends = ["output"]
 
@@ -385,6 +415,6 @@ namedSends = { "2" = ["writing"] }
 [[modules]]
 plugin = "source.settings"
 title = "Details · social feed"
-data.fields = [{ key = "Name" }, { key = "Handle" }, { key = "Time" }, { key = "Metrics" }]
-data.values = { "Name" = "Person A", "Handle" = "@person_a", "Time" = "09:41", "Metrics" = "12 replies · 24 reposts · 128 likes" }
+data.fields = [{ key = "Name", default = "Person A", section = "First post" }, { key = "Handle", default = "@person_a", section = "First post" }, { key = "Time", default = "09:41", section = "First post" }, { key = "Metrics", default = "12 replies · 24 reposts · 128 likes", section = "Extras", advanced = true }, { key = "Reply", default = "", section = "Extras", label = "Replying to", advanced = true, hint = "A handle makes this a nested reply." }, { key = "_size", label = "Text size", type = "choice", options = ["Original", "Larger", "Largest"], default = "Original", section = "Appearance", advanced = true }, { key = "_width", label = "Width", type = "choice", options = ["Original", "Narrow", "Wide"], default = "Original", section = "Appearance", advanced = true }, { key = "_font", label = "Typeface", type = "choice", options = ["Original", "Serif", "Sans serif", "Monospace"], default = "Original", section = "Appearance", advanced = true }]
+data.values = { "Name" = "Person A", "Handle" = "@person_a", "Time" = "09:41", "Metrics" = "12 replies · 24 reposts · 128 likes", "Reply" = "", "_size" = "Original", "_width" = "Original", "_font" = "Original" }
 namedSends = { "2" = ["settings"] }

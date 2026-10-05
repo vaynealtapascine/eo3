@@ -273,6 +273,14 @@ Each entry: the files that implement it (most important first), its tests, and w
 
 ### Examples and workskin gallery
 
+-   `assets/workskins/examples.mjs` holds sample writing and optional per-field Settings
+    metadata; `scripts/workskin-documents.mjs` carries it into generated documents and groups.
+-   `assets/workskins/writing-help.mjs` holds per-example syntax help and shared appearance
+    fields. `styles/appearance.css` supplies AO3-compatible size, width, and font variants.
+    The generator stores help in text module data; `src/plugins/source/text.tsx` and
+    `text.css` display the Writing help disclosure in both editor views.
+    `scripts/export-workskin-examples.mjs` includes the syntax examples in downloaded guides.
+
 -   **Files:** `assets/examples/*` (documents), `assets/workskins/*` (source),
     `scripts/*workskin*`, `scripts/build-writing-lab.mjs`, `src/groups/examples.ts`,
     `src/storage/example-link.ts`, `src/ui/examples.tsx` (upstream, don't modify).
@@ -366,6 +374,12 @@ schema, append it to `MIGRATIONS` in `versions/index.ts`, and implement the stor
 -   On Windows, run Vitest directly (`node node_modules/vitest/vitest.mjs run --pool=threads --maxWorkers=2`) if `npm test` times out.
 
 ## 6. Tests
+
+Programmable group settings extend the existing `source/settings.tsx` form and authoring
+controls, `settings-values.ts` evaluation helpers, and `settings.css`. The simple editor
+reuses that form. Optional field metadata stays in module data without a file-version
+change. See `docs/group-settings.md`; `test/ui/settings.test.ts` covers conditional forms,
+defaults, bounds, and group-file round trips.
 
 | Folder               | Covers                                                                    |
 | -------------------- | ------------------------------------------------------------------------- |

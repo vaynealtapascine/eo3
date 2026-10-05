@@ -37,6 +37,11 @@ const LANGUAGE_LABELS: { [k: string]: string } = {
 export type TextPluginData = {
     contents: string;
     language: string;
+    /** Optional author-provided writing instructions, saved with reusable groups. */
+    help?: {
+        summary: string;
+        examples: { syntax: string; description: string }[];
+    };
 };
 
 class TextEditor extends PureComponent<ModulePluginProps<TextPluginData>> {
@@ -148,7 +153,27 @@ class TextEditor extends PureComponent<ModulePluginProps<TextPluginData>> {
             );
         }
 
-        return <div className="plugin-plain-text-editor">{editor}</div>;
+        return (
+            <div className="plugin-plain-text-editor">
+                {data.help ? (
+                    <details className="i-writing-help">
+                        <summary>Writing help</summary>
+                        <p>{data.help.summary}</p>
+                        <dl>
+                            {data.help.examples.map((example, i) => (
+                                <div key={i}>
+                                    <dt>
+                                        <code>{example.syntax}</code>
+                                    </dt>
+                                    <dd>{example.description}</dd>
+                                </div>
+                            ))}
+                        </dl>
+                    </details>
+                ) : null}
+                {editor}
+            </div>
+        );
     }
 }
 

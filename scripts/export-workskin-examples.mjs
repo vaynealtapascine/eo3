@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { parse } from '@ltd/j-toml';
 import { renderWorkskinDocument } from './render-workskin-document.mjs';
 import { workskinGroup } from './workskin-documents.mjs';
+import { writingHelp, headerHelp } from '../assets/workskins/writing-help.mjs';
 import { examples } from '../assets/workskins/examples.mjs';
 import { buildWritingLab } from './build-writing-lab.mjs';
 
@@ -66,6 +67,9 @@ Optional headers go between --- lines at the start. *Text*, **text**, ~~text~~,
 and backtick code work in prose; blank lines separate paragraphs. This is a small
 writing syntax, not full Markdown. Terminal logs are displayed literally.
 
+In the editor, open Writing help beside the text input for syntax examples.
+Advanced settings includes text size, width, and typeface. Original keeps the sample style.
+
 To reuse an example in an existing fic, import its .eo3group.json from add node >
 Groups > import. Its internal links are preserved. Connect the Compose and
 Workskin modules to the chapter output; group imports arrive unwired from chapters.
@@ -85,7 +89,13 @@ not AO3's surrounding interface. EO3 does not post your work for you.
 ${catalog
     .map(
         (x) =>
-            `## ${x.title}\n\n${x.description}\n\nWriting syntax: ${x.syntax}\n\n${x.writingGuide}\n\n${x.tip}\n\nFiles: ${x.file}, ${x.id}.txt, ${x.id}.eo3group.json, ${x.id}.html, ${x.id}.css\n`
+            `## ${x.title}\n\n${x.description}\n\nWriting syntax: ${x.syntax}\n\n${
+                x.writingGuide
+            }\n\n${[...writingHelp[x.id], headerHelp]
+                .map(([syntax, description]) => '~~~text\n' + syntax + '\n~~~\n' + description)
+                .join('\n\n')}\n\n${x.tip}\n\nFiles: ${x.file}, ${x.id}.txt, ${
+                x.id
+            }.eo3group.json, ${x.id}.html, ${x.id}.css\n`
     )
     .join('\n')}
 Examples are MIT licensed, like EO3. Built on cpsdqs's prechoster.

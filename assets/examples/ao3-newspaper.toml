@@ -8,6 +8,7 @@ groups = [{ id = "fic-newspaper-renderer", title = "Newspaper clipping · reusab
 plugin = "source.text"
 title = "Write here · Paper: / Title: / By: · plain paragraphs"
 data.language = "text"
+data.help = { "summary" = "Edit Details above, then write here. Clear optional fields to omit them.", "examples" = [{ "syntax" = "A paragraph\n\nAnother paragraph", "description" = "Leave a blank line between paragraphs." }, { "syntax" = "*italic* · **bold** · ~~struck out~~ · `code`", "description" = "Inline formatting; HTML is treated as text." }, { "syntax" = "> Quoted passage", "description" = "Set a quotation apart from the article." }, { "syntax" = "---\nKey: value\n---", "description" = "Headers override Details. Use them at the start of each later item." }] }
 data.contents = '''
 Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
 
@@ -92,6 +93,29 @@ data.contents = '''
     font-size: 0.7em;
     font-style: italic;
 }
+
+/* Per-block choices; keep all variants so mirrored blocks can differ. */
+#workskin .fx-size-larger > div {
+    font-size: 1.15em;
+}
+#workskin .fx-size-largest > div {
+    font-size: 1.3em;
+}
+#workskin .fx-width-narrow > div {
+    max-width: 28em;
+}
+#workskin .fx-width-wide > div {
+    max-width: 52em;
+}
+#workskin .fx-font-serif > div {
+    font-family: Georgia, serif;
+}
+#workskin .fx-font-sans > div {
+    font-family: Arial, sans-serif;
+}
+#workskin .fx-font-mono > div {
+    font-family: monospace;
+}
 '''
 sends = ["output"]
 
@@ -105,10 +129,16 @@ data.contents = '''
     import settings from './settings';
     import { withSettings } from './writing';
     import Newspaper from './Newspaper.svelte';
+    const { _size, _width, _font, ...details } = settings;
+    const sizes = { Larger: 'fx-size-larger', Largest: 'fx-size-largest' };
+    const widths = { Narrow: 'fx-width-narrow', Wide: 'fx-width-wide' };
+    const fonts = { Serif: 'fx-font-serif', 'Sans serif': 'fx-font-sans', Monospace: 'fx-font-mono' };
 </script>
 
 <!-- The details fill in the text's header; a header written in the text itself wins. -->
-<Newspaper text={withSettings(draft, settings)} />
+<div class={['fx-appearance', sizes[_size], widths[_width], fonts[_font]].filter(Boolean).join(' ')}>
+<Newspaper text={withSettings(draft, details)} />
+</div>
 '''
 sends = ["output"]
 
@@ -379,6 +409,6 @@ namedSends = { "2" = ["writing"] }
 [[modules]]
 plugin = "source.settings"
 title = "Details · newspaper clipping"
-data.fields = [{ key = "Paper" }, { key = "Edition" }, { key = "Date" }, { key = "Section" }, { key = "Title" }, { key = "Deck" }, { key = "By" }, { key = "Footer" }]
-data.values = { "Paper" = "The Lorem Ipsum", "Edition" = "Vol. 01 · No. 01", "Date" = "01 January · Morning edition", "Section" = "Local / Correspondence", "Title" = "Lorem ipsum dolor sit amet, consectetur adipiscing elit", "Deck" = "Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.", "By" = "Person A · Staff writer", "Footer" = "Continued on page 02" }
+data.fields = [{ key = "Paper", default = "The Lorem Ipsum", section = "", label = "Newspaper" }, { key = "Edition", default = "Vol. 01 · No. 01", section = "Extras", advanced = true }, { key = "Date", default = "01 January · Morning edition", section = "Extras", advanced = true }, { key = "Section", default = "Local / Correspondence", section = "Extras", advanced = true }, { key = "Title", default = "Lorem ipsum dolor sit amet, consectetur adipiscing elit", section = "", label = "Headline" }, { key = "Deck", default = "Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.", section = "", label = "Subheading", type = "paragraph" }, { key = "By", default = "Person A · Staff writer", section = "", label = "Byline" }, { key = "Footer", default = "Continued on page 02", section = "Extras", advanced = true }, { key = "_size", label = "Text size", type = "choice", options = ["Original", "Larger", "Largest"], default = "Original", section = "Appearance", advanced = true }, { key = "_width", label = "Width", type = "choice", options = ["Original", "Narrow", "Wide"], default = "Original", section = "Appearance", advanced = true }, { key = "_font", label = "Typeface", type = "choice", options = ["Original", "Serif", "Sans serif", "Monospace"], default = "Original", section = "Appearance", advanced = true }]
+data.values = { "Paper" = "The Lorem Ipsum", "Edition" = "Vol. 01 · No. 01", "Date" = "01 January · Morning edition", "Section" = "Local / Correspondence", "Title" = "Lorem ipsum dolor sit amet, consectetur adipiscing elit", "Deck" = "Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.", "By" = "Person A · Staff writer", "Footer" = "Continued on page 02", "_size" = "Original", "_width" = "Original", "_font" = "Original" }
 namedSends = { "2" = ["settings"] }

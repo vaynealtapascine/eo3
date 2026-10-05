@@ -22,8 +22,13 @@ in `assets/workskins` are the source of truth; `workskins.json` holds the galler
 Run `node scripts/build-workskin-documents.mjs` to regenerate the self-contained TOML documents,
 then `node scripts/export-workskin-examples.mjs` to render the previews and package downloads.
 
-Fill in **Details**, then write in **Your text** (in the nodes view, **Write here**). The
-details become the text's header, and a header written in the text itself wins. Chat accepts
+Fill in **Details**, then write in **Your text** (in the nodes view, **Write here**).
+**Writing help** disclosure gives syntax examples for each block. All 14 examples include
+**Advanced settings → Appearance** for text size, width, and typeface; **Original** keeps
+the sample's styling. Optional fields can be cleared. These settings and instructions
+are included in exported groups.
+
+The details become the text's header, and a header written in the text itself wins. Chat accepts
 `NAME: text`, optional `[09:41]` timestamps, continuations, `! event`, `> quote` and
 `+ reaction`. Letters and found documents use headers between `---`
 lines and plain paragraphs. Journal entries use `## date`; footnotes use `[^key]` references
@@ -64,6 +69,12 @@ To make your own block, group the modules in the nodes view, then in the simple 
 **show up front** on the members a writer should fill in (and **fold away** to hide them
 again). A **Settings** module, sent to a Svelte module as a named input, is a form in the block
 (`import settings from './settings'`). Group inputs are saved with the work and in group files.
+
+Settings fields have an **Options** disclosure in the nodes editor. Authors can add help text,
+organize fields into sections, put less-used controls under **Advanced settings**, set defaults
+and numeric bounds, or show a field only when another field has a particular value.
+The simple view uses the same form, without the field-building controls.
+See [Authoring group settings](docs/group-settings.md) for the declarative format.
 
 ## Saving and recovery
 

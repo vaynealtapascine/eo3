@@ -1,0 +1,22 @@
+/* Per-block choices; keep all variants so mirrored blocks can differ. */
+#workskin .fx-size-larger > div {
+    font-size: 1.15em;
+}
+#workskin .fx-size-largest > div {
+    font-size: 1.3em;
+}
+#workskin .fx-width-narrow > div {
+    max-width: 28em;
+}
+#workskin .fx-width-wide > div {
+    max-width: 52em;
+}
+#workskin .fx-font-serif > div {
+    font-family: Georgia, serif;
+}
+#workskin .fx-font-sans > div {
+    font-family: Arial, sans-serif;
+}
+#workskin .fx-font-mono > div {
+    font-family: monospace;
+}

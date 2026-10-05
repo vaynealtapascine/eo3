@@ -8,6 +8,7 @@ groups = [{ id = "fic-collapsible-notes-renderer", title = "Collapsible extras �
 plugin = "source.text"
 title = "Write here · ::: panel title … :::"
 data.language = "text"
+data.help = { "summary" = "Edit Details above, then write here. Clear optional fields to omit them.", "examples" = [{ "syntax" = "::: Translation\nOptional text\n:::", "description" = "Open a panel with its title; close it with ::: on its own line." }, { "syntax" = "Story text outside the panel", "description" = "Keep essential text outside panels. Panels cannot be nested." }, { "syntax" = "A paragraph\n\nAnother paragraph", "description" = "Leave a blank line between paragraphs." }, { "syntax" = "*italic* · **bold** · ~~struck out~~ · `code`", "description" = "Inline formatting; HTML is treated as text." }, { "syntax" = "---\nKey: value\n---", "description" = "Headers override Details. Use them at the start of each later item." }] }
 data.contents = '''
 Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
 
@@ -64,6 +65,29 @@ data.contents = '''
     padding: 0.8em 1em 0;
     border-top: 1px solid #c7d4cf;
 }
+
+/* Per-block choices; keep all variants so mirrored blocks can differ. */
+#workskin .fx-size-larger > div {
+    font-size: 1.15em;
+}
+#workskin .fx-size-largest > div {
+    font-size: 1.3em;
+}
+#workskin .fx-width-narrow > div {
+    max-width: 28em;
+}
+#workskin .fx-width-wide > div {
+    max-width: 52em;
+}
+#workskin .fx-font-serif > div {
+    font-family: Georgia, serif;
+}
+#workskin .fx-font-sans > div {
+    font-family: Arial, sans-serif;
+}
+#workskin .fx-font-mono > div {
+    font-family: monospace;
+}
 '''
 sends = ["output"]
 
@@ -77,10 +101,16 @@ data.contents = '''
     import settings from './settings';
     import { withSettings } from './writing';
     import Extras from './Extras.svelte';
+    const { _size, _width, _font, ...details } = settings;
+    const sizes = { Larger: 'fx-size-larger', Largest: 'fx-size-largest' };
+    const widths = { Narrow: 'fx-width-narrow', Wide: 'fx-width-wide' };
+    const fonts = { Serif: 'fx-font-serif', 'Sans serif': 'fx-font-sans', Monospace: 'fx-font-mono' };
 </script>
 
 <!-- The details fill in the text's header; a header written in the text itself wins. -->
-<Extras text={withSettings(draft, settings)} />
+<div class={['fx-appearance', sizes[_size], widths[_width], fonts[_font]].filter(Boolean).join(' ')}>
+<Extras text={withSettings(draft, details)} />
+</div>
 '''
 sends = ["output"]
 
@@ -353,6 +383,6 @@ namedSends = { "2" = ["writing"] }
 [[modules]]
 plugin = "source.settings"
 title = "Details · collapsible extras"
-data.fields = [{ key = "Title" }]
-data.values = { "Title" = "Lorem ipsum" }
+data.fields = [{ key = "Title", default = "Lorem ipsum", section = "" }, { key = "_size", label = "Text size", type = "choice", options = ["Original", "Larger", "Largest"], default = "Original", section = "Appearance", advanced = true }, { key = "_width", label = "Width", type = "choice", options = ["Original", "Narrow", "Wide"], default = "Original", section = "Appearance", advanced = true }, { key = "_font", label = "Typeface", type = "choice", options = ["Original", "Serif", "Sans serif", "Monospace"], default = "Original", section = "Appearance", advanced = true }]
+data.values = { "Title" = "Lorem ipsum", "_size" = "Original", "_width" = "Original", "_font" = "Original" }
 namedSends = { "2" = ["settings"] }

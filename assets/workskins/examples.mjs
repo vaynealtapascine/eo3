@@ -16,6 +16,12 @@ export const examples = {
     'text-messages': {
         component: 'ChatLog',
         props: 'variant="messages"',
+        settings: {
+            Title: { label: 'Conversation' },
+            Self: { label: 'Your speaker', hint: 'Their messages appear on the right.' },
+            Status: { advanced: true },
+            Participants: { advanced: true, hint: 'Leave blank to use the speakers in your text.' },
+        },
         writing: header(
             {
                 Title: 'Messages',
@@ -26,10 +32,16 @@ export const examples = {
             `Person A [09:41]: ${a}\nPerson B [09:42]: ${b}\nPerson A [09:43]: *Ut enim ad minim veniam.*\nQuis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.\nPerson B [09:44]: ${d}`
         ),
         syntax: 'NAME: text',
-        guide: 'One message per NAME: line. Optional times: NAME [09:41]: text. A line without a name continues the message. Set Self in the header for outgoing bubbles. Use ! for events, > for quoted replies, + for reactions, and a leading backslash for a literal line.',
+        guide: 'Set the conversation and your speaker in Details. Write NAME: text, with optional [09:41] times. Status is under Advanced settings.',
     },
     'group-chat': {
         component: 'ChatLog',
+        settings: {
+            Title: { label: 'Channel' },
+            Date: {},
+            Status: { advanced: true },
+            Participants: { advanced: true, hint: 'Leave blank to use the speakers in your text.' },
+        },
         props: 'variant="group"',
         writing: header(
             { Title: '# general', Date: 'Monday', Status: 'End of conversation · 09:45' },
@@ -40,6 +52,15 @@ export const examples = {
     },
     email: {
         component: 'EmailThread',
+        settings: {
+            From: { section: 'Message' },
+            To: { section: 'Message' },
+            Date: { section: 'Message' },
+            Subject: { section: 'Message' },
+            Signature: { advanced: true },
+            Attachment: { advanced: true },
+            Folder: { advanced: true, hint: 'For example, Inbox or Sent.' },
+        },
         writing:
             header(
                 {
@@ -63,10 +84,19 @@ export const examples = {
                 a
             ),
         syntax: 'From: / To: / Subject: · --- message ---',
-        guide: 'Edit the headers between the --- lines, then write paragraphs below. Quote an earlier email with >. Separate complete emails with --- message ---. Signature and Attachment headers are optional.',
+        guide: 'Fill in Details, then write the email. Signature and attachment are under Advanced settings. Use > for quotes and --- message --- for another email.',
     },
     letter: {
         component: 'Letter',
+        settings: {
+            Label: { advanced: true },
+            Date: { section: 'Letter' },
+            Place: { advanced: true },
+            To: { label: 'Greeting', section: 'Letter' },
+            Closing: { section: 'Letter' },
+            From: { label: 'Signature', section: 'Letter' },
+            PS: { label: 'Postscript', type: 'paragraph', advanced: true },
+        },
         writing: header(
             {
                 Label: 'Personal correspondence',
@@ -80,10 +110,11 @@ export const examples = {
             `${a}\n\n${b}\n\n${c}\n\n${d}`
         ),
         syntax: 'Date: / To: / From: · plain paragraphs',
-        guide: 'Edit Date, Place, To, Closing, From and PS between the --- lines. Write the letter beneath them. Blank lines make paragraphs. Remove any optional header you do not need. Reuse Letter with another text input for a second letter.',
+        guide: 'Fill in Details, then write the letter. Blank lines make paragraphs. Place, label, and postscript are under Advanced settings.',
     },
     journal: {
         component: 'Journal',
+        settings: { Title: { label: 'Journal title' } },
         writing: header(
             { Title: 'Private journal' },
             `## 01 January · 09:41 · Entry 01\n${a} ${b}\n\n${c}\n\n~~Duis aute irure dolor.~~ In reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.\n\n## 02 January · 22:14 · Entry 02\n${e}\n\n> Lorem ipsum dolor sit amet.`
@@ -93,6 +124,16 @@ export const examples = {
     },
     newspaper: {
         component: 'Newspaper',
+        settings: {
+            Paper: { label: 'Newspaper' },
+            Edition: { advanced: true },
+            Date: { advanced: true },
+            Section: { advanced: true },
+            Title: { label: 'Headline' },
+            Deck: { label: 'Subheading', type: 'paragraph' },
+            By: { label: 'Byline' },
+            Footer: { advanced: true },
+        },
         writing: header(
             {
                 Paper: 'The Lorem Ipsum',
@@ -111,6 +152,16 @@ export const examples = {
     },
     'case-file': {
         component: 'CaseFile',
+        settings: {
+            Classification: { advanced: true },
+            Title: {},
+            Number: { label: 'File number' },
+            Subject: {},
+            'Compiled by': { advanced: true },
+            Date: { advanced: true },
+            Status: {},
+            Footer: { advanced: true },
+        },
         writing: header(
             {
                 Classification: 'Confidential / Fictional sample',
@@ -129,6 +180,17 @@ export const examples = {
     },
     'social-thread': {
         component: 'SocialFeed',
+        settings: {
+            Name: { section: 'First post' },
+            Handle: { section: 'First post' },
+            Time: { section: 'First post' },
+            Metrics: { advanced: true },
+            Reply: {
+                label: 'Replying to',
+                advanced: true,
+                hint: 'A handle makes this a nested reply.',
+            },
+        },
         writing:
             header(
                 {
@@ -165,6 +227,7 @@ export const examples = {
     },
     transcript: {
         component: 'Transcript',
+        settings: { Recording: { label: 'Recording label', advanced: true }, Title: {}, Date: {} },
         writing: header(
             {
                 Recording: 'Recording 001 / Transcript',
@@ -178,6 +241,7 @@ export const examples = {
     },
     terminal: {
         component: 'Terminal',
+        settings: { Title: { label: 'Window title' } },
         writing: header(
             { Title: 'Terminal / Session 001' },
             `$ cat lorem.txt\n${a}\n${b}\n\n$ tail system.log\n[09:41:00] INFO · Ut enim ad minim veniam.\n[09:41:01] INFO · Quis nostrud exercitation ullamco laboris.\n[09:41:02] WARN · Duis aute irure dolor in reprehenderit.\n$ _`
@@ -187,6 +251,12 @@ export const examples = {
     },
     poetry: {
         component: 'Poem',
+        settings: {
+            Label: { advanced: true },
+            Title: {},
+            By: { label: 'Author' },
+            Note: { label: 'End note', advanced: true },
+        },
         writing: header(
             { Label: 'Verse / Fragment', Title: 'Lorem ipsum', By: 'Person A' },
             `Lorem ipsum dolor sit amet,\n  consectetur adipiscing elit,\nsed do eiusmod tempor incididunt\n  ut labore et dolore magna aliqua.\n\nUt enim ad minim veniam,\n  quis nostrud exercitation ullamco laboris\nnisi ut aliquip ex ea commodo consequat.`
@@ -196,6 +266,13 @@ export const examples = {
     },
     'chapter-opening': {
         component: 'ChapterOpening',
+        settings: {
+            Chapter: { label: 'Chapter label' },
+            Title: {},
+            Subtitle: {},
+            Epigraph: { type: 'paragraph', advanced: true },
+            Attribution: { label: 'Epigraph credit', advanced: true },
+        },
         writing: header(
             {
                 Chapter: 'Chapter 01',
@@ -211,6 +288,14 @@ export const examples = {
     },
     footnotes: {
         component: 'Footnotes',
+        settings: {
+            Title: {},
+            Id: {
+                label: 'Link prefix',
+                advanced: true,
+                hint: 'Use a different prefix for each footnotes block in a chapter.',
+            },
+        },
         writing: header(
             { Title: 'Lorem ipsum', Id: 'fic-notes' },
             `Lorem ipsum dolor sit amet, consectetur adipiscing elit.[^lorem] ${b}\n\nUt enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.[^ipsum]\n\n${d}\n\n[^lorem]: ${a}\n[^ipsum]: ${e}`
@@ -220,6 +305,7 @@ export const examples = {
     },
     'collapsible-notes': {
         component: 'Extras',
+        settings: { Title: {} },
         writing: header(
             { Title: 'Lorem ipsum' },
             `${a} ${b}\n\n${c}\n\n::: Translation / Lorem ipsum\n${d}\n:::\n\n::: Optional notes / Lorem ipsum\n${e}\n\n${a}\n:::\n\n${b}`

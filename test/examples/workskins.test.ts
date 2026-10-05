@@ -9,6 +9,7 @@ import { renderWorkskinDocument } from '../../scripts/render-workskin-document.m
 import { sampleWriting, workskinGroup } from '../../scripts/workskin-documents.mjs';
 import { normalize, withSettings } from '../../assets/workskins/writing.js';
 import { parseGroupFile } from '../../src/storage/group-file';
+import { SettingsData, settingsValues } from '../../src/plugins/source/settings-values';
 
 describe('bundled AO3 workskin examples', () => {
     for (const item of catalog) {
@@ -24,8 +25,26 @@ describe('bundled AO3 workskin examples', () => {
             expect(writingModule.namedSends).toEqual({ 2: ['draft'] });
             expect(settingsModule.plugin).toBe('source.settings');
             expect(settingsModule.namedSends).toEqual({ 2: ['settings'] });
+            // Optional form metadata survives document generation and group exports.
+            {
+                expect(settingsModule.data.fields).toEqual(
+                    (workskinGroup(item).modules[6].data as unknown as SettingsData).fields
+                );
+                expect(settingsValues({ ...settingsModule.data, values: {} })).toEqual(
+                    settingsModule.data.values
+                );
+                expect(
+                    settingsModule.data.fields.filter((field: any) => !field.advanced).length
+                ).toBeLessThanOrEqual(4);
+            }
+            expect(writingModule.data.help.examples.length).toBeGreaterThanOrEqual(3);
+            expect(writingModule.data.help.summary).toContain('Details');
+            expect(
+                settingsModule.data.fields.filter((f: any) => f.section === 'Appearance')
+            ).toHaveLength(3);
             // The details form plus the text rebuild the sample exactly.
-            expect(withSettings(writingModule.data.contents, settingsModule.data.values)).toBe(
+            const { _size, _width, _font, ...details } = settingsModule.data.values;
+            expect(withSettings(writingModule.data.contents, details)).toBe(
                 normalize(sampleWriting(item))
             );
             expect(doc.groups[0].modules).toEqual([0, 2, 3, 4, 5, 6]);
@@ -69,10 +88,21 @@ describe('bundled AO3 workskin examples', () => {
             }
             expect(Object.prototype.hasOwnProperty.call(index, item.file)).toBe(true);
             expect(html).not.toMatch(/<(?:script|iframe|img|svg)\b|\bstyle=/i);
+            settingsModule.data.values._size = 'Larger';
+            settingsModule.data.values._width = 'Wide';
+            settingsModule.data.values._font = 'Serif';
+            const customized = await renderWorkskinDocument(doc);
+            expect(customized.html).toContain('fx-size-larger fx-width-wide fx-font-serif');
+            expect(renderAo3Content(customized.html).html).toContain('fx-size-larger');
+            expect(customized.html).not.toContain('_size:');
+            // Restore before comparing the exported group data.
+            Object.assign(settingsModule.data.values, { _size, _width, _font });
             expect(cssModule.data.contents).not.toMatch(/url\(|@import|var\(|\.eo3-/);
             const group = parseGroupFile(JSON.stringify(workskinGroup(item, doc)));
             expect(group.modules).toHaveLength(7);
             expect(group.inputs).toEqual(doc.groups[0].inputs);
+            expect(group.modules[0].data).toEqual(writingModule.data);
+            expect(group.modules[6].data).toEqual(settingsModule.data);
             expect(group.modules[0].namedSends).toEqual({ 2: ['draft'] });
             expect(group.modules[2].sends).toEqual([]);
             expect(group.modules[1].sends).toEqual([]);
