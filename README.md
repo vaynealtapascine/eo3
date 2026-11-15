@@ -37,8 +37,8 @@ and definitions; optional extras use `::: title` / `:::` panels. Prose supports 
 
 In the simple view, add any example to a chapter from **+ add → Blocks**. In the nodes view,
 the reusable renderer group starts folded to leave the writing input visible; import any
-example from **add node → Groups** (all 14 are bundled there too), then connect **Compose** and
-**Workskin** to a chapter output. Internal named sends are already wired. The same Svelte
+example from **add node** (search for it, or open **Groups and templates**, where all 14 are
+bundled too), then connect **Compose** and **Workskin** to a chapter output. Internal named sends are already wired. The same Svelte
 component can take a second named text input in Compose. ChatLog accepts `variant` and `self`;
 Footnotes accepts `id` to keep anchors unique when composing multiple passages.
 
