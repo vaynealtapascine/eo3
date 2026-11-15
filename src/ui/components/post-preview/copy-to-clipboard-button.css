@@ -1,0 +1,42 @@
+/* Shown when the browser refuses to copy: the text, to select and copy by hand. It is rendered
+   inside a site mockup whose mirrored CSS (AO3's, with ids) restyles every div, p and textarea,
+   so what matters here is forced. */
+.copy-to-clipboard-manual {
+    box-sizing: border-box !important;
+    width: min(26em, calc(100vw - 4em)) !important;
+    padding: 0.75em 1em !important;
+    text-align: left;
+
+    .i-explanation {
+        margin: 0 0 0.6em !important;
+        padding: 0 !important;
+        font: inherit;
+        line-height: 1.4 !important;
+    }
+
+    .i-text {
+        display: block;
+        box-sizing: border-box !important;
+        width: 100% !important;
+        min-height: 0 !important;
+        height: 9em;
+        margin: 0 !important;
+        padding: 0.4em 0.5em !important;
+        font-family: var(--P-monospace) !important;
+        font-size: 0.85em !important;
+        line-height: 1.4;
+        color: inherit;
+        background: rgb(var(--P-color-shade) / var(--P-color-shade-opacity));
+        border: 1px solid var(--P-separator);
+        border-radius: 0.4em;
+        box-shadow: none;
+        resize: vertical;
+    }
+
+    .i-buttons {
+        display: flex;
+        justify-content: space-between;
+        margin: 0.6em 0 0 !important;
+        padding: 0 !important;
+    }
+}
