@@ -4987,7 +4987,19 @@ IN REVIEW: this block is very old (2008), a bit wonky and has an unexpected effe
     margin: 0;
     padding: 0;
 
-    /* Title and byline edited in place: the hidden copy sizes the field to its text. */
+    /* Says which parts of the mockup are made up (see preview-chrome.tsx). */
+    .preview-sample-note {
+        margin: 0.6em auto 0;
+        max-width: 44em;
+        padding: 0 1em;
+        font-size: 0.9em;
+        font-style: italic;
+        line-height: 1.4;
+        text-align: center;
+        opacity: 0.85;
+    }
+
+    /* Titles and byline edited in place: the hidden copy sizes the field to its text. */
     .eo3-preface-field {
         display: inline-grid;
         max-width: 100%;
@@ -5015,7 +5027,9 @@ IN REVIEW: this block is very old (2008), a bit wonky and has an unexpected effe
             width: 100%;
             min-width: 2em;
             background: none;
+            /* a faint dashed underline says "you can type here", also where nothing hovers */
             border: 1px dashed transparent;
+            border-bottom-color: color-mix(in srgb, currentColor 40%, transparent);
             border-radius: 0.2em;
             box-shadow: none;
             text-decoration: inherit;
@@ -5026,7 +5040,7 @@ IN REVIEW: this block is very old (2008), a bit wonky and has an unexpected effe
             }
 
             &:hover {
-                border-color: #0004;
+                border-color: color-mix(in srgb, currentColor 40%, transparent);
             }
 
             &:focus {

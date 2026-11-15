@@ -104,6 +104,20 @@ export class ModuleList extends PureComponent<ModuleList.Props, ModuleListState>
         });
     }
 
+    /** Unfolds a module's editor, scrolls it into view and puts the cursor in it. */
+    reveal(id: ModuleId) {
+        const item = this.listItems.get(id)?.ref.current;
+        if (!item) return;
+        item.setState({ collapsed: false }, () => {
+            const node = item.node.current;
+            // a jump the author asked for: no animation, which a busy or hidden page can drop
+            node?.scrollIntoView?.({ block: 'start' });
+            node?.querySelector<HTMLElement>(
+                '.i-editor .cm-content, .i-editor textarea, .i-editor [contenteditable="true"]'
+            )?.focus({ preventScroll: true });
+        });
+    }
+
     componentDidMount() {
         this.props.document.addEventListener('change', this.onDocumentChange);
         this.select(this.props.selected);

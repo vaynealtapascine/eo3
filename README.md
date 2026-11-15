@@ -83,21 +83,22 @@ shows whether the latest changes are saved. When a save fails, a red bar above t
 offers **Retry save** and **Download work**, and closing the tab waits until the work is
 saved (a failed save leaves the tab open).
 
-Click the indicator for **Version history**. Turn on **Keep versions of this work** to keep
-earlier versions (off by default, per work). While the work is on screen and you are editing,
+Click **history** (or the indicator) for **Version history**. Turn on **Keep versions of this
+work** to keep earlier versions (off by default, per work). While the work is on screen and you are editing,
 a version is recorded for every minute of editing, skipping minutes with no changes; every
 ten minutes of editing it stores a full copy instead of only the changes. Time stops counting
 after a minute without input and while the tab is hidden or unfocused. The newest 120
-versions (or about 20 MiB) are kept; the latest is always kept. Pick a version to see what it
-contains, download it, or restore it. Restoring keeps the current draft as a version too and
+versions (or about 20 MiB) are kept; the latest is always kept. Each version lists what changed since the one
+before it (words and chapters added or removed). Pick a version to see what it contains,
+download it, or restore it. Restoring keeps the current draft as a version too and
 can be undone. Turning history off keeps the versions you have; **Delete all versions…**
 removes them.
 
 The sidebar's **Backups** section downloads all works, their version history, My groups and
-custom sites as one JSON file, including the latest edits of open works. **restore…**
+custom sites as one JSON file, including the latest edits of open works. **import backup…**
 validates a backup before writing anything and adds its works as copies; nothing existing is
 replaced, and custom sites that conflict with yours are kept as separate sites. Backups up to
-100 MiB can be restored. The section can also ask the browser to keep eo3's data.
+100 MiB can be imported. The section can also ask the browser to keep eo3's data.
 
 Browser storage is not a substitute for downloaded backups. If it is unavailable, the toolbar
 says so, the indicator reads **Saved in memory**, and everything disappears when the page

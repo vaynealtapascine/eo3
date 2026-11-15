@@ -19,12 +19,13 @@ import { useOptHeld } from './opt-held';
 import { shouldReduceMotion } from '../uikit/animation';
 import { DirPopover } from '../uikit/dir-popover';
 import { Button } from '../uikit/button';
-import { showAlert, showConfirm } from './dialogs';
+import { showAlert } from './dialogs';
 import { exampleFromSearch } from '../storage/example-link';
 import { SaveController, SaveState } from '../storage/save-controller';
 import { downloadFile, safeFileName } from '../util/download';
 import { SaveErrorBanner, SaveStatus, VersionHistory } from './components/save-recovery';
 import { EditorView, EditorViewSwitch, EditorViewWelcome, useEditorView } from './editor-view';
+import { StartupError } from './startup-error';
 
 let lastEo3Init = 0;
 try {
@@ -263,44 +264,7 @@ export default function ApplicationFrame({
         );
     }
     if (error) {
-        return (
-            <div role="application" className="application-frame is-error">
-                <div className="i-error">
-                    <p>An error occurred while initializing the application.</p>
-                    <pre>{error.toString()}</pre>
-                    <p>
-                        I don’t know what that error above might be, but I can offer you to a reset:
-                        <br />
-                        <button
-                            onClick={async () => {
-                                const yes = await showConfirm(
-                                    'Delete all of eo3’s data in this browser, including every saved work? This can’t be undone.',
-                                    { confirmLabel: 'Delete everything', danger: true }
-                                );
-                                if (!yes) return;
-                                storage.close();
-                                const req = window.indexedDB.deleteDatabase('eo3_data');
-                                req.addEventListener('blocked', () => {
-                                    showAlert(
-                                        'Waiting for another eo3 tab to stop using the data. Close it to continue.'
-                                    );
-                                });
-                                req.addEventListener('error', () => {
-                                    showAlert(String(req.error), {
-                                        title: 'Couldn’t delete the data',
-                                    });
-                                });
-                                req.addEventListener('success', () => {
-                                    window.location.reload();
-                                });
-                            }}
-                        >
-                            delete all user data forever
-                        </button>
-                    </p>
-                </div>
-            </div>
-        );
+        return <StartupError error={error} storage={storage} />;
     }
 
     return (
@@ -324,6 +288,13 @@ export default function ApplicationFrame({
                         <ToolbarButton onClick={newFile}>new</ToolbarButton>
                         <LoadButton onLoad={load} />
                         <SaveButton disabled={!tabState} onSave={save} />
+                        <ToolbarButton
+                            disabled={!tabState?.saveState}
+                            onClick={() => tabState?.openHistory()}
+                            title="See and restore earlier versions of this work"
+                        >
+                            history
+                        </ToolbarButton>
                         {tabState?.saveState ? (
                             <SaveStatus
                                 state={tabState.saveState}

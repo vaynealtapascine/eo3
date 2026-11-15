@@ -7,7 +7,7 @@ import {
     useRef,
     useInsertionEffect,
 } from 'react';
-import { Document, RenderState, RenderTarget } from '../../document';
+import { Document, ModuleId, RenderState, RenderTarget } from '../../document';
 import { CodeEditor } from './code-editor';
 import { javascript } from '@codemirror/lang-javascript';
 import { PostPreview, PreviewConfig, makeDefaultPreviewConfig } from './post-preview';
@@ -35,9 +35,11 @@ export function Preview({
     copiedParts,
     onPartCopied,
     clickToRender,
+    stale,
     onTargetChange,
     onLiveChange,
     onRender,
+    onOpenModule,
 }: Preview.Props) {
     let contents = null;
     const shownPart = document.findPart(partId ?? '') ?? document.parts[0];
@@ -68,8 +70,12 @@ export function Preview({
     if (clickToRender) {
         contents = (
             <div className="i-preview-click-to-render">
-                <p className="i-description">rendering paused</p>
-                <button onClick={clickToRender}>render</button>
+                <p className="i-title">Preview paused</p>
+                <p className="i-description">
+                    eo3 was reloaded twice in a row, so the preview is waiting in case it was the
+                    cause. Your work is unchanged.
+                </p>
+                <button onClick={clickToRender}>Show preview</button>
             </div>
         );
     } else if (render.output) {
@@ -96,6 +102,10 @@ export function Preview({
                         author={document.author}
                         onWorkTitleChange={(title) => document.setTitle(title)}
                         onAuthorChange={(author) => document.setAuthor(author)}
+                        partTitleFor={(id) => document.findPart(id)?.title ?? null}
+                        onPartTitleChange={(id, title) => {
+                            if (document.findPart(id)) document.updatePart(id, { title });
+                        }}
                         stale={render.rendering}
                         work={work}
                         partId={shownPart.id}
@@ -128,17 +138,21 @@ export function Preview({
             );
         }
     } else if (render.error) {
-        let moduleIndex = null;
-        let moduleLabel = null;
-        if (render.error.source) {
-            const module = document.findModule(render.error.source);
-            if (module) {
-                moduleIndex = document.modules.indexOf(module);
-                moduleLabel = module.plugin.description(module.data);
-            }
-        }
+        const module = render.error.source ? document.findModule(render.error.source) : null;
+        const moduleName = module
+            ? `${document.modules.indexOf(module) + 1}. ${
+                  module.title || module.plugin.description(module.data)
+              }`
+            : null;
 
-        let errorString = (render.error.error as any).toString();
+        const errorString: string = (render.error.error as any).toString();
+        // The first line says what went wrong; compilers follow it with code frames and traces.
+        const summary =
+            errorString
+                .split('\n')
+                .find((line) => line.trim())
+                ?.replace(/^\w*Error: /, '') ?? 'Something went wrong.';
+        const hasMore = errorString.trim().includes('\n');
         let sourceJavascript = (render.error.error as any).sourceJavascript;
         let sourceJavascriptLine = (render.error.error as any).sourceJavascriptLine;
 
@@ -152,25 +166,44 @@ export function Preview({
         );
 
         errorContents = (
-            <div className="preview-error">
-                {moduleIndex !== null ? (
-                    <div className="error-title">
-                        Error in {moduleIndex + 1}. {moduleLabel}
-                    </div>
-                ) : (
-                    <div className="error-title">Error</div>
-                )}
-                <div className="error-contents">{errorString}</div>
-                {sourceJavascript ? (
-                    <div className="error-source">
-                        <div className="inner-title">Source Script</div>
-                        <SourceJavascript source={sourceJavascript} line={sourceJavascriptLine} />
-                    </div>
+            <div className="preview-error" role="status">
+                <div className="error-title">
+                    {moduleName
+                        ? `The preview stopped at “${moduleName}”`
+                        : 'The preview couldn’t be updated'}
+                </div>
+                <p className="error-summary">{summary}</p>
+                <p className="error-help">
+                    Your work is safe.{' '}
+                    {module
+                        ? 'Fix the problem in that module and the preview comes back.'
+                        : 'Undo your last change, or check how the modules are connected.'}
+                </p>
+                {module ? (
+                    <button className="error-open" onClick={() => onOpenModule(module.id)}>
+                        Open this module
+                    </button>
+                ) : null}
+                {hasMore || sourceJavascript ? (
+                    <details className="error-details">
+                        <summary>Technical details</summary>
+                        <div className="error-contents">{errorString}</div>
+                        {sourceJavascript ? (
+                            <div className="error-source">
+                                <div className="inner-title">Source Script</div>
+                                <SourceJavascript
+                                    source={sourceJavascript}
+                                    line={sourceJavascriptLine}
+                                />
+                            </div>
+                        ) : null}
+                    </details>
                 ) : null}
             </div>
         );
     }
 
+    const partLabel = siteTargetPlugin?.partLabel ?? 'Part';
     const modules = document.modules;
     const outputTargets = [];
     for (let i = 0; i < modules.length; i++) {
@@ -199,6 +232,8 @@ export function Preview({
                 <div className="preview-config">
                     <select
                         className="output-select"
+                        aria-label="What to preview"
+                        title="What to preview: the finished page, or what one module produces"
                         value={render.target || 'output'}
                         onChange={(e) => {
                             const target = (e.target as HTMLSelectElement).value;
@@ -206,19 +241,19 @@ export function Preview({
                             else onTargetChange(target);
                         }}
                     >
-                        {outputTargets}
-                        <option value="output">output</option>
+                        <option value="output">Site preview</option>
+                        <optgroup label="One module’s output">{outputTargets}</optgroup>
                     </select>
                     {!render.target && document.parts.length > 1 && (
                         <select
                             className="part-select"
-                            aria-label="Part to preview"
+                            aria-label={`${partLabel} to preview`}
                             value={partId ?? document.parts[0].id}
                             onChange={(e) => onPartChange((e.target as HTMLSelectElement).value)}
                         >
                             {document.parts.map((part, i) => (
                                 <option value={part.id} key={part.id}>
-                                    {siteTargetPlugin?.partLabel ?? 'Part'} {i + 1}
+                                    {partLabel} {i + 1}
                                     {part.title ? `: ${part.title}` : ''}
                                 </option>
                             ))}
@@ -227,6 +262,8 @@ export function Preview({
                     {!render.target && (
                         <select
                             className="site-target-select"
+                            aria-label="Site to preview for"
+                            title="The site this is previewed and exported for"
                             value={siteTargetId}
                             onChange={(e) => {
                                 const value = (e.target as HTMLSelectElement).value;
@@ -259,10 +296,19 @@ export function Preview({
                         <label htmlFor={liveCheckbox}>Live Update</label>
                     </span>
                     {!render.live && (
-                        <button className="render-button" onClick={onRender}>
-                            Render
+                        <button
+                            className={'render-button' + (stale ? ' is-stale' : '')}
+                            onClick={onRender}
+                        >
+                            Update preview
                         </button>
                     )}
+                    {/* always mounted, so screen readers announce it when it fills in */}
+                    <span className="preview-stale" role="status">
+                        {stale && !render.live
+                            ? 'Out of date: the preview and copy buttons still show your work before your latest changes.'
+                            : ''}
+                    </span>
                 </div>
                 <span className={'render-indicator' + (render.rendering ? ' is-rendering' : '')} />
             </div>
@@ -288,9 +334,13 @@ namespace Preview {
         copiedParts: string[];
         onPartCopied: (partId: string) => void;
         clickToRender: (() => void) | null;
+        /** With Live Update off: the work changed since the render on screen. */
+        stale: boolean;
         onTargetChange: (target: RenderTarget) => void;
         onLiveChange: (live: boolean) => void;
         onRender: () => void;
+        /** Shows a module's editor, e.g. the one a render error came from. */
+        onOpenModule: (moduleId: ModuleId) => void;
     }
 }
 

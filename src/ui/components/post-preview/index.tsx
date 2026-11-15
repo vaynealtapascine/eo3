@@ -10,6 +10,7 @@ import { createPortal } from 'react-dom';
 import { DirPopover } from '../../../uikit/dir-popover';
 import { JsonValue, PostedSnapshot, WorkOutput } from '../../../document';
 import { fnv1a36 } from '../../../util/hash';
+import { countWords } from '../../../util/word-count';
 import {
     ErrorMessage,
     LiveRenderFn,
@@ -214,6 +215,8 @@ export function PostPreview({
     author,
     onWorkTitleChange,
     onAuthorChange,
+    partTitleFor,
+    onPartTitleChange,
     work,
     partId,
     error,
@@ -243,6 +246,10 @@ export function PostPreview({
     const skinBaseline = work.skinBaselines[plugin.id] ?? null;
     const markdown = part.content;
     const cssInput = [work.workCss, part.css].filter(Boolean).join('\n');
+    const workWords = useMemo(
+        () => work.parts.reduce((words, p) => words + countWords(p.content), 0),
+        [work]
+    );
 
     // Memoized: the fallback can be a full DOM pipeline (AO3) and shouldn't rerun on unrelated renders.
     const fallbackResult = useMemo(() => {
@@ -440,9 +447,16 @@ export function PostPreview({
         author,
         onWorkTitleChange,
         onAuthorChange,
+        onPartTitleChange: (title) => onPartTitleChange(part.id, title),
+        workWords,
         markdown,
         exportOutput,
-        part: { index: partIndex, count: work.parts.length, title: part.title },
+        part: {
+            index: partIndex,
+            count: work.parts.length,
+            // the render can lag behind typing; a field showing it would drop keystrokes
+            title: partTitleFor(part.id) ?? part.title,
+        },
         posting,
         sizing,
         config: config.targetConfig,
@@ -523,6 +537,9 @@ namespace PostPreview {
         author: string;
         onWorkTitleChange: (title: string) => void;
         onAuthorChange: (author: string) => void;
+        /** A part's title in the document right now; null if the part is gone. */
+        partTitleFor: (partId: string) => string | null;
+        onPartTitleChange: (partId: string, title: string) => void;
         work: WorkOutput;
         /** The part to show; falls back to the first part if it no longer exists. */
         partId: string | null;

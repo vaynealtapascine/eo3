@@ -66,8 +66,8 @@ function PostSize({ size }: { size: number }) {
 }
 
 /**
- * The work's title or byline, edited in place: it looks like the text AO3 shows (Work Skin
- * styles apply to it too) and only shows it's a field on hover and focus.
+ * The work's title, byline or chapter title, edited in place: it looks like the text AO3 shows
+ * (Work Skin styles apply to it too), with a faint dashed underline to say it can be edited.
  */
 function PrefaceField({
     label,
@@ -103,6 +103,8 @@ export function Ao3PreviewHeader({
     author,
     onWorkTitleChange,
     onAuthorChange,
+    onPartTitleChange,
+    workWords,
     part,
     posting,
     sizing,
@@ -489,6 +491,11 @@ export function Ao3PreviewHeader({
                                                     <button className="collapsed">Download</button>
                                                 </li>
                                             </ul>
+                                            <p className="preview-sample-note">
+                                                The tags, dates and reader numbers below are
+                                                examples. The title, author, word count and chapter
+                                                count are your work’s.
+                                            </p>
                                             <dl className="wrapper work meta group">
                                                 <dt className="rating tags">Rating:</dt>
 
@@ -590,9 +597,11 @@ export function Ao3PreviewHeader({
                                                         <dt className="status">Updated:</dt>
                                                         <dd className="status">2026-07-18</dd>
                                                         <dt className="words">Words:</dt>
-                                                        <dd className="words">128,679</dd>
+                                                        <dd className="words">
+                                                            {workWords.toLocaleString('en-US')}
+                                                        </dd>
                                                         <dt className="chapters">Chapters:</dt>
-                                                        <dd className="chapters">97/?</dd>
+                                                        <dd className="chapters">{part.count}/?</dd>
                                                         <dt className="comments">Comments:</dt>
                                                         <dd className="comments">35</dd>
                                                         <dt className="kudos">Kudos:</dt>
@@ -686,7 +695,12 @@ export function Ao3PreviewHeader({
                                                 <div className="chapter preface group">
                                                     <h3 className="title">
                                                         <a>Chapter {part.index + 1}</a>:{' '}
-                                                        {part.title || 'Chapter Title'}
+                                                        <PrefaceField
+                                                            label="Chapter title"
+                                                            placeholder="Chapter Title"
+                                                            value={part.title}
+                                                            onChange={onPartTitleChange}
+                                                        />
                                                     </h3>
                                                 </div>
 

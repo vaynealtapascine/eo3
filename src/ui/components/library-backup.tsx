@@ -57,7 +57,7 @@ export function LibraryBackupControls({
                     >
                         download backup
                     </Button>
-                    <Button run={() => input.current?.click()}>restore…</Button>
+                    <Button run={() => input.current?.click()}>import backup…</Button>
                 </div>
                 <input
                     ref={input}
@@ -82,8 +82,8 @@ export function LibraryBackupControls({
                         <p>
                             This backup has {plural(pending.backup.works.length, 'work')},{' '}
                             {plural(pending.backup.groups.length, 'group')} and{' '}
-                            {plural(pending.backup.profiles.length, 'custom site')}. They’re added
-                            as copies; nothing you have now is replaced.
+                            {plural(pending.backup.profiles.length, 'custom site')}. Importing adds
+                            them as copies; nothing you have now is replaced or removed.
                         </p>
                         <div className="i-buttons">
                             <Button
@@ -94,7 +94,12 @@ export function LibraryBackupControls({
                                         setPending(null);
                                         onImported(ids);
                                         setMessage({
-                                            text: `Restored ${plural(ids.length, 'work')}.`,
+                                            text: `Added ${plural(
+                                                ids.length,
+                                                'work'
+                                            )} from the backup as ${
+                                                ids.length === 1 ? 'a copy' : 'copies'
+                                            }.`,
                                         });
                                     })
                                 }

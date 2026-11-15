@@ -5,6 +5,7 @@ import { deserialize, serialize } from '../../storage';
 import { SaveController, SaveState } from '../../storage/save-controller';
 import { showConfirm } from '../dialogs';
 import { downloadFile, safeFileName } from '../../util/download';
+import { workWordCount } from '../../util/word-count';
 import './save-recovery.css';
 
 const STATUS_LABELS: Record<SaveState['status'], [short: string, long: string]> = {
@@ -12,7 +13,8 @@ const STATUS_LABELS: Record<SaveState['status'], [short: string, long: string]> 
     pending: ['Edited', 'Your latest changes are about to be saved.'],
     saving: ['Saving…', 'Saving your latest changes.'],
     saved: ['Saved', 'Everything is saved in this browser.'],
-    error: ['Not saved', 'Your latest changes couldn’t be saved.'],
+    // unlike "Not saved yet", this one is a failure, so it must not read like it
+    error: ['Couldn’t save', 'Your latest changes couldn’t be saved.'],
 };
 
 /**
@@ -104,11 +106,88 @@ function formatWhen(at: string, now = new Date()): string {
     })}, ${time}`;
 }
 
+/** How much editing a version comes after; a tooltip, since what changed says more. */
 function formatEditing(ms: number): string {
     const minutes = Math.floor(ms / 60_000);
-    if (minutes < 1) return 'start of history';
-    if (minutes < 60) return `after ${minutes} min of editing`;
-    return `after ${Math.floor(minutes / 60)} h ${minutes % 60} min of editing`;
+    if (minutes < 1) return 'Saved when version history started';
+    if (minutes < 60) return `Saved after ${minutes} min of editing`;
+    return `Saved after ${Math.floor(minutes / 60)} h ${minutes % 60} min of editing`;
+}
+
+/** What a writer would compare two versions by; null when the version can't be read. */
+export type VersionSummary = { words: number; chapters: number } | null;
+
+/** Versions never change, so each is summarized once per session, by checkpoint id. */
+const summaries = new Map<string, VersionSummary>();
+
+function summarize(source: string): VersionSummary {
+    try {
+        const work = deserialize(source);
+        return { words: workWordCount(work), chapters: work.parts.length };
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Summarizes every version while the dialog is open, newest first (the top of the list), in
+ * short slices so a long history doesn't freeze the page.
+ */
+function useVersionSummaries(
+    open: boolean,
+    recovery: SaveState['recovery']
+): Map<string, VersionSummary> {
+    const [, repaint] = useState(0);
+    const { entries } = recovery;
+    useEffect(() => {
+        if (!open || entries.every((entry) => summaries.has(entry.id))) return;
+        let cancelled = false;
+        void (async () => {
+            let sliceStart = Date.now();
+            for (const { id } of [...entries].reverse()) {
+                if (summaries.has(id)) continue;
+                let summary: VersionSummary = null;
+                try {
+                    summary = summarize(checkpointSource(recovery, id));
+                } catch {
+                    // Damaged history: the version keeps its date, and opening it says why.
+                }
+                summaries.set(id, summary);
+                if (Date.now() - sliceStart < 12) continue;
+                repaint((n) => n + 1);
+                await new Promise((resolve) => setTimeout(resolve));
+                if (cancelled) return;
+                sliceStart = Date.now();
+            }
+            if (!cancelled) repaint((n) => n + 1);
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, [open, entries]);
+    return summaries;
+}
+
+const count = (n: number, word: string) => `${n.toLocaleString()} ${word}${n === 1 ? '' : 's'}`;
+
+/** What changed in a version since the one before it, e.g. "+85 words · 1 chapter added". */
+export function describeVersion(
+    version: VersionSummary | undefined,
+    previous: VersionSummary | undefined
+): string {
+    if (version === undefined) return '';
+    if (version === null) return 'can’t be read';
+    if (!previous) return `${count(version.words, 'word')} · ${count(version.chapters, 'chapter')}`;
+    const changes = [];
+    const words = version.words - previous.words;
+    if (words) changes.push(`${words > 0 ? '+' : '−'}${count(Math.abs(words), 'word')}`);
+    const chapters = version.chapters - previous.chapters;
+    if (chapters) {
+        changes.push(
+            `${count(Math.abs(chapters), 'chapter')} ${chapters > 0 ? 'added' : 'removed'}`
+        );
+    }
+    return changes.join(' · ') || 'same word count';
 }
 
 /** A version's contents, read on demand; damaged history reports its error instead. */
@@ -169,7 +248,17 @@ export function VersionHistory({
     };
 
     const { enabled, entries } = state.recovery;
-    const newestFirst = [...entries].reverse();
+    const versionSummaries = useVersionSummaries(open, state.recovery);
+    // newest first, each with what changed since the version before it
+    const newestFirst = entries
+        .map((entry, i) => ({
+            entry,
+            change: describeVersion(
+                versionSummaries.get(entry.id),
+                i > 0 ? versionSummaries.get(entries[i - 1].id) : null
+            ),
+        }))
+        .reverse();
     const version = selected ? readVersion(entries, state.recovery, selected) : null;
 
     return (
@@ -229,16 +318,18 @@ export function VersionHistory({
             {entries.length ? (
                 <div className="i-browser">
                     <ul className="i-versions" aria-label="Saved versions">
-                        {newestFirst.map((entry, i) => (
+                        {newestFirst.map(({ entry, change }, i) => (
                             <li key={entry.id}>
                                 <button
                                     aria-pressed={entry.id === selected}
+                                    title={formatEditing(entry.activeMs)}
                                     onClick={() => setSelected(entry.id)}
                                 >
                                     <span className="i-when">{formatWhen(entry.at)}</span>
                                     <span className="i-detail">
-                                        {i === 0 ? 'latest · ' : ''}
-                                        {formatEditing(entry.activeMs)}
+                                        {[i === 0 ? 'latest' : '', change]
+                                            .filter(Boolean)
+                                            .join(' · ')}
                                     </span>
                                 </button>
                             </li>

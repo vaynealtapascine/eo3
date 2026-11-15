@@ -65,7 +65,7 @@ new files, update the matching section here in the same commit.
 
 | File                                        | What it is                                                                                                                                                                    |
 | ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `index.ts`                                  | `MODULES` registry: id → title, description, lazy `load()`, `managed` (hidden from "add node").                                                                               |
+| `index.ts`                                  | `MODULES` registry: id → title, description, picker `category`, lazy `load()`, `managed` (hidden from "add node").                                                            |
 | `source/text.tsx`                           | Text module: HTML / rich text (TinyMCE) / CSS / JS / plain text. Also "insert chapter break".                                                                                 |
 | `source/shared-styles.tsx`                  | "All chapters" CSS module (managed; wired to every part).                                                                                                                     |
 | `source/settings.tsx`, `settings-values.ts` | Settings module: a form of named values (fields + values), evaluated to a JS module `export default {…}` for Svelte. `SettingsForm` is reused by blocks in the simple editor. |
@@ -118,9 +118,12 @@ new files, update the matching section here in the same commit.
 | `editor-view.tsx`                                  | Simple / nodes preference (localStorage `eo3-editor-view`, default simple), `EditorViewSwitch` (toolbar), `EditorViewWelcome` (asked once on first launch).                                                                        |
 | `sidebar.tsx`                                      | Sidebar: local documents, examples menu, extras (share URL), Backups.                                                                                                                                                              |
 | `dialogs.tsx`                                      | `showAlert` / `showConfirm` + `DialogHost`. **Never use native `alert/confirm/prompt`.**                                                                                                                                           |
+| `startup-error.tsx`                                | Shown when eo3 can't open its storage: reload, download a backup, and only then delete everything.                                                                                                                                 |
 | `update-notice.tsx`                                | "eo3 has been updated" toast and changelog (via `util/changelog.ts`).                                                                                                                                                              |
 | `group-files.ts`                                   | Pick / download group files.                                                                                                                                                                                                       |
 | `viewport.ts`, `opt-held.tsx`, `render-context.ts` | On-screen keyboard sizing; Alt-key hook; context to schedule a re-render.                                                                                                                                                          |
+| `render-inputs.ts`                                 | What a render reads from the document, by reference: tells `Eo3` when the preview is out of date while Live Update is off.                                                                                                         |
+| `focus-when-shown.ts`                              | `useFocusWhenShown`: focus something once a `DirPopover` is really open (menus, the picker's search field); `isCoarsePointer`.                                                                                                     |
 | `examples.tsx`, `examples.css`                     | Examples menu. **Upstream prechoster code: don't modify.**                                                                                                                                                                         |
 
 ### `src/ui/components/`
@@ -130,31 +133,31 @@ new files, update the matching section here in the same commit.
 | `parts-list.tsx`                                                                                              | Chapters list in the left panel: select, rename, ⋯ menu (styles, split at break, move, remove), posted badges.                                                                                                                                                               |
 | `ao3-import.tsx`                                                                                              | "Import existing AO3 work": paste Work Skin, then chapters.                                                                                                                                                                                                                  |
 | `module-list.tsx`                                                                                             | The module editor list (each module's plugin UI, sends, named sends, reorder by drag).                                                                                                                                                                                       |
-| `module-picker.tsx`                                                                                           | "add node": module types and the Groups level (import, My groups, examples).                                                                                                                                                                                                 |
+| `module-picker.tsx`                                                                                           | "add node" (and the simple view's "Other module types…"): search, module types by category (loading and failed-load states per row), and the "Groups and templates" level (import, My groups, templates).                                                                    |
 | `simple-editor.tsx`                                                                                           | Simple view: the selected part as a list (pinned managed styles, draggable items with in-place names and ⋯ menus, blocks showing their inputs with the rest under Customize), "+ add" menu (text, styles, blocks, all module types). Shows a notice for works it can't list. |
 | `module-graph/`                                                                                               | React Flow graph. `index.tsx` (`ModuleGraph`: nodes, edges, connect, drag, grouping), `auto-layout.ts`, `group-cards.ts` (collapsed group rows and edge routing), `module-node.tsx`, `output-node.tsx`, `part-styles-node.tsx`, `group-node.tsx`, `consts.ts`.               |
-| `preview.tsx`                                                                                                 | Preview pane: output/part/site selectors, live toggle, error display; wires `PostPreview` to document actions (mark posted, split, prune).                                                                                                                                   |
+| `preview.tsx`                                                                                                 | Preview pane: output/part/site selectors, live toggle and "out of date" notice, error display with "Open this module"; wires `PostPreview` to document actions (mark posted, split, prune).                                                                                  |
 | `post-preview/index.tsx`                                                                                      | `PostPreview`: runs the target's fallback render and `export()`, builds `posting`/`sizing`, injects CSS, renders header/footer. Also `RenderConfigEditor`.                                                                                                                   |
 | `post-preview/posted-status.tsx`, `split-prompt.tsx`, `copy-to-clipboard-button.tsx`, `dark-theme-button.tsx` | Shared controls targets use in their chrome.                                                                                                                                                                                                                                 |
 | `profile-editor.tsx`                                                                                          | Custom sites dialog (create/edit/import/export/delete profiles; forget retired sites' history).                                                                                                                                                                              |
 | `save-recovery.tsx`                                                                                           | `SaveStatus` (toolbar), `SaveErrorBanner`, `VersionHistory` dialog.                                                                                                                                                                                                          |
 | `library-backup.tsx`                                                                                          | Sidebar Backups section.                                                                                                                                                                                                                                                     |
-| `action-menu.tsx`, `name-popover.tsx`                                                                         | "⋯" menus; in-app naming popover (instead of `prompt()`).                                                                                                                                                                                                                    |
+| `action-menu.tsx`, `name-popover.tsx`                                                                         | "⋯" menus (arrow-key navigation, finger-sized on touch screens); in-app naming popover (instead of `prompt()`).                                                                                                                                                              |
 | `code-editor.tsx`, `codemirror.tsx`, `rich-editor.tsx`, `tiny-rich-editor.tsx`, `tiny-plugins/`               | CodeMirror and TinyMCE wrappers.                                                                                                                                                                                                                                             |
 | `split-panel.tsx`, `data-preview.tsx`, `icons.tsx`, `module-status.tsx`                                       | Layout and small widgets.                                                                                                                                                                                                                                                    |
 
 ### Other source
 
-| Path                              | What it is                                                                                                         |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `src/uikit/`                      | Upstream widget kit: `Button` (async `run`), `DirPopover` (anchored modal popover), text field, checkbox, springs. |
-| `src/util/`                       | `hash.ts` (fnv1a36), `lazy.ts`, `split-html.ts` (chapter splitting), `download.ts`, `changelog.ts`.                |
-| `src/groups/examples.ts`          | Built-in example groups (letters, chat, all 14 workskins) offered in "add node → Groups".                          |
-| `assets/examples/`                | Bundled example documents (`index.json` lists them; `workskins.json` is the workskin gallery catalog).             |
-| `assets/workskins/`               | Source of the 14 workskin examples: Svelte components, `writing.js` parser, `examples.mjs`, `styles/`.             |
-| `scripts/`                        | Build-time: regenerate workskin TOML documents, render previews, package the gallery and writing lab.              |
-| `vite.config.js`                  | Build: node-module string/bundle plugins, Svelte runtime trees, `eo3:config` virtual module.                       |
-| `docs/design/publishing-model.md` | Design of works/parts/targets/delivery. `PROGRESS.md`: hand-off log.                                               |
+| Path                              | What it is                                                                                                                                                                                           |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/uikit/`                      | Upstream widget kit: `Button` (async `run`), `DirPopover` (anchored modal popover), text field, checkbox, springs.                                                                                   |
+| `src/util/`                       | `hash.ts` (fnv1a36), `lazy.ts`, `split-html.ts` (chapter splitting), `download.ts`, `changelog.ts`, `word-count.ts` (`countWords`, `workWordCount`: version labels and the AO3 mockup's word count). |
+| `src/groups/examples.ts`          | Built-in example groups (letters, chat, all 14 workskins) offered as Blocks in the simple view and Templates in "add node"; `exampleGroupDescription`.                                               |
+| `assets/examples/`                | Bundled example documents (`index.json` lists them; `workskins.json` is the workskin gallery catalog).                                                                                               |
+| `assets/workskins/`               | Source of the 14 workskin examples: Svelte components, `writing.js` parser, `examples.mjs`, `styles/`.                                                                                               |
+| `scripts/`                        | Build-time: regenerate workskin TOML documents, render previews, package the gallery and writing lab.                                                                                                |
+| `vite.config.js`                  | Build: node-module string/bundle plugins, Svelte runtime trees, `eo3:config` virtual module.                                                                                                         |
+| `docs/design/publishing-model.md` | Design of works/parts/targets/delivery. `PROGRESS.md`: hand-off log.                                                                                                                                 |
 
 ## 3. Feature index
 
@@ -163,7 +166,8 @@ Each entry: the files that implement it (most important first), its tests, and w
 ### Module graph and evaluation
 
 -   **Files:** `src/document.ts` (`cacheEvalModule`, `evalModuleInputs`, `evalWork`, `eval`),
-    `src/plugins/index.ts`, `src/ui/eo3.tsx` (`renderPreview`, debounce),
+    `src/plugins/index.ts`, `src/ui/eo3.tsx` (`renderPreview`, debounce, `stale`, `openModule`),
+    `src/ui/render-inputs.ts`, `src/ui/components/preview.tsx` (errors, out-of-date notice),
     `src/ui/components/module-list.tsx`, `src/ui/components/module-graph/`.
 -   **Tests:** `test/document/*`.
 -   **Start:** evaluation semantics → `document.ts`; how the editor shows modules →
@@ -221,7 +225,8 @@ Each entry: the files that implement it (most important first), its tests, and w
     `group-library.ts`, `src/ui/group-files.ts`, `src/ui/components/module-picker.tsx`
     (Groups level), `src/groups/examples.ts`.
 -   **Tests:** `test/document/groups-and-splitting.test.ts`, `test/ui/group-cards.test.ts`,
-    `test/ui/group-drag.test.ts`, `test/storage/browser-libraries.test.ts`.
+    `test/ui/group-drag.test.ts`, `test/ui/module-picker.test.ts`,
+    `test/storage/browser-libraries.test.ts`.
 
 ### AO3 output (sanitizer port, Work Skin)
 
@@ -235,6 +240,12 @@ Each entry: the files that implement it (most important first), its tests, and w
 
 -   **Files:** `src/targets/ao3/preview-chrome.tsx`, `src/targets/ao3/styles.scss`,
     `src/ui/components/post-preview/*`, `src/ui/eo3.tsx` (`DocumentSettings`: project title).
+-   Copy buttons (`copy-to-clipboard-button.tsx`) report a copy, and start the posting
+    reminders, only once the browser confirms it; a refused copy shows the text to copy by
+    hand. Tests: `test/ui/copy-button.test.ts`.
+-   The mockup's word and chapter counts are the work's (`workWords`, `part.count`); its
+    tags, dates and reader numbers are examples, and a note in the mockup says so.
+-   The chapter title is edited in place too (`onPartTitleChange`), like the title and byline.
 -   The work title and byline are edited in place in the AO3 mockup (`PrefaceField` in
     `preview-chrome.tsx`, via `onWorkTitleChange` / `onAuthorChange` in
     `SiteTargetPreviewProps`). They come from the document, not from the render, so they
@@ -265,11 +276,13 @@ Each entry: the files that implement it (most important first), its tests, and w
 ### Saving, version history, backups
 
 -   **Files:** `src/storage/save-controller.ts`, `checkpoints.ts`, `index.ts`, `backup.ts`,
-    `versions/v2.ts`; UI in `src/ui/components/save-recovery.tsx` (toolbar status, error
+    `versions/v2.ts`; UI in `src/ui/components/save-recovery.tsx` (toolbar status, what changed per version, error
     banner, version history dialog), `library-backup.tsx`, `src/ui/index.tsx`
-    (`ApplicationTab` creates the controller and flushes on hide/blur/close).
+    (toolbar "history" button; `ApplicationTab` creates the controller and flushes on
+    hide/blur/close), `src/ui/startup-error.tsx`.
 -   **Tests:** `test/storage/*`, `test/ui/save-recovery.test.ts`,
-    `test/ui/save-lifecycle.test.ts`, `test/ui/library-errors.test.ts`.
+    `test/ui/save-lifecycle.test.ts`, `test/ui/library-errors.test.ts`,
+    `test/ui/startup-error.test.ts`.
 
 ### Examples and workskin gallery
 
@@ -315,8 +328,9 @@ Each entry: the files that implement it (most important first), its tests, and w
 
 1. Create `src/plugins/source/<name>.tsx` (or `transform/`) exporting a `ModulePlugin`:
    `id`, `component`, `initialData`, `description`, `eval` returning a `Data` subclass.
-2. Register it in `src/plugins/index.ts` (`MODULES`). Its data interface is saved in files:
-   keep it backwards compatible forever.
+2. Register it in `src/plugins/index.ts` (`MODULES`) with a `category` (where "add node"
+   lists it; category titles and order are in `module-picker.tsx`). Its data interface is
+   saved in files: keep it backwards compatible forever.
 3. If it outputs CSS before rendering matters (splitting, styles detection), see
    `isCssModule` in `document.ts`.
 
@@ -342,7 +356,9 @@ Edit `src/targets/ao3/render/`, add inputs to `test/ao3-parity/cases.json`, run
 ### Add a dialog, menu or confirmation
 
 Use `showAlert`/`showConfirm` (`src/ui/dialogs.tsx`), `ActionMenu`, `NamePopover`, or a
-`<dialog>` with `showModal()` like `VersionHistory`. Never `alert/confirm/prompt`.
+`<dialog>` with `showModal()` like `VersionHistory`. Never `alert/confirm/prompt`. To put
+focus inside a `DirPopover` when it opens, use `useFocusWhenShown` (its dialog opens a frame
+or two after `open` turns true).
 
 ### Change autosave or version history
 
@@ -365,6 +381,8 @@ schema, append it to `MIGRATIONS` in `versions/index.ts`, and implement the stor
     directly (inherited keys such as `constructor`).
 -   `eo3-` class prefix is reserved for generated classes; packaged CSS uses `fx-`.
 -   Keep `@property` rules top-level with literal `initial-value`s.
+-   In plain `.css` files keep `@keyframes` top-level too: nested ones fail the production
+    build's CSS minify (`.scss` files are fine, Sass hoists them).
 -   Posting state is keyed by target id (`ao3`, `profile:<id>`, …). Custom profiles live in
     localStorage, not in documents.
 -   `evalWork` snapshots the state before awaiting; keep it that way so edits during a render
@@ -381,15 +399,15 @@ reuses that form. Optional field metadata stays in module data without a file-ve
 change. See `docs/group-settings.md`; `test/ui/settings.test.ts` covers conditional forms,
 defaults, bounds, and group-file round trips.
 
-| Folder               | Covers                                                                    |
-| -------------------- | ------------------------------------------------------------------------- |
-| `test/document/`     | Parts, groups, splitting, shared styles, evaluation, simple view layout.  |
-| `test/ao3/`          | AO3 export, lift-styles naming.                                           |
-| `test/ao3-parity/`   | The AO3 port against otwarchive's Ruby (`expected.json` is generated).    |
-| `test/wafrn-parity/` | wafrn target against the real sanitize-html with wafrn's config.          |
-| `test/targets/`      | Custom site profiles.                                                     |
-| `test/storage/`      | Checkpoints, save controller, recovery store, backups, browser libraries. |
-| `test/ui/`           | Save UI and lifecycle, library errors, group cards and drag.              |
-| `test/plugins/`      | Svelte bundler worker handling.                                           |
-| `test/util/`         | Split HTML, changelog.                                                    |
-| `test/examples/`     | Workskin examples: content, layout, writing parser.                       |
+| Folder               | Covers                                                                                                                                        |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `test/document/`     | Parts, groups, splitting, shared styles, evaluation, simple view layout.                                                                      |
+| `test/ao3/`          | AO3 export, lift-styles naming.                                                                                                               |
+| `test/ao3-parity/`   | The AO3 port against otwarchive's Ruby (`expected.json` is generated).                                                                        |
+| `test/wafrn-parity/` | wafrn target against the real sanitize-html with wafrn's config.                                                                              |
+| `test/targets/`      | Custom site profiles.                                                                                                                         |
+| `test/storage/`      | Checkpoints, save controller, recovery store, backups, browser libraries.                                                                     |
+| `test/ui/`           | Save UI and lifecycle, library errors, group cards and drag, copy buttons, module picker, action menu keys, preview freshness, startup error. |
+| `test/plugins/`      | Svelte bundler worker handling.                                                                                                               |
+| `test/util/`         | Split HTML, changelog, word count.                                                                                                            |
+| `test/examples/`     | Workskin examples: content, layout, writing parser.                                                                                           |

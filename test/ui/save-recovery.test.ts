@@ -2,10 +2,15 @@ import { createElement } from 'react';
 import { createRoot, Root } from 'react-dom/client';
 import { act, Simulate } from 'react-dom/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { Document } from '../../src/document';
+import { Document, Module, ModulePlugin } from '../../src/document';
 import { MemoryStorage } from '../../src/storage';
 import { SaveController, SaveState } from '../../src/storage/save-controller';
-import { SaveErrorBanner, SaveStatus, VersionHistory } from '../../src/ui/components/save-recovery';
+import {
+    describeVersion,
+    SaveErrorBanner,
+    SaveStatus,
+    VersionHistory,
+} from '../../src/ui/components/save-recovery';
 
 vi.mock('../../src/ui/dialogs', () => ({ showConfirm: vi.fn(async () => true) }));
 let container: HTMLDivElement;
@@ -110,7 +115,7 @@ describe('save recovery controls', () => {
             work.setTitle('Latest writing');
             await vi.advanceTimersByTimeAsync(1000);
         });
-        expect(container.querySelector('.save-status')?.textContent).toBe('Not saved');
+        expect(container.querySelector('.save-status')?.textContent).toBe('Couldn’t save');
         expect(container.textContent).toContain('Storage full');
         expect(container.textContent).toContain('Download work');
         save.mockImplementation(original);
@@ -145,6 +150,56 @@ describe('save recovery controls', () => {
         expect(work.title).toBe('Original title');
         expect(writer!.state.recovery.entries).toHaveLength(3);
         expect(container.textContent).toContain('Restored.');
+    });
+
+    it('labels each version with what changed since the one before', async () => {
+        const { work } = await setup();
+        await click('Saved');
+        await act(async () => {
+            Simulate.change(container.querySelector('input[type="checkbox"]')!, {
+                target: { checked: true },
+            } as any);
+        });
+        const text: ModulePlugin<any> = {
+            id: 'source.text',
+            acceptsInputs: false,
+            acceptsNamedInputs: false,
+            component: () => null,
+            initialData: () => ({ contents: '', language: 'html' }),
+            description: () => 'HTML',
+            eval: async () => null as any,
+        };
+        await act(async () => {
+            work.insertModule(
+                new Module(text, { contents: '<p>Three short words</p>', language: 'html' })
+            );
+            // a version is recorded after a minute of editing
+            await vi.advanceTimersByTimeAsync(60_000);
+        });
+        await act(async () => {
+            work.addPart('Second');
+            await vi.advanceTimersByTimeAsync(60_000);
+        });
+        const details = [...container.querySelectorAll('.i-versions .i-detail')].map(
+            (node) => node.textContent
+        );
+        // newest first; the oldest shows where the history starts
+        expect(details).toEqual(['latest · 1 chapter added', '+3 words', '0 words · 1 chapter']);
+    });
+
+    it('describes changes between versions in a writer’s terms', () => {
+        const before = { words: 1200, chapters: 3 };
+        expect(describeVersion(undefined, before)).toBe('');
+        expect(describeVersion(null, before)).toBe('can’t be read');
+        expect(describeVersion(before, null)).toBe('1,200 words · 3 chapters');
+        expect(describeVersion({ words: 1285, chapters: 3 }, before)).toBe('+85 words');
+        expect(describeVersion({ words: 900, chapters: 2 }, before)).toBe(
+            '−300 words · 1 chapter removed'
+        );
+        expect(describeVersion({ words: 1200, chapters: 5 }, before)).toBe('2 chapters added');
+        expect(describeVersion(before, before)).toBe('same word count');
+        // a version after one that can't be read stands on its own
+        expect(describeVersion(before, undefined)).toBe('1,200 words · 3 chapters');
     });
 
     it('clearly labels the memory-only fallback', async () => {

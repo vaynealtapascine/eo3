@@ -234,6 +234,47 @@ export function SimpleEditor({ document, partId, userData }: SimpleEditor.Props)
     );
 }
 
+/**
+ * The part whose list shows a module, on its own or inside a block; the part on screen wins
+ * when several do. Null when no list shows it (or the work can't be shown as lists).
+ */
+export function partListing(
+    document: Document,
+    moduleId: ModuleId,
+    current: string | null
+): string | null {
+    const result = document.linear;
+    if (!('layout' in result)) return null;
+    const lists = (partId: string) =>
+        (result.layout.parts[partId] ?? []).some((item) =>
+            item.kind === 'module'
+                ? item.moduleId === moduleId
+                : !!document.findGroup(item.groupId)?.moduleIds.includes(moduleId)
+        );
+    if (current && lists(current)) return current;
+    return document.parts.find((part) => lists(part.id))?.id ?? null;
+}
+
+/**
+ * Unfolds the card holding a module, scrolls to it and puts the cursor in its editor, e.g.
+ * from a preview error. False if the list under `root` has no card for it.
+ */
+export function revealSimpleItem(root: ParentNode, moduleId: ModuleId): boolean {
+    const card = [...root.querySelectorAll<HTMLElement>('.simple-item[data-modules]')].find(
+        (node) => node.dataset.modules!.split(' ').includes(moduleId)
+    );
+    if (!card) return false;
+    card.querySelector<HTMLElement>('.i-collapse[aria-expanded="false"]')?.click();
+    card.scrollIntoView?.({ block: 'start' });
+    // after the card has unfolded
+    setTimeout(() => {
+        card.querySelector<HTMLElement>(
+            '.i-body .cm-content, .i-body textarea, .i-body [contenteditable="true"]'
+        )?.focus({ preventScroll: true });
+    });
+    return true;
+}
+
 export namespace SimpleEditor {
     export interface Props {
         document: Document;
@@ -601,7 +642,11 @@ function ItemCard({
     const kind = kindLabel(document, item);
 
     return (
-        <article className={'simple-item' + (transform ? ' is-effect' : '')} aria-label={name}>
+        <article
+            className={'simple-item' + (transform ? ' is-effect' : '')}
+            aria-label={name}
+            data-modules={(mod ? [mod.id] : group?.moduleIds ?? []).join(' ')}
+        >
             <header className="i-header">
                 <button
                     className="i-collapse"
@@ -783,7 +828,7 @@ function PinnedStyles({
     const [open, setOpen] = useState(false);
     const name = module.title || moduleDescription(document, module, partLabel);
     return (
-        <article className="simple-item is-pinned" aria-label={name}>
+        <article className="simple-item is-pinned" aria-label={name} data-modules={module.id}>
             <header className="i-header">
                 <button
                     className="i-collapse is-wide"

@@ -50,6 +50,7 @@
 
         .preview-config {
             display: flex;
+            flex-wrap: wrap;
             align-items: center;
             gap: 0.5em;
             flex: 1;
@@ -57,6 +58,22 @@
             .output-select {
                 width: 100%;
                 max-width: 8em;
+            }
+
+            .render-button.is-stale {
+                font-weight: bold;
+                outline: 2px solid rgb(var(--P-color-warning));
+                outline-offset: 1px;
+            }
+
+            .preview-stale {
+                flex-basis: 100%;
+                font-size: smaller;
+                color: rgb(var(--P-color-warning));
+
+                &:empty {
+                    display: none;
+                }
             }
         }
 
@@ -121,10 +138,46 @@
             font-weight: bold;
         }
 
-        .error-contents {
+        .error-summary,
+        .error-help {
+            margin: 0.4em 0 0;
+            overflow-wrap: break-word;
+        }
+
+        .error-help {
+            font-size: smaller;
+            opacity: 0.8;
+        }
+
+        .error-open {
+            font: inherit;
+            margin: 0.6em 0 0.2em;
+            padding: 0.3em 0.9em;
+            color: rgb(var(--P-color-accent-fg));
+            background: rgb(var(--P-color-accent));
+            border: none;
+            border-radius: 0.5em;
+            cursor: pointer;
+
+            &:focus-visible {
+                outline: 2px solid rgb(var(--P-color-fg));
+                outline-offset: 2px;
+            }
+        }
+
+        .error-details {
             margin-top: 0.5em;
             padding-top: 0.5em;
             border-top: 1px solid var(--P-separator);
+
+            summary {
+                cursor: pointer;
+                font-size: smaller;
+            }
+        }
+
+        .error-contents {
+            margin-top: 0.5em;
             white-space: pre-wrap;
             font-family: var(--P-monospace);
             font-size: smaller;
@@ -158,6 +211,20 @@
         flex-direction: column;
         gap: 0.5em;
         align-items: center;
+        padding: 2em 1em;
+        text-align: center;
+
+        .i-title {
+            margin: 0;
+            font-weight: bold;
+        }
+
+        .i-description {
+            margin: 0;
+            max-width: 32em;
+            font-size: smaller;
+            opacity: 0.8;
+        }
 
         button {
             font: inherit;

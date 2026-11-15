@@ -178,7 +178,75 @@ html {
         background: rgb(var(--P-card-bg));
         border-radius: 0.5em;
         margin: 1em;
-        padding: 1em;
+        padding: 1em 1.25em;
+        max-width: 36em;
+        user-select: text;
+
+        h1 {
+            margin: 0 0 0.5em;
+            font-size: 1.3em;
+        }
+
+        p {
+            margin: 0.5em 0;
+        }
+
+        .i-steps {
+            margin: 1em 0;
+            padding-left: 1.4em;
+
+            li + li {
+                margin-top: 1em;
+            }
+
+            div {
+                margin-top: 0.4em;
+            }
+        }
+
+        button {
+            font: inherit;
+            color: inherit;
+            background: none;
+            border: 1px solid var(--P-separator);
+            border-radius: 0.5em;
+            padding: 0.3em 0.9em;
+            cursor: pointer;
+
+            &:hover:not(:disabled) {
+                background: var(--P-separator);
+            }
+
+            &:disabled {
+                opacity: 0.5;
+                cursor: default;
+            }
+
+            &.is-danger {
+                color: var(--P-error-text);
+                border-color: currentColor;
+            }
+        }
+
+        .i-backup {
+            font-size: smaller;
+
+            &.is-failed {
+                color: var(--P-error-text);
+            }
+        }
+
+        summary {
+            cursor: pointer;
+            font-size: smaller;
+            opacity: 0.8;
+        }
+
+        pre {
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+            font-size: smaller;
+        }
     }
 
     > .i-toolbar {
@@ -319,6 +387,13 @@ html {
     @media (max-width: 700px) {
         > .i-toolbar {
             height: 2.8em;
+            /* more buttons than fit: swipe the toolbar sideways rather than lose the tabs */
+            overflow: auto hidden;
+            scrollbar-width: none;
+
+            > .application-tabs {
+                min-width: 9em;
+            }
 
             > .i-buttons > .i-section {
                 display: none;

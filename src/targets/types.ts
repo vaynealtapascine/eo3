@@ -152,6 +152,10 @@ export interface SiteTargetPreviewProps<Config extends JsonValue> {
     /** Edit the metadata from the preview (AO3 shows them as the work's title and byline). */
     onWorkTitleChange(title: string): void;
     onAuthorChange(author: string): void;
+    /** Renames the part on screen (AO3 shows the title above the chapter). */
+    onPartTitleChange(title: string): void;
+    /** Words in the whole work as last rendered, for mockups that show a word count. */
+    workWords: number;
     markdown: string;
     /**
      * The finished artifacts for the part on screen plus the work-wide ones, keyed by
@@ -159,7 +163,10 @@ export interface SiteTargetPreviewProps<Config extends JsonValue> {
      * the others are exported via their copy buttons.
      */
     exportOutput: SiteTargetExportOutput;
-    /** The part on screen: its position (0-based) and how many parts the work has. */
+    /**
+     * The part on screen: its position (0-based) and how many parts the work has. The title is
+     * the document's current one, like the work's title, so it can be edited in place.
+     */
     part: { index: number; count: number; title: string };
     /** Posted state of the part on screen; chrome shows it next to its copy buttons. */
     posting: PartPosting;

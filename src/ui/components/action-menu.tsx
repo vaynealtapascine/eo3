@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { DirPopover } from '../../uikit/dir-popover';
 import { showAlert } from '../dialogs';
+import { useFocusWhenShown } from '../focus-when-shown';
 import './action-menu.css';
 
 export interface MenuAction {
@@ -10,7 +11,14 @@ export interface MenuAction {
     danger?: boolean;
 }
 
-/** A "⋯" button opening a list of actions; falsy entries are left out. */
+const enabledItems = (menu: HTMLElement | null) => [
+    ...(menu?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not(:disabled)') ?? []),
+];
+
+/**
+ * A "⋯" button opening a list of actions; falsy entries are left out. Opening it focuses the
+ * first action; arrow keys, Home and End move between actions, and Escape closes it.
+ */
 export function ActionMenu({
     label,
     actions,
@@ -25,7 +33,27 @@ export function ActionMenu({
     className?: string;
 }) {
     const button = useRef<HTMLButtonElement>(null);
+    const menu = useRef<HTMLDivElement>(null);
     const [open, setOpen] = useState(false);
+
+    useFocusWhenShown(open, () => enabledItems(menu.current)[0]);
+
+    const onKeyDown = (event: React.KeyboardEvent) => {
+        const items = enabledItems(menu.current);
+        if (!items.length) return;
+        const at = items.indexOf(window.document.activeElement as HTMLButtonElement);
+        let next: number;
+        if (event.key === 'ArrowDown') next = (at + 1) % items.length;
+        else if (event.key === 'ArrowUp') next = (at <= 0 ? items.length : at) - 1;
+        else if (event.key === 'Home') next = 0;
+        else if (event.key === 'End') next = items.length - 1;
+        else return;
+        event.preventDefault();
+        // a menu inside a list (the module picker) keeps its own keys
+        event.stopPropagation();
+        items[next].focus();
+    };
+
     return (
         <>
             <button
@@ -33,6 +61,7 @@ export function ActionMenu({
                 className={'action-menu-button ' + className}
                 aria-label={label}
                 aria-haspopup="menu"
+                aria-expanded={open}
                 title={label}
                 onPointerDown={(event) => event.stopPropagation()}
                 onClick={(event) => {
@@ -43,7 +72,13 @@ export function ActionMenu({
                 ⋯
             </button>
             <DirPopover anchor={button.current} open={open} onClose={() => setOpen(false)}>
-                <div className="action-menu" role="menu" aria-label={label}>
+                <div
+                    ref={menu}
+                    className="action-menu"
+                    role="menu"
+                    aria-label={label}
+                    onKeyDown={onKeyDown}
+                >
                     {note && <p className="i-note">{note}</p>}
                     {actions.map(
                         (action) =>

@@ -10,6 +10,52 @@ update it whenever a step lands (what changed, what's next, anything surprising)
 
 ## Status
 
+2026-11-15 — **UI review: fixes, and plainer words for writers.** From a source review of
+the whole UI, then of the save/history/backup and AO3 preview features.
+
+-   **Copy buttons** await the clipboard. A copy is shown as done, and the "mark as posted"
+    reminders start, only after the browser confirms it; a refused copy opens the text to
+    select and copy by hand (copying it there counts).
+-   **add node** (also the simple view's "Other module types…") has a search field over
+    module types, My groups and templates; module types are listed under Writing / Styles /
+    Files and images / Advanced (`category` in `plugins/index.ts`); the built-in example
+    groups are called Templates there and show a description. A module type that fails to
+    load says so on its row and can be retried. Rows are clickable as a whole. Row heading
+    ids were all `"0"` (`useMemo` destructuring bug); they use `useId` now.
+-   **⋯ menus** focus their first action, move with the arrow keys / Home / End, and report
+    `aria-expanded`. On touch screens the button and items are finger-sized.
+-   **Preview header:** the selectors are labelled; "output" is "Site preview", with module
+    outputs under "One module’s output"; "Render" is "Update preview". With Live Update off,
+    an out-of-date notice appears once the work differs from what's on screen
+    (`ui/render-inputs.ts` compares what a render reads, so titles, author and layout edits
+    don't trigger it), because the copy buttons copy what's on screen.
+-   **Preview errors** name the module, show the first line of the error, and offer "Open
+    this module": in the nodes view it selects, unfolds and focuses the module; in the simple
+    view it shows the chapter listing it and unfolds its card (`revealSimpleItem`). The full
+    error and source script are under "Technical details".
+-   **Saving:** the toolbar has a **history** button (the indicator still opens it too); the
+    failed state reads "Couldn’t save" instead of "Not saved". Version history lists what
+    changed in each version since the one before ("+85 words · 1 chapter added"), computed in
+    the dialog from the restored files (`util/word-count.ts`) and cached per checkpoint;
+    nothing new is stored. Backups: "restore…" is "import backup…", since it adds copies.
+-   **AO3 mockup:** editable fields have a faint dashed underline; the chapter title is
+    editable in place; Words and Chapters show the work's own numbers; a note marks the
+    tags, dates and reader numbers as examples.
+-   **"Couldn't start" screen** (`ui/startup-error.tsx`): Reload, then Download backup, then
+    deleting everything, with a warning if no backup could be made.
+-   Left for later, by the author's choice: a readable preview of a version's contents, and
+    a wording pass over "node", "module", "Send to" and "mark as posted".
+-   Validation: typecheck, 635 passing tests (3 skipped), production build. Browser checked
+    at desktop and 390px in both views: picker search and row clicks, ⋯ menu keys, out-of-date
+    notice, error panel and "Open this module", copy fallback, history labels, mockup fields.
+    The check found and fixed three things tests had missed: whole-row clicks in the picker
+    did nothing inside the real popover dialog, the jump to a module relied on smooth
+    scrolling (now instant), and the AO3 mockup's CSS squashed the copy fallback.
+-   Known limits: at 390px the toolbar is wider than the screen and scrolls sideways to reach
+    undo, redo and the tabs (it already overflowed before the history button, without
+    scrolling). The "couldn't start" screen is covered by tests but was not seen in a
+    browser, since it only appears when storage fails to open.
+
 2026-10-05 — **All AO3 examples: settings and writing help.** All 14 bundled examples
 now have defaulted, labeled fields with optional details folded away, plus shared
 text-size, width, and typeface choices. Per-block classes use AO3-compatible CSS.
