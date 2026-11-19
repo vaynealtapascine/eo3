@@ -116,7 +116,7 @@ Plugins are defined in `src/plugins` (indexed in `src/plugins/index.tsx`) and ar
 Do not change module data interfaces in a backwards-incompatible way because people are apparently using this software sometimes!!
 
 ## Changes from prechoster
--   Rich Text Editor has been replaced with TinyMCE.
+-   Rich Text Editor has been replaced with TipTap (ProseMirror).
 -   Svelte 3.55.1 is the default for now, but Svelte 4 and 5 have been added as options.
 -	Modularized the render pipeline, so `SiteTargetPlugin`s can be used to extend EO3 to work with new or other sites.
 -   A work has parts (chapters or posts), each with its own output, styles and posted state, and long parts can be split.

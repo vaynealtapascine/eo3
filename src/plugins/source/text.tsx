@@ -54,12 +54,10 @@ class TextEditor extends PureComponent<ModulePluginProps<TextPluginData>> {
     codeEditor = createRef<CodeEditor>();
     richEditor = createRef<RichEditor>();
 
-    /** Inserts the invisible chapter-break marker at the cursor, in either editor. */
+    /** Inserts the chapter-break marker at the cursor, in either editor. */
     insertSplitMarker = () => {
-        const rich = this.richEditor.current?.editor.current?.getEditor();
-        if (rich) {
-            rich.insertContent(SPLIT_MARKER);
-            rich.focus();
+        if (this.richEditor.current) {
+            this.richEditor.current.insertChapterBreak();
             return;
         }
         const view = this.codeEditor.current?.editor.current?.view;
@@ -92,8 +90,14 @@ class TextEditor extends PureComponent<ModulePluginProps<TextPluginData>> {
                         id={this.modeSelectId}
                         value={data.language}
                         onChange={(e) => {
+                            const contents =
+                                this.richEditor.current?.takeContent() ?? data.contents;
                             this.memoizedExtensions = null;
-                            onChange({ ...data, language: (e.target as HTMLSelectElement).value });
+                            onChange({
+                                ...data,
+                                contents,
+                                language: (e.target as HTMLSelectElement).value,
+                            });
                         }}
                     >
                         {Object.keys(LANGUAGES).map((k) => (
@@ -111,6 +115,7 @@ class TextEditor extends PureComponent<ModulePluginProps<TextPluginData>> {
                             type="checkbox"
                             checked={this.state.editingRichText}
                             onChange={(e) => {
+                                this.richEditor.current?.flush();
                                 this.setState({
                                     editingRichText: (e.target as HTMLInputElement).checked,
                                 });
