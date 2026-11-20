@@ -1,0 +1,774 @@
+/*
+ * Inline in-preview chapter editor mounted inside AO3's `#workskin .userstuff`.
+ *
+ * Prose containers stay completely transparent so AO3's `.userstuff` and `#workskin` Work Skin
+ * styles apply natively.
+ *
+ * All UI chrome inside `#workskin` is prefixed with `:is(#workskin, :root)` so its specificity
+ * beats AO3's `.post-preview.target-ao3 button` / Meyer's reset (`div`/`span`) rules AND Work
+ * Skin `#workskin button`/`div` selectors, while still working in standalone unit tests.
+ */
+:is(#workskin, :root) .eo3-inline-chapter {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.9rem;
+    align-items: start;
+    padding: 0.25rem 0;
+
+    &.is-fallback {
+        display: block;
+    }
+
+    > .eo3-inline-body {
+        min-width: 0;
+    }
+
+    &.is-empty .tiptap-rich-editor.is-inline .ProseMirror,
+    &.is-single .tiptap-rich-editor.is-inline .ProseMirror {
+        min-height: 11em;
+    }
+}
+
+/* Floating sticky side rail matching eo3's DirPopover surface */
+:is(#workskin, :root) .eo3-side-rail {
+    position: sticky;
+    top: 0.75rem;
+    z-index: 4;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.2rem;
+    margin: 0;
+    padding: 0.25rem;
+    border: none;
+    border-radius: 0.5rem;
+    background: var(--P-dialog-bg, #eee);
+    color: rgb(var(--P-color-fg, 0 0 0));
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.16),
+        0 0 0 1px var(--P-dialog-outline, rgba(0, 0, 0, 0.2));
+    font-family: 'Atkinson Hyperlegible', system-ui, sans-serif;
+    font-size: var(--P-font-size-ui, 14px);
+    line-height: 1;
+    font-style: normal;
+    font-weight: 500;
+    letter-spacing: normal;
+    text-indent: 0;
+    box-sizing: border-box;
+    user-select: none;
+
+    .eo3-rail-btn {
+        appearance: none;
+        box-sizing: border-box;
+        width: 2rem;
+        height: 2rem;
+        min-width: 0;
+        padding: 0;
+        margin: 0;
+        border: 1px solid transparent;
+        border-radius: 0.38rem;
+        background: transparent;
+        background-image: none;
+        color: inherit;
+        font-family: 'Atkinson Hyperlegible', system-ui, sans-serif;
+        font-size: 13px;
+        font-weight: 500;
+        line-height: 1;
+        vertical-align: middle;
+        box-shadow: none;
+        text-shadow: none;
+        text-decoration: none;
+        outline: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: background 0.09s ease-out, border-color 0.09s ease-out, color 0.09s ease-out,
+            transform 0.07s ease-out;
+
+        svg {
+            display: block;
+            width: 1.2rem;
+            height: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        &:hover:not(:disabled),
+        &:focus-visible:not(:disabled) {
+            background: var(--P-item-selected-bg, rgba(0, 0, 0, 0.1));
+            background-image: none;
+            border-color: var(--P-separator, rgba(0, 0, 0, 0.2));
+            color: inherit;
+            box-shadow: none;
+        }
+
+        &:active:not(:disabled) {
+            transform: scale(0.94);
+        }
+
+        &:focus-visible:not(:disabled) {
+            outline: 2px solid rgb(var(--P-color-accent, 135 0 0));
+            outline-offset: 1px;
+        }
+
+        &.is-active {
+            background: rgb(var(--P-color-accent, 135 0 0));
+            background-image: none;
+            color: rgb(var(--P-color-accent-fg, 255 255 255));
+            border-color: transparent;
+
+            &:hover:not(:disabled),
+            &:focus-visible:not(:disabled) {
+                background: rgb(var(--P-color-accent, 135 0 0));
+                color: rgb(var(--P-color-accent-fg, 255 255 255));
+                border-color: transparent;
+            }
+        }
+
+        &:disabled {
+            opacity: 0.38;
+            cursor: default;
+        }
+    }
+
+    .eo3-rail-sep {
+        display: block;
+        width: 1.25rem;
+        height: 1px;
+        margin: 0.15rem 0;
+        padding: 0;
+        border: 0;
+        background: var(--P-separator, rgba(0, 0, 0, 0.2));
+    }
+}
+
+/* Editable prose segments */
+:is(#workskin, :root) .eo3-inline-segment {
+    position: relative;
+    border-radius: 0.35rem;
+    transition: box-shadow 0.1s ease-out;
+
+    & + .eo3-inline-segment,
+    & + .eo3-inline-island {
+        margin-top: 0.65rem;
+    }
+}
+
+/* Subtle hover/focus control pill for multi-segment chapters and block islands */
+:is(#workskin, :root) .eo3-segment-controls,
+:is(#workskin, :root) .eo3-island-bar {
+    font-family: 'Atkinson Hyperlegible', system-ui, sans-serif;
+    font-size: 12px;
+    line-height: 1.2;
+    font-style: normal;
+    font-weight: 500;
+    letter-spacing: normal;
+    text-indent: 0;
+    text-align: left;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.18rem;
+    margin: 0;
+    padding: 0.18rem 0.22rem 0.18rem 0.5rem;
+    border: none;
+    border-radius: 0.5rem;
+    background: var(--P-dialog-bg, #eee);
+    color: rgb(var(--P-color-fg, 0 0 0));
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.16), 0 0 0 1px var(--P-dialog-outline, rgba(0, 0, 0, 0.2));
+    user-select: none;
+
+    .eo3-seg-label,
+    .eo3-island-label {
+        font-weight: 600;
+        font-size: 12px;
+        opacity: 0.78;
+        margin: 0 0.25rem 0 0;
+        padding: 0;
+        max-width: 12rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    button {
+        appearance: none;
+        box-sizing: border-box;
+        font-family: 'Atkinson Hyperlegible', system-ui, sans-serif;
+        font-size: 12px;
+        font-weight: 500;
+        font-style: normal;
+        color: inherit;
+        background: transparent;
+        background-image: none;
+        border: 1px solid transparent;
+        border-radius: 0.35rem;
+        width: auto;
+        min-width: 1.6rem;
+        height: 1.6rem;
+        padding: 0 0.35rem;
+        margin: 0;
+        box-shadow: none;
+        text-shadow: none;
+        text-decoration: none;
+        outline: none;
+        line-height: 1;
+        vertical-align: middle;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.25rem;
+        cursor: pointer;
+        transition: background 0.09s ease-out, border-color 0.09s ease-out, transform 0.07s ease-out;
+
+        svg {
+            display: block;
+            width: 0.95rem;
+            height: 0.95rem;
+            flex-shrink: 0;
+        }
+
+        &:hover:not(:disabled),
+        &:focus-visible:not(:disabled) {
+            background: var(--P-item-selected-bg, rgba(0, 0, 0, 0.1));
+            background-image: none;
+            border-color: var(--P-separator, rgba(0, 0, 0, 0.2));
+            color: inherit;
+            box-shadow: none;
+        }
+
+        &:active:not(:disabled) {
+            transform: scale(0.94);
+        }
+
+        &:focus-visible:not(:disabled) {
+            outline: 2px solid rgb(var(--P-color-accent, 135 0 0));
+            outline-offset: 1px;
+        }
+
+        &:disabled {
+            opacity: 0.35;
+            cursor: default;
+        }
+    }
+
+    .eo3-island-edit {
+        font-weight: 600;
+        padding: 0 0.5rem;
+        background: rgb(var(--P-card-bg, 255 255 255));
+        background-image: none;
+        border-color: var(--P-separator, rgba(0, 0, 0, 0.2));
+
+        &.is-active {
+            background: rgb(var(--P-color-accent, 135 0 0));
+            color: rgb(var(--P-color-accent-fg, 255 255 255));
+            border-color: transparent;
+        }
+    }
+}
+
+:is(#workskin, :root) .eo3-segment-controls {
+    position: absolute;
+    top: -0.75rem;
+    right: 0.25rem;
+    z-index: 3;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.1s ease-out;
+}
+
+:is(#workskin, :root) .eo3-inline-segment:hover > .eo3-segment-controls,
+:is(#workskin, :root) .eo3-inline-segment:focus-within > .eo3-segment-controls {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Ready-made block / custom module preview islands */
+:is(#workskin, :root) .eo3-inline-island {
+    position: relative;
+    margin: 0.95rem 0;
+    padding: 0.35rem 0.45rem;
+    border-radius: 0.45rem;
+    border: 1px dashed transparent;
+    box-sizing: border-box;
+    transition: border-color 0.1s ease-out, background 0.1s ease-out;
+
+    &:hover,
+    &:focus-within,
+    &.is-editing {
+        border-color: rgb(var(--P-color-accent, 135 0 0) / 0.45);
+        background: rgb(var(--P-color-accent, 135 0 0) / 0.025);
+
+        > .eo3-island-bar {
+            opacity: 1;
+            pointer-events: auto;
+        }
+    }
+
+    > .eo3-island-bar {
+        position: absolute;
+        top: -0.85rem;
+        right: 0.4rem;
+        z-index: 3;
+        opacity: 0.85;
+        transition: opacity 0.1s ease-out;
+    }
+
+    @media (hover: hover) {
+        > .eo3-island-bar {
+            opacity: 0.52;
+        }
+    }
+
+    .eo3-island-empty {
+        font-family: 'Atkinson Hyperlegible', system-ui, sans-serif;
+        font-size: 13px;
+        line-height: 1.4;
+        padding: 0.9rem 1rem;
+        border: 1px dashed var(--P-separator, rgba(0, 0, 0, 0.25));
+        border-radius: 0.45rem;
+        opacity: 0.75;
+        text-align: center;
+        cursor: pointer;
+        transition: opacity 0.1s ease-out, border-color 0.1s ease-out;
+
+        &:hover {
+            opacity: 1;
+            border-color: rgb(var(--P-color-accent, 135 0 0) / 0.55);
+        }
+
+        span {
+            font-weight: 600;
+        }
+    }
+}
+
+/* Declarative inline-editable template regions (`data-edit`, `data-edit-field`, `data-edit-input`) */
+:is(#workskin, :root) .eo3-island-preview {
+    [data-edit-interactive] {
+        cursor: text;
+        border-radius: 3px;
+        outline: 1.5px dashed transparent;
+        outline-offset: 2px;
+        transition: outline-color 0.09s ease-out, background-color 0.09s ease-out,
+            opacity 0.12s ease-out;
+    }
+
+    [data-edit-interactive]:hover:not(:has([data-edit-interactive]:hover)):not(.is-inline-editing):not(.is-inline-input-editing) {
+        outline-color: rgb(var(--P-color-accent, 135 0 0) / 0.55);
+        background-color: rgb(var(--P-color-accent, 135 0 0) / 0.045);
+    }
+
+    [data-edit-interactive].is-inline-editing {
+        outline: 1.5px solid rgb(var(--P-color-accent, 135 0 0) / 0.85);
+        outline-offset: 2px;
+        background-color: rgb(var(--P-color-accent, 135 0 0) / 0.05);
+    }
+
+    [data-edit-interactive].is-inline-updating {
+        opacity: 0.68;
+    }
+
+    [data-edit-interactive='editable']:empty::before,
+    [data-edit-interactive='field']:empty::before {
+        content: attr(data-edit-placeholder);
+        opacity: 0.45;
+        font-style: italic;
+    }
+
+    .eo3-inline-field-input {
+        appearance: none;
+        box-sizing: border-box;
+        font: inherit;
+        color: inherit;
+        letter-spacing: inherit;
+        text-transform: inherit;
+        text-align: inherit;
+        line-height: inherit;
+        background: transparent;
+        background-image: none;
+        border: none;
+        border-radius: 2px;
+        padding: 0;
+        margin: 0;
+        min-width: 2.5ch;
+        max-width: 100%;
+        vertical-align: baseline;
+        box-shadow: none;
+        outline: none;
+
+        &.is-multiline {
+            display: block;
+            width: 100%;
+            resize: vertical;
+        }
+
+        &.is-select {
+            appearance: auto;
+            background: rgb(var(--P-card-bg, 255 255 255));
+            color: rgb(var(--P-color-fg, 0 0 0));
+            border: 1px solid var(--P-separator, rgba(0, 0, 0, 0.25));
+            border-radius: 4px;
+            padding: 0.1rem 0.35rem;
+            cursor: pointer;
+        }
+    }
+
+    .is-inline-input-editing > :not(.eo3-inline-draft-editor) {
+        display: none !important;
+    }
+
+    .eo3-inline-draft-editor {
+        font-family: 'Atkinson Hyperlegible', system-ui, sans-serif;
+        font-size: 14px;
+        font-style: normal;
+        font-weight: normal;
+        letter-spacing: normal;
+        text-transform: none;
+        text-indent: 0;
+        text-align: left;
+        line-height: 1.45;
+        box-sizing: border-box;
+        margin: 0.35rem 0;
+        padding: 0;
+        border-radius: 0.45rem;
+        border: 1.5px solid rgb(var(--P-color-accent, 135 0 0) / 0.75);
+        background: rgb(var(--P-card-bg, 255 255 255));
+        color: rgb(var(--P-color-fg, 0 0 0));
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+        overflow: hidden;
+    }
+
+    .eo3-inline-draft-textarea {
+        display: block;
+        box-sizing: border-box;
+        width: 100%;
+        min-height: 6.5rem;
+        padding: 0.65rem 0.75rem;
+        margin: 0;
+        border: none;
+        background: transparent;
+        color: inherit;
+        font-family: 'Source Code Pro', 'League Mono', ui-monospace, monospace;
+        font-size: 13px;
+        line-height: 1.55;
+        resize: vertical;
+        outline: none;
+        box-shadow: none;
+    }
+
+    .eo3-inline-draft-bar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.4rem 0.65rem;
+        padding: 0.35rem 0.55rem;
+        border-top: 1px solid var(--P-separator, rgba(0, 0, 0, 0.14));
+        background: var(--P-dialog-bg, rgba(0, 0, 0, 0.04));
+        font-size: 12px;
+        line-height: 1.3;
+    }
+
+    .eo3-inline-draft-hints {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.3rem;
+        min-width: 0;
+    }
+
+    .eo3-inline-draft-hint code {
+        display: inline-block;
+        padding: 0.1rem 0.35rem;
+        border-radius: 3px;
+        background: rgb(var(--P-card-bg, 255 255 255));
+        border: 1px solid var(--P-separator, rgba(0, 0, 0, 0.16));
+        font-family: 'Source Code Pro', 'League Mono', ui-monospace, monospace;
+        font-size: 11px;
+        color: inherit;
+    }
+
+    .eo3-inline-draft-summary {
+        opacity: 0.72;
+    }
+
+    .eo3-inline-draft-done {
+        appearance: none;
+        box-sizing: border-box;
+        font-family: 'Atkinson Hyperlegible', system-ui, sans-serif;
+        font-size: 12px;
+        font-weight: 600;
+        line-height: 1;
+        padding: 0.32rem 0.7rem;
+        margin: 0;
+        border: none;
+        border-radius: 0.38rem;
+        background: rgb(var(--P-color-accent, 135 0 0));
+        background-image: none;
+        color: rgb(var(--P-color-accent-fg, 255 255 255));
+        box-shadow: none;
+        text-shadow: none;
+        cursor: pointer;
+        transition: filter 0.09s ease-out, transform 0.07s ease-out;
+
+        &:hover,
+        &:focus-visible {
+            filter: brightness(1.08);
+        }
+
+        &:active {
+            transform: scale(0.95);
+        }
+    }
+}
+
+/* Fallback notice for effect chapters or non-linear graphs */
+:is(#workskin, :root) .eo3-inline-banner {
+    font-family: 'Atkinson Hyperlegible', system-ui, sans-serif;
+    font-size: var(--P-font-size-ui, 14px);
+    line-height: 1.4;
+    font-style: normal;
+    font-weight: normal;
+    text-indent: 0;
+    box-sizing: border-box;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem 0.75rem;
+    margin: 0 0 1rem;
+    padding: 0.5rem 0.75rem;
+    border: none;
+    border-radius: 0.5rem;
+    background: var(--P-dialog-bg, #eee);
+    color: rgb(var(--P-color-fg, 0 0 0));
+    box-shadow: 0 0 0 1px var(--P-dialog-outline, rgba(0, 0, 0, 0.2));
+
+    .eo3-inline-banner-actions {
+        display: inline-flex;
+        gap: 0.4rem;
+    }
+
+    button {
+        appearance: none;
+        box-sizing: border-box;
+        font-family: 'Atkinson Hyperlegible', system-ui, sans-serif;
+        font-size: inherit;
+        font-weight: 500;
+        line-height: 1.25;
+        color: inherit;
+        background: transparent;
+        background-image: none;
+        border: 1px solid var(--P-separator, rgba(0, 0, 0, 0.2));
+        border-radius: 0.5em;
+        width: auto;
+        height: auto;
+        padding: 0.2rem 0.65rem;
+        margin: 0;
+        box-shadow: none;
+        text-shadow: none;
+        outline: none;
+        cursor: pointer;
+        transition: background 0.12s;
+
+        &:hover,
+        &:focus-visible {
+            background: var(--P-item-selected-bg, rgba(0, 0, 0, 0.1));
+            background-image: none;
+            color: inherit;
+            box-shadow: none;
+        }
+
+        &:focus-visible {
+            outline: 2px solid rgb(var(--P-color-accent, 135 0 0));
+            outline-offset: 1px;
+        }
+    }
+}
+
+/* Side popovers (Work Skin CSS & Block/Module editors) — portaled into document.body */
+.eo3-styles-quick-popover,
+.eo3-island-popover {
+    display: flex;
+    flex-direction: column;
+    width: min(30rem, 88vw);
+    max-height: min(36rem, 78vh);
+    font-family: 'Atkinson Hyperlegible', system-ui, sans-serif;
+    font-size: var(--P-font-size-ui, 14px);
+    line-height: 1.4;
+
+    .eo3-popover-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+        padding: 0.55rem 0.75rem;
+        border-bottom: 1px solid var(--P-separator);
+        background: var(--P-item-bg);
+
+        h4 {
+            margin: 0;
+            font-size: 0.95em;
+            font-weight: 700;
+        }
+
+        .eo3-popover-close {
+            font: inherit;
+            color: inherit;
+            background: none;
+            border: 1px solid transparent;
+            border-radius: 0.45em;
+            width: 1.8rem;
+            height: 1.8rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.14s var(--P-ease-default),
+                border-color 0.14s var(--P-ease-default), box-shadow 0.14s var(--P-ease-default);
+
+            &:hover {
+                background: rgb(var(--P-color-shade) / var(--P-color-shade-opacity));
+                border-color: rgb(
+                    var(--P-color-soft-outline) / var(--P-color-soft-outline-opacity)
+                );
+            }
+
+            &:focus-visible {
+                outline: none;
+                background: rgb(var(--P-color-shade) / var(--P-color-shade-opacity));
+                border-color: rgb(var(--P-color-accent) / 0.65);
+                box-shadow: 0 0 0 0.2em rgb(var(--P-color-accent) / 0.35);
+            }
+        }
+    }
+
+    .eo3-popover-scroll {
+        overflow-y: auto;
+        padding: 0.7rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    /* Match SimpleEditor's BlockBody form layout inside portaled island popovers */
+    .i-block {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75em;
+    }
+
+    .i-input-header {
+        display: flex;
+        align-items: baseline;
+        gap: 0.75em;
+        margin-bottom: 0.3em;
+
+        h4 {
+            flex: 1;
+            margin: 0;
+            font-size: 0.95em;
+        }
+    }
+
+    .i-fold {
+        font: inherit;
+        color: inherit;
+        background: none;
+        border: none;
+        padding: 0;
+        font-size: 0.85em;
+        opacity: 0.6;
+        text-decoration: underline;
+        cursor: pointer;
+
+        &:hover,
+        &:focus-visible {
+            opacity: 1;
+        }
+    }
+
+    .i-customize {
+        > summary {
+            cursor: pointer;
+            opacity: 0.8;
+        }
+
+        &[open] > summary {
+            margin-bottom: 0.5em;
+        }
+
+        .i-input + .i-input {
+            margin-top: 0.75em;
+        }
+    }
+
+    .eo3-css-card {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+        border: 1px solid rgb(var(--P-color-soft-outline) / var(--P-color-soft-outline-opacity));
+        border-radius: 0.5em;
+        padding: 0.5rem;
+        background: rgb(var(--P-color-shade) / calc(var(--P-color-shade-opacity) * 0.65));
+    }
+
+    .eo3-css-card-title {
+        font-size: 0.85em;
+        font-weight: 600;
+        opacity: 0.8;
+    }
+
+    .eo3-css-empty {
+        text-align: center;
+        padding: 1rem 0.5rem;
+
+        p {
+            margin: 0 0 0.65rem;
+            opacity: 0.75;
+        }
+
+        button {
+            font: inherit;
+            font-weight: 500;
+            color: rgb(var(--P-color-accent-fg));
+            background: rgb(var(--P-color-accent));
+            border: none;
+            border-radius: 100em;
+            padding: 0.38rem 1rem;
+            cursor: pointer;
+            transition: filter 0.14s var(--P-ease-default), box-shadow 0.14s var(--P-ease-default);
+
+            &:hover {
+                filter: brightness(1.06);
+            }
+
+            &:focus-visible {
+                outline: none;
+                box-shadow: 0 0 0 0.2em rgb(var(--P-color-accent) / 0.35);
+            }
+        }
+    }
+}
+
+/* Narrow viewports: fold the rail into a sticky compact bar above the prose */
+@media (max-width: 560px) {
+    :is(#workskin, :root) .eo3-inline-chapter {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0.5rem;
+    }
+
+    :is(#workskin, :root) .eo3-side-rail {
+        order: -1;
+        flex-direction: row;
+        justify-self: end;
+        top: 0.4rem;
+
+        .eo3-rail-sep {
+            width: 1px;
+            height: 1.25rem;
+            margin: 0 0.1rem;
+        }
+    }
+}

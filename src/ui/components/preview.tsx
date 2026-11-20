@@ -22,6 +22,8 @@ import {
     subscribeProfiles,
 } from '../../targets/profile/store';
 import { ProfileEditor } from './profile-editor';
+import { InlineChapterEditor } from './inline-chapter-editor';
+import { PlusIcon, SidebarActiveIcon, SidebarIcon } from './icons';
 
 /** Site-selector entry that opens the custom site editor instead of switching targets. */
 const EDIT_PROFILES = '__edit-profiles';
@@ -40,6 +42,10 @@ export function Preview({
     onLiveChange,
     onRender,
     onOpenModule,
+    isSimpleView = false,
+    panelOpen = true,
+    onTogglePanel,
+    onOpenPanel,
 }: Preview.Props) {
     let contents = null;
     const shownPart = document.findPart(partId ?? '') ?? document.parts[0];
@@ -57,6 +63,13 @@ export function Preview({
             onPreviewConfigChange(makeDefaultPreviewConfig(siteTargetPlugin));
         }
     }, [siteTargetPlugin]);
+
+    // Only AO3 supports in-preview inline editing; open the left panel when switching targets.
+    useEffect(() => {
+        if (isSimpleView && onOpenPanel && !panelOpen && siteTargetId !== 'ao3') {
+            onOpenPanel();
+        }
+    }, [isSimpleView, onOpenPanel, panelOpen, siteTargetId]);
 
     useInsertionEffect(() => {
         const preview = previewContainer.current;
@@ -133,6 +146,21 @@ export function Preview({
                         readMore={readMore}
                         onReadMoreChange={setReadMore}
                         errorPortal={postErrorPortal.current}
+                        chapterBody={
+                            isSimpleView && siteTargetId === 'ao3' && !render.target ? (
+                                <InlineChapterEditor
+                                    document={document}
+                                    partId={shownPart.id}
+                                    renderOutput={render.output}
+                                    fallbackHtml={
+                                        work.parts.find((p) => p.id === shownPart.id)?.content ?? ''
+                                    }
+                                    panelOpen={panelOpen}
+                                    onTogglePanel={() => onTogglePanel?.()}
+                                    onOpenModule={onOpenModule}
+                                />
+                            ) : undefined
+                        }
                     />
                 </div>
             );
@@ -230,6 +258,22 @@ export function Preview({
             />
             <div className="preview-header">
                 <div className="preview-config">
+                    {onTogglePanel ? (
+                        <button
+                            type="button"
+                            className={'panel-toggle-button' + (panelOpen ? ' is-open' : '')}
+                            aria-pressed={panelOpen}
+                            title={
+                                panelOpen
+                                    ? 'Hide left panel for full-width writing'
+                                    : 'Show left panel (chapters, HTML code, modules)'
+                            }
+                            onClick={onTogglePanel}
+                        >
+                            {panelOpen ? <SidebarActiveIcon /> : <SidebarIcon />}
+                            <span>Panel</span>
+                        </button>
+                    ) : null}
                     <select
                         className="output-select"
                         aria-label="What to preview"
@@ -258,6 +302,21 @@ export function Preview({
                                 </option>
                             ))}
                         </select>
+                    )}
+                    {!render.target && isSimpleView && onTogglePanel && !panelOpen && (
+                        <button
+                            type="button"
+                            className="add-part-button"
+                            title={`Add a new ${partLabel.toLowerCase()}`}
+                            onClick={() => {
+                                document
+                                    .addPartWithText(partLabel)
+                                    .then((added) => onPartChange(added.id));
+                            }}
+                        >
+                            <PlusIcon />
+                            <span>{partLabel}</span>
+                        </button>
                     )}
                     {!render.target && (
                         <select
@@ -341,6 +400,12 @@ namespace Preview {
         onRender: () => void;
         /** Shows a module's editor, e.g. the one a render error came from. */
         onOpenModule: (moduleId: ModuleId) => void;
+        /** Enables direct in-preview WYSIWYG chapter editing in Simple view. */
+        isSimpleView?: boolean;
+        /** Whether the left technical panel is currently expanded (desktop Simple view). */
+        panelOpen?: boolean;
+        onTogglePanel?: () => void;
+        onOpenPanel?: () => void;
     }
 }
 

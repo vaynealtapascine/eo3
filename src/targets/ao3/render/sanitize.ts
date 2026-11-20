@@ -19,6 +19,20 @@ export type Ao3Diagnostic =
 
 export type Ao3DiagnosticSink = (diagnostic: Ao3Diagnostic) => void;
 
+export interface SanitizeOptions {
+    /**
+     * Keeps `data-edit` / `data-edit-*` inline-editor binding markers in the interactive live
+     * preview DOM. On normal AO3 export (false/omitted), they are stripped silently without
+     * emitting diagnostics so exported HTML stays 100% AO3-clean.
+     */
+    preserveEditorMarkers?: boolean;
+}
+
+/** Attribute namespace for inline-template editing hooks (stripped silently on export). */
+export function isEo3EditorAttr(attrName: string): boolean {
+    return attrName === 'data-edit' || attrName.startsWith('data-edit-');
+}
+
 // Sanitize's REGEX_PROTOCOL, run on the entity-decoded attribute value.
 const REGEX_PROTOCOL = /^\s*([^/#]*?)(?::|&#0*58|&#x0*3a)/i;
 
@@ -33,11 +47,12 @@ const UNSAFE_LIBXML_ATTRS_A = new Set(['name']);
 export function sanitizeFragment(
     root: Node,
     config: SanitizeConfig,
-    onDiagnostic?: Ao3DiagnosticSink
+    onDiagnostic?: Ao3DiagnosticSink,
+    options?: SanitizeOptions
 ): void {
     const allowlist = new Set<Element>();
     for (const child of Array.from(root.childNodes)) {
-        cleanNode(child, config, onDiagnostic, allowlist);
+        cleanNode(child, config, onDiagnostic, allowlist, options);
     }
 }
 
@@ -52,7 +67,8 @@ export function cleanNode(
     node: Node,
     config: SanitizeConfig,
     onDiagnostic?: Ao3DiagnosticSink,
-    allowlist: Set<Element> = new Set()
+    allowlist: Set<Element> = new Set(),
+    options?: SanitizeOptions
 ): void {
     if (node.nodeType === Node.COMMENT_NODE) {
         (node as ChildNode).remove();
@@ -70,7 +86,7 @@ export function cleanNode(
 
     const cleanChildren = () => {
         for (const child of Array.from(el.childNodes)) {
-            cleanNode(child, config, onDiagnostic, allowlist);
+            cleanNode(child, config, onDiagnostic, allowlist, options);
         }
     };
 
@@ -96,7 +112,7 @@ export function cleanNode(
 
     cleanChildren();
 
-    cleanAttributes(el, name, config, onDiagnostic);
+    cleanAttributes(el, name, config, onDiagnostic, options);
 
     const additions = config.addAttributes[name];
     if (additions) {
@@ -146,7 +162,8 @@ function cleanAttributes(
     el: Element,
     name: string,
     config: SanitizeConfig,
-    onDiagnostic?: Ao3DiagnosticSink
+    onDiagnostic?: Ao3DiagnosticSink,
+    options?: SanitizeOptions
 ): void {
     const allowed = allowedAttributes(config, name);
     const tagProtocols = config.protocols[name];
@@ -155,6 +172,10 @@ function cleanAttributes(
         const attrName = attr.name.toLowerCase();
 
         if (!allowed.has(attrName)) {
+            if (isEo3EditorAttr(attrName)) {
+                if (!options?.preserveEditorMarkers) el.removeAttribute(attr.name);
+                continue;
+            }
             onDiagnostic?.({
                 kind: 'strip-attribute',
                 node: el,

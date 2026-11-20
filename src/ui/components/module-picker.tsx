@@ -189,7 +189,7 @@ export function ModulePicker({ open, anchor, onClose, onPick, onPickGroup }: Mod
     };
 
     return (
-        <DirPopover open={open} onClose={onClose} anchor={anchor}>
+        <DirPopover portal open={open} onClose={onClose} anchor={anchor}>
             <div
                 className="module-picker-items"
                 tabIndex={-1}

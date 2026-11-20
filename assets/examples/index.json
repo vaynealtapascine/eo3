@@ -1,4 +1,8 @@
 {
+    "default.toml": {
+        "title": "Welcome to eo3",
+        "description": "An interactive starter chapter showcasing live AO3 editing, hover translations, styled blocks, and Work Skin CSS."
+    },
     "ao3-text-messages.toml": {
         "title": "AO3 · Text messages",
         "description": "Format a two-person text exchange with alternating bubbles, timestamps, and delivery status."
@@ -54,10 +58,6 @@
     "ao3-collapsible-notes.toml": {
         "title": "AO3 · Collapsible extras",
         "description": "Keep optional translations or extra notes close to the prose, in native panels readers can open themselves."
-    },
-    "default.toml": {
-        "title": "Style Inlining",
-        "description": "Inline a CSS stylesheet into HTML."
     },
     "css-animations.toml": {
         "title": "CSS Animations",

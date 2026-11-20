@@ -111,6 +111,7 @@ export function Ao3PreviewHeader({
     error,
     renderErrors,
     asyncErrors,
+    chapterBody,
 }: SiteTargetPreviewProps<RenderConfig>) {
     const errorBtn = useRef<HTMLButtonElement>(null);
     const [errorsOpen, setErrorsOpen] = useState(false);
@@ -708,7 +709,7 @@ export function Ao3PreviewHeader({
                                                     <h3 className="landmark heading" id="work">
                                                         Chapter Text
                                                     </h3>
-                                                    {parse(html)}
+                                                    {chapterBody ?? parse(html)}
                                                 </div>
                                             </div>
                                         </div>

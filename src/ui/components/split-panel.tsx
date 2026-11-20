@@ -98,22 +98,15 @@ export class SplitPanel extends PureComponent<SplitPanel.Props, SplitPanelState>
     render() {
         const { vertical, children: originalChildren } = this.props;
 
-        let children: React.ReactNode[];
-        if (Array.isArray(originalChildren)) {
-            children = originalChildren;
-        } else {
-            children = [originalChildren];
-        }
-        children = children.filter((x: any) => x);
-        if (children.length > 2) throw new Error('SplitPanel: more than 2 children not supported');
+        const raw = Array.isArray(originalChildren) ? originalChildren : [originalChildren];
+        if (raw.length > 2) throw new Error('SplitPanel: more than 2 children not supported');
 
-        const doSplit = children.length > 1;
-        const style1 = {
-            [this.hv('width', 'height')]: doSplit ? this.state.splitPos * 100 + '%' : '100%',
-        };
-        const style2 = {
-            [this.hv('width', 'height')]: (1 - this.state.splitPos) * 100 + '%',
-        };
+        const first = raw[0] || null;
+        const second = raw[1] || null;
+        const doSplit = Boolean(first && second);
+        const dim = this.hv('width', 'height');
+        const style1 = { [dim]: doSplit ? this.state.splitPos * 100 + '%' : '100%' };
+        const style2 = { [dim]: doSplit ? (1 - this.state.splitPos) * 100 + '%' : '100%' };
         const [minSplit, maxSplit] = this.bounds;
 
         return (
@@ -121,11 +114,14 @@ export class SplitPanel extends PureComponent<SplitPanel.Props, SplitPanelState>
                 ref={this.panel}
                 className={'split-panel' + (vertical ? ' is-vertical' : ' is-horizontal')}
             >
-                <div className="inner-container" role="group" style={style1}>
-                    {children[0]}
-                </div>
+                {first ? (
+                    <div key="first" className="inner-container" role="group" style={style1}>
+                        {first}
+                    </div>
+                ) : null}
                 {doSplit && (
                     <div
+                        key="resizer"
                         ref={this.resizer}
                         tabIndex={0}
                         role="separator"
@@ -143,11 +139,11 @@ export class SplitPanel extends PureComponent<SplitPanel.Props, SplitPanelState>
                         <div className="inner-affordance" />
                     </div>
                 )}
-                {doSplit && (
-                    <div className="inner-container" role="group" style={style2}>
-                        {children[1]}
+                {second ? (
+                    <div key="second" className="inner-container" role="group" style={style2}>
+                        {second}
                     </div>
-                )}
+                ) : null}
             </div>
         );
     }

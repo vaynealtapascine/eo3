@@ -1,6 +1,6 @@
 export function SidebarIcon() {
     return (
-        <svg width="24" height="24">
+        <svg width="24" height="24" viewBox="0 0 24 24">
             <g fill="none" fillRule="evenodd" stroke="currentColor">
                 <path d="M18.154 4.5c1.196 0 1.636.107 2.075.342.4.214.715.528.93.929.234.439.341.88.341 2.075v8.308c0 1.196-.107 1.636-.342 2.075-.214.4-.528.715-.929.93-.439.234-.88.341-2.075.341H5.846c-1.196 0-1.636-.107-2.075-.342a2.233 2.233 0 0 1-.93-.929c-.234-.439-.341-.88-.341-2.075V7.846c0-1.196.107-1.636.342-2.075.214-.4.528-.715.929-.93.439-.234.88-.341 2.075-.341Z" />
                 <path strokeLinecap="round" d="M10.5 6v12M4.5 7.5h4M4.5 10.5h4M4.5 13.5h4" />
@@ -11,7 +11,7 @@ export function SidebarIcon() {
 
 export function SidebarActiveIcon() {
     return (
-        <svg width="24" height="24">
+        <svg width="24" height="24" viewBox="0 0 24 24">
             <g fill="none" fillRule="evenodd" stroke="currentColor">
                 <path d="M18.154 4.5c1.196 0 1.636.107 2.075.342.4.214.715.528.93.929.234.439.341.88.341 2.075v8.308c0 1.196-.107 1.636-.342 2.075-.214.4-.528.715-.929.93-.439.234-.88.341-2.075.341H5.846c-1.196 0-1.636-.107-2.075-.342a2.233 2.233 0 0 1-.93-.929c-.234-.439-.341-.88-.341-2.075V7.846c0-1.196.107-1.636.342-2.075.214-.4.528-.715.929-.93.439-.234.88-.341 2.075-.341Z" />
                 <path
@@ -172,10 +172,72 @@ export function PreviewRenderIcon() {
 
 export function EditIcon() {
     return (
-        <svg width="24" height="24">
+        <svg width="24" height="24" viewBox="0 0 24 24">
             <g fill="none" fillRule="evenodd" stroke="currentColor">
                 <path d="M17.5 6.5a2.121 2.121 0 0 0-3 0L6 15l-1 4 4-1 8.5-8.5a2.121 2.121 0 0 0 0-3Z" />
                 <path d="M13 8c.5 1 2 2.5 3 3" />
+            </g>
+        </svg>
+    );
+}
+
+export function SparklesIcon() {
+    return (
+        <svg width="24" height="24" viewBox="0 0 24 24">
+            <g
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.35}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            >
+                <path d="M10.5 4.5 12 9l4.5 1.5L12 12l-1.5 4.5L9 12l-4.5-1.5L9 9l1.5-4.5Z" />
+                <path d="M17.5 14.5 18.25 16.75 20.5 17.5 18.25 18.25 17.5 20.5 16.75 18.25 14.5 17.5 16.75 16.75 17.5 14.5Z" />
+            </g>
+        </svg>
+    );
+}
+
+export function FormatTextIcon() {
+    return (
+        <svg width="24" height="24" viewBox="0 0 24 24">
+            <g
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.4}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            >
+                <path d="M4.5 18 8.75 6.5 13 18M5.8 14.5h5.9" />
+                <path d="M19.5 18v-5.5a2.25 2.25 0 0 0-4.3-.9" />
+                <path d="M19.5 14.75h-2.4a1.85 1.85 0 0 0 0 3.25h.65a1.75 1.75 0 0 0 1.75-1.75" />
+            </g>
+        </svg>
+    );
+}
+
+export function PlusIcon() {
+    return (
+        <svg width="24" height="24" viewBox="0 0 24 24">
+            <g fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round">
+                <path d="M12 5.5v13M5.5 12h13" />
+            </g>
+        </svg>
+    );
+}
+
+export function CodeBracesIcon() {
+    return (
+        <svg width="24" height="24" viewBox="0 0 24 24">
+            <g
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.45}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            >
+                <path d="M9 5.5c-1.5 0-2 .8-2 2.2v2.4c0 1-.6 1.7-1.7 1.9 1.1.2 1.7.9 1.7 1.9v2.4c0 1.4.5 2.2 2 2.2" />
+                <path d="M15 5.5c1.5 0 2 .8 2 2.2v2.4c0 1 .6 1.7 1.7 1.9-1.1.2-1.7.9-1.7 1.9v2.4c0 1.4-.5 2.2-2 2.2" />
             </g>
         </svg>
     );

@@ -1,10 +1,15 @@
 import React, { createRef, lazy, PureComponent, Suspense } from 'react';
-import type { RichTextEditorHandle } from './tiptap-rich-editor';
+import type { PopoverAnchor, RichTextEditorHandle } from './tiptap-rich-editor';
+import type { CssPiece } from '../../editor/css-pieces';
+import { EditorCanvasContext } from '../editor-canvas-context';
 import './rich-editor.css';
 
 const TipTapRichEditor = lazy(() => import('./tiptap-rich-editor'));
 
 export class RichEditor extends PureComponent<RichEditor.Props> {
+    static contextType = EditorCanvasContext;
+    declare context: React.ContextType<typeof EditorCanvasContext>;
+
     editor = createRef<RichTextEditorHandle>();
 
     onValueChange = (newValue: string) => {
@@ -20,6 +25,18 @@ export class RichEditor extends PureComponent<RichEditor.Props> {
         this.editor.current?.flush();
     }
 
+    focus() {
+        this.editor.current?.focus();
+    }
+
+    openStyles(anchor: PopoverAnchor) {
+        this.editor.current?.openStyles(anchor);
+    }
+
+    openFormat(anchor: PopoverAnchor) {
+        this.editor.current?.openFormat(anchor);
+    }
+
     takeContent(): string | undefined {
         if (!this.editor.current?.getEditor()) return undefined;
         const html = this.editor.current.getContent();
@@ -28,12 +45,30 @@ export class RichEditor extends PureComponent<RichEditor.Props> {
     }
 
     render() {
-        const { value, footer, readOnly, placeholder } = this.props;
+        const {
+            value,
+            footer,
+            readOnly,
+            placeholder,
+            className,
+            variant,
+            onFocus,
+            canvasCss,
+            onEnsurePieceCss,
+        } = this.props;
+        const effectiveCss = canvasCss ?? this.context?.canvasCss ?? '';
+        const effectiveEnsurePieceCss = onEnsurePieceCss ?? this.context?.ensurePieceCss;
 
         return (
             <Suspense
                 fallback={
-                    <div className="tiptap-rich-editor is-loading">
+                    <div
+                        className={
+                            'tiptap-rich-editor is-loading' +
+                            (variant === 'inline' ? ' is-inline' : '') +
+                            (className ? ' ' + className : '')
+                        }
+                    >
                         <div className="i-editor-surface i-loading-placeholder">
                             Loading editor…
                         </div>
@@ -45,9 +80,14 @@ export class RichEditor extends PureComponent<RichEditor.Props> {
                     ref={this.editor}
                     value={value}
                     onChange={this.onValueChange}
+                    onFocus={onFocus}
                     disabled={readOnly}
                     placeholder={placeholder}
+                    className={className}
+                    variant={variant}
                     footer={footer}
+                    canvasCss={effectiveCss}
+                    onEnsurePieceCss={effectiveEnsurePieceCss}
                 />
             </Suspense>
         );
@@ -59,7 +99,12 @@ export namespace RichEditor {
         value: string;
         footer?: React.ReactNode;
         onChange: (v: string) => void;
+        onFocus?: () => void;
         readOnly?: boolean;
         placeholder?: string;
+        className?: string;
+        variant?: 'card' | 'inline';
+        canvasCss?: string;
+        onEnsurePieceCss?: (piece: CssPiece) => void | Promise<unknown>;
     }
 }

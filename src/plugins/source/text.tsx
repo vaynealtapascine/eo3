@@ -80,11 +80,45 @@ class TextEditor extends PureComponent<ModulePluginProps<TextPluginData>> {
 
     render() {
         const { data, onChange } = this.props;
-        const useRichTextCheckboxId = Math.random().toString(36);
+        const setRichEditing = (next: boolean) => {
+            if (next === this.state.editingRichText) return;
+            if (!next) this.richEditor.current?.flush();
+            this.setState({ editingRichText: next });
+        };
 
         const footer = (
-            <div className="i-footer">
-                <span>
+            <div className="i-footer i-text-footer">
+                {data.language === HTML_CONTENTEDITABLE ? (
+                    <span className="i-view-toggle" role="group" aria-label="Editor view">
+                        <button
+                            type="button"
+                            className={this.state.editingRichText ? 'is-active' : undefined}
+                            aria-pressed={this.state.editingRichText}
+                            onClick={() => setRichEditing(true)}
+                        >
+                            Visual
+                        </button>
+                        <button
+                            type="button"
+                            className={!this.state.editingRichText ? 'is-active' : undefined}
+                            aria-pressed={!this.state.editingRichText}
+                            onClick={() => setRichEditing(false)}
+                        >
+                            HTML
+                        </button>
+                    </span>
+                ) : null}
+                {(data.language === 'html' || data.language === HTML_CONTENTEDITABLE) && (
+                    <button
+                        type="button"
+                        className="i-footer-btn"
+                        onClick={this.insertSplitMarker}
+                        title="Marks where this chapter should be split in two. Then choose “Split at chapter break” in the chapter’s menu."
+                    >
+                        + Chapter break
+                    </button>
+                )}
+                <span className="i-mode-control">
                     <label htmlFor={this.modeSelectId}>Mode: </label>
                     <select
                         id={this.modeSelectId}
@@ -107,32 +141,6 @@ class TextEditor extends PureComponent<ModulePluginProps<TextPluginData>> {
                         ))}
                     </select>
                 </span>
-                {data.language === HTML_CONTENTEDITABLE ? (
-                    <span>
-                        {' '}
-                        <input
-                            id={useRichTextCheckboxId}
-                            type="checkbox"
-                            checked={this.state.editingRichText}
-                            onChange={(e) => {
-                                this.richEditor.current?.flush();
-                                this.setState({
-                                    editingRichText: (e.target as HTMLInputElement).checked,
-                                });
-                            }}
-                        />
-                        <label htmlFor={useRichTextCheckboxId}>Rich Text Editor</label>
-                    </span>
-                ) : null}
-                {(data.language === 'html' || data.language === HTML_CONTENTEDITABLE) && (
-                    <button
-                        type="button"
-                        onClick={this.insertSplitMarker}
-                        title="Marks where this chapter should be split in two. Then choose “Split at chapter break” in the chapter’s menu."
-                    >
-                        insert chapter break
-                    </button>
-                )}
             </div>
         );
 

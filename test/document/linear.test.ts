@@ -422,7 +422,12 @@ describe('bundled examples in the simple editor', () => {
                 'Your text',
             ]);
         } else {
-            expect(items).toHaveLength(4);
+            // The default starter chapter is a single rich-text module with managed "All chapters" CSS.
+            expect(items).toEqual([{ kind: 'module', moduleId: doc.modules[0].id }]);
+            expect(doc.sharedStylesModuleId).toBe(doc.modules[1].id);
+            expect((doc.modules[0].data as { language?: string }).language).toBe(
+                'html-contenteditable'
+            );
         }
     });
 });

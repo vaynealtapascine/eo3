@@ -81,19 +81,19 @@ export const EXAMPLE_GROUPS: GroupFile[] = [
     example(
         'Text message thread',
         'A minimal text exchange: two lines of HTML and a few styles to build on.',
-        '<div class="fx-text-thread"><p><strong>Alex</strong> <span>Are you there?</span></p><p><strong>Sam</strong> <span>On my way.</span></p></div>',
+        '<div class="fx-text-thread"><p><strong data-edit="text">Alex</strong> <span data-edit="rich">Are you there?</span></p><p><strong data-edit="text">Sam</strong> <span data-edit="rich">On my way.</span></p></div>',
         '.fx-text-thread { padding: 1em; border: 1px solid #888; }\n.fx-text-thread p { margin: 0.5em 0; }\n.fx-text-thread strong { margin-right: 0.5em; }'
     ),
     example(
         'Letter',
         'A minimal framed letter in a serif typeface.',
-        '<div class="fx-letter"><p>Dear friend,</p><p>Write your letter here.</p><p>Yours,<br />A friend</p></div>',
+        '<div class="fx-letter"><p data-edit="text">Dear friend,</p><div data-edit="rich"><p>Write your letter here.</p></div><p data-edit="rich">Yours,<br />A friend</p></div>',
         '.fx-letter { padding: 1.5em; border: 1px solid #888; font-family: serif; }\n.fx-letter p { margin: 0 0 1em; }'
     ),
     example(
         'Chat log',
         'A minimal monospace chat transcript with speaker names.',
-        '<div class="fx-chat-log"><p><strong>Alex:</strong> Hello!</p><p><strong>Sam:</strong> Hi.</p></div>',
+        '<div class="fx-chat-log"><p><strong data-edit="text">Alex:</strong> <span data-edit="rich">Hello!</span></p><p><strong data-edit="text">Sam:</strong> <span data-edit="rich">Hi.</span></p></div>',
         '.fx-chat-log { padding: 1em; background: #f5f5f5; font-family: monospace; }\n.fx-chat-log p { margin: 0.25em 0; }'
     ),
 ];

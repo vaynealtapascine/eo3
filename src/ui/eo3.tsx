@@ -8,6 +8,9 @@ import { ModuleGraph, EdgeId } from './components/module-graph';
 import { Preview } from './components/preview';
 import { Document, ModuleId, RenderOutput, RenderState } from '../document';
 import { RenderContext } from './render-context';
+import { EditorCanvasContext, type EditorCanvasContextValue } from './editor-canvas-context';
+import { collectPartLiveCss, ensurePieceCssInDocument } from '../editor/work-styles';
+import type { CssPiece } from '../editor/css-pieces';
 import { renderInputs, sameRenderInputs } from './render-inputs';
 import { SiteTargetProvider } from '../targets/context';
 // @ts-ignore
@@ -28,6 +31,8 @@ interface Eo3State {
     compact: boolean;
     /** The pane shown in compact mode. */
     pane: CompactPane;
+    /** In Simple view on desktop: whether the left technical panel is expanded. */
+    simplePanelOpen: boolean;
 }
 
 type CompactPane = 'edit' | 'preview' | 'graph';
@@ -50,7 +55,8 @@ export class Eo3 extends PureComponent<Eo3.Props, Eo3State> {
         partId: null,
         copiedParts: [] as string[],
         compact: compactQuery.matches,
-        pane: 'edit' as CompactPane,
+        pane: (this.props.view === 'simple' ? 'preview' : 'edit') as CompactPane,
+        simplePanelOpen: false,
     };
 
     onCompactChange = () => this.setState({ compact: compactQuery.matches });
@@ -106,6 +112,7 @@ export class Eo3 extends PureComponent<Eo3.Props, Eo3State> {
         }
     }
     componentWillUnmount() {
+        clearTimeout(this.renderTimeout);
         compactQuery.removeEventListener('change', this.onCompactChange);
         this.props.document.removeEventListener('change', this.onDocumentChange);
     }
@@ -132,12 +139,19 @@ export class Eo3 extends PureComponent<Eo3.Props, Eo3State> {
     scheduleRender() {
         if (this.state.clickToRender) return;
 
-        const debounceTime = this.props.document.wantsDebounce() ? 500 : 250;
+        const debounceTime = this.props.document.wantsDebounce() ? 300 : 180;
         clearTimeout(this.renderTimeout);
         this.renderTimeout = setTimeout(() => {
             this.renderTimeout = null;
             this.renderPreview();
         }, debounceTime);
+    }
+
+    renderNow() {
+        if (this.state.clickToRender || !this.state.render.live) return;
+        clearTimeout(this.renderTimeout);
+        this.renderTimeout = null;
+        this.renderPreview();
     }
 
     renderId = 0;
@@ -203,18 +217,33 @@ export class Eo3 extends PureComponent<Eo3.Props, Eo3State> {
 
     renderContext = {
         scheduleRender: () => this.scheduleRender(),
+        renderNow: () => this.renderNow(),
     };
 
     moduleList = createRef<ModuleList>();
     leftPanelNode = createRef<HTMLDivElement>();
+    toggleSimplePanel = () => this.setState((s) => ({ simplePanelOpen: !s.simplePanelOpen }));
+    openSimplePanel = () => {
+        if (!this.state.simplePanelOpen) this.setState({ simplePanelOpen: true });
+    };
+    toggleCompactPanel = () =>
+        this.setState((s) => ({ pane: s.pane === 'edit' ? 'preview' : 'edit' }));
+    openCompactPanel = () => {
+        if (this.state.pane !== 'edit') this.setState({ pane: 'edit' });
+    };
+
     /** Brings a module's editor on screen, e.g. from a render error. */
     openModule = (id: ModuleId) => {
         if (this.props.view === 'simple') {
             // the simple view lists one chapter at a time: show the one holding the module
             const partId = partListing(this.props.document, id, this.state.partId);
-            this.setState({ partId: partId ?? this.state.partId, pane: 'edit' }, () => {
-                if (this.leftPanelNode.current) revealSimpleItem(this.leftPanelNode.current, id);
-            });
+            this.setState(
+                { partId: partId ?? this.state.partId, simplePanelOpen: true, pane: 'edit' },
+                () => {
+                    if (this.leftPanelNode.current)
+                        revealSimpleItem(this.leftPanelNode.current, id);
+                }
+            );
             return;
         }
         this.setState({ selected: id, pane: 'edit' }, () => this.moduleList.current?.reveal(id));
@@ -253,6 +282,7 @@ export class Eo3 extends PureComponent<Eo3.Props, Eo3State> {
     }
 
     previewPane() {
+        const isSimpleView = this.props.view === 'simple';
         return (
             <Preview
                 document={this.props.document}
@@ -290,6 +320,24 @@ export class Eo3 extends PureComponent<Eo3.Props, Eo3State> {
                         this.renderPreview();
                     });
                 }}
+                isSimpleView={isSimpleView}
+                panelOpen={
+                    this.state.compact ? this.state.pane === 'edit' : this.state.simplePanelOpen
+                }
+                onTogglePanel={
+                    isSimpleView
+                        ? this.state.compact
+                            ? this.toggleCompactPanel
+                            : this.toggleSimplePanel
+                        : undefined
+                }
+                onOpenPanel={
+                    isSimpleView
+                        ? this.state.compact
+                            ? this.openCompactPanel
+                            : this.openSimplePanel
+                        : undefined
+                }
             />
         );
     }
@@ -343,32 +391,59 @@ export class Eo3 extends PureComponent<Eo3.Props, Eo3State> {
         );
     }
 
+    ensurePieceCss = (piece: CssPiece) =>
+        ensurePieceCssInDocument(this.props.document, this.state.partId, piece);
+
+    lastCanvasContext: EditorCanvasContextValue | null = null;
+    getCanvasContext(): EditorCanvasContextValue {
+        const canvasCss = collectPartLiveCss(
+            this.props.document,
+            this.state.partId,
+            this.state.render.output?.work
+        );
+        const isSimpleView = this.props.view === 'simple';
+        const prev = this.lastCanvasContext;
+        if (prev && prev.canvasCss === canvasCss && prev.isSimpleView === isSimpleView) {
+            return prev;
+        }
+        const next: EditorCanvasContextValue = {
+            canvasCss,
+            ensurePieceCss: this.ensurePieceCss,
+            isSimpleView,
+        };
+        this.lastCanvasContext = next;
+        return next;
+    }
+
     render() {
+        const showLeftPanel = this.props.view === 'nodes' || this.state.simplePanelOpen;
         return (
             <RenderContext.Provider value={this.renderContext}>
-                <SiteTargetProvider>
-                    <div className="eo3">
-                        {this.state.compact ? (
-                            this.compactLayout()
-                        ) : (
-                            <SplitPanel
-                                initialPos={Math.min(
-                                    0.7,
-                                    Math.max(500 / innerWidth, 1 - 700 / innerWidth)
-                                )}
-                            >
-                                {this.leftPanel()}
+                <EditorCanvasContext.Provider value={this.getCanvasContext()}>
+                    <SiteTargetProvider>
+                        <div className="eo3">
+                            {this.state.compact ? (
+                                this.compactLayout()
+                            ) : (
                                 <SplitPanel
-                                    vertical
-                                    initialPos={Math.max(0.6, 1 - 300 / innerHeight)}
+                                    initialPos={Math.min(
+                                        0.7,
+                                        Math.max(500 / innerWidth, 1 - 700 / innerWidth)
+                                    )}
                                 >
-                                    {this.previewPane()}
-                                    {this.props.view === 'nodes' ? this.graphPane() : null}
+                                    {showLeftPanel ? this.leftPanel() : null}
+                                    <SplitPanel
+                                        vertical
+                                        initialPos={Math.max(0.6, 1 - 300 / innerHeight)}
+                                    >
+                                        {this.previewPane()}
+                                        {this.props.view === 'nodes' ? this.graphPane() : null}
+                                    </SplitPanel>
                                 </SplitPanel>
-                            </SplitPanel>
-                        )}
-                    </div>
-                </SiteTargetProvider>
+                            )}
+                        </div>
+                    </SiteTargetProvider>
+                </EditorCanvasContext.Provider>
             </RenderContext.Provider>
         );
     }

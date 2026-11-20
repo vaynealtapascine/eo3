@@ -29,6 +29,7 @@ import { DirPopover } from '../../uikit/dir-popover';
 import { useSiteTarget } from '../../targets/context';
 import { showAlert, showConfirm } from '../dialogs';
 import { setEditorView } from '../editor-view';
+import { useFocusWhenShown } from '../focus-when-shown';
 import { ActionMenu, MenuAction } from './action-menu';
 import { EditIcon } from './icons';
 import { TextField } from '../../uikit/text-field';
@@ -284,7 +285,7 @@ export namespace SimpleEditor {
 }
 
 /** Managed styles that reach this part: "All chapters", an imported skin, its own styles. */
-function pinnedModules(doc: Document, outputId: ModuleId, stylesId: ModuleId | null) {
+export function pinnedModules(doc: Document, outputId: ModuleId, stylesId: ModuleId | null) {
     const managed = managedModuleIds(doc.state);
     return doc.modules.filter(
         (mod) =>
@@ -295,7 +296,7 @@ function pinnedModules(doc: Document, outputId: ModuleId, stylesId: ModuleId | n
     );
 }
 
-function itemName(doc: Document, item: LinearItem): string {
+export function itemName(doc: Document, item: LinearItem): string {
     if (item.kind === 'block') return doc.findGroup(item.groupId)?.title ?? 'Block';
     const mod = doc.findModule(item.moduleId);
     return mod ? moduleName(mod) : 'Module';
@@ -326,7 +327,7 @@ function kindLabel(doc: Document, item: LinearItem): string {
 }
 
 /** A module's own editor, as its plugin draws it. */
-function ModuleEditor({
+export function ModuleEditor({
     document,
     module,
     userData,
@@ -701,7 +702,7 @@ function ItemCard({
 }
 
 /** A block: its inputs up front, everything else folded under "Customize". */
-function BlockBody({
+export function BlockBody({
     document,
     group,
     userData,
@@ -853,21 +854,41 @@ function PinnedStyles({
     );
 }
 
-type Added = { modules?: AnyModule[]; groups?: ModuleGroup[] };
+export type Added = { modules?: AnyModule[]; groups?: ModuleGroup[] };
 
 /** "Add": text and styles first, then ready-made blocks, then every module type. */
-function AddMenu({
+export function AddMenu({
     onAdd,
     mirrorChoices,
+    buttonClassName = 'i-add-button',
+    buttonLabel = '+ add',
+    buttonTitle,
+    ariaLabel,
+    anchorBias = 'left',
+    compact = false,
 }: {
     onAdd: (item: LinearItem, added: Added) => void;
     /** Items listed in other parts, to mirror here. */
     mirrorChoices: { title: string; description: string; add: () => void }[];
+    buttonClassName?: string;
+    buttonLabel?: React.ReactNode;
+    buttonTitle?: string;
+    ariaLabel?: string;
+    anchorBias?: 'above' | 'below' | 'left' | 'right';
+    compact?: boolean;
 }) {
     const button = useRef<HTMLButtonElement>(null);
+    const searchRef = useRef<HTMLInputElement>(null);
     const [open, setOpen] = useState(false);
+    const [query, setQuery] = useState('');
     const [allTypes, setAllTypes] = useState(false);
     const library = open ? listLibraryGroups() : [];
+
+    useEffect(() => {
+        if (open) setQuery('');
+    }, [open]);
+
+    useFocusWhenShown(open, () => searchRef.current);
 
     const addModule = (plugin: ModulePlugin<JsonValue>, data?: JsonValue) => {
         const mod = new Module(plugin, data ?? plugin.initialData());
@@ -891,62 +912,166 @@ function AddMenu({
         }
     };
 
+    const needle = query.trim().toLowerCase();
+    const matches = (...fields: (string | undefined)[]) =>
+        !needle || fields.some((field) => field?.toLowerCase().includes(needle));
+
+    const writeEntries = [
+        {
+            key: 'text',
+            title: 'Text',
+            description: 'Your writing, with formatting.',
+            keywords: 'prose rich paragraph writing',
+            onClick: () => addText('html-contenteditable'),
+        },
+        {
+            key: 'styles',
+            title: 'Styles',
+            description: 'CSS for this chapter.',
+            keywords: 'css workskin stylesheet',
+            onClick: () => addText('css'),
+        },
+    ].filter((entry) => matches(entry.title, entry.description, entry.keywords));
+
+    const libraryEntries = library.filter((entry) => matches(entry.file.title, 'my groups'));
+    const blockEntries = EXAMPLE_GROUPS.filter((file) =>
+        matches(file.title, file.title.replace(/^AO3 · /, ''), 'blocks templates')
+    );
+    const filteredMirrors = mirrorChoices.filter((choice) =>
+        matches(choice.title, choice.description, 'mirror chapter')
+    );
+    const showMore = matches(
+        'Other module types…',
+        'Sass, Svelte, effects and more.',
+        'less html raw code transform'
+    );
+    const hasMatches =
+        writeEntries.length +
+            libraryEntries.length +
+            blockEntries.length +
+            filteredMirrors.length +
+            (showMore ? 1 : 0) >
+        0;
+
     return (
         <>
-            <button ref={button} className="i-add-button" onClick={() => setOpen(true)}>
-                + add
+            <button
+                ref={button}
+                type="button"
+                className={buttonClassName + (open ? ' is-active' : '')}
+                title={buttonTitle}
+                aria-label={ariaLabel}
+                aria-expanded={open}
+                onClick={() => setOpen((v) => !v)}
+            >
+                {buttonLabel}
             </button>
-            <DirPopover anchor={button.current} open={open} onClose={() => setOpen(false)}>
-                <div className="simple-add-menu" role="menu" aria-label="Add">
-                    <h3>Write</h3>
-                    <AddEntry
-                        title="Text"
-                        description="Your writing, with formatting."
-                        onClick={() => addText('html-contenteditable')}
-                    />
-                    <AddEntry
-                        title="Styles"
-                        description="CSS for this chapter."
-                        onClick={() => addText('css')}
-                    />
-                    {library.length ? <h3>My groups</h3> : null}
-                    {library.map((entry) => (
-                        <AddEntry
-                            key={entry.id}
-                            title={entry.file.title}
-                            onClick={() => addGroup(entry.file)}
-                        />
-                    ))}
-                    <h3>Blocks</h3>
-                    {EXAMPLE_GROUPS.map((file) => (
-                        <AddEntry
-                            key={file.title}
-                            title={file.title.replace(/^AO3 · /, '')}
-                            onClick={() => addGroup(file)}
-                        />
-                    ))}
-                    {mirrorChoices.length ? <h3>Mirror from other chapters</h3> : null}
-                    {mirrorChoices.map((choice, i) => (
-                        <AddEntry
-                            key={i}
-                            title={choice.title}
-                            description={choice.description}
-                            onClick={() => {
-                                setOpen(false);
-                                choice.add();
-                            }}
-                        />
-                    ))}
-                    <h3>More</h3>
-                    <AddEntry
-                        title="Other module types…"
-                        description="Sass, Svelte, effects and more."
-                        onClick={() => {
-                            setOpen(false);
-                            setAllTypes(true);
-                        }}
-                    />
-                </div>
+            <DirPopover
+                portal
+                anchor={button.current}
+                anchorBias={anchorBias}
+                open={open}
+                onClose={() => setOpen(false)}
+            >
+                {open ? (
+                    <div
+                        className={'simple-add-menu' + (compact ? ' is-compact' : '')}
+                        role="menu"
+                        aria-label="Add"
+                    >
+                        <div className="i-search">
+                            <input
+                                ref={searchRef}
+                                type="search"
+                                placeholder="Search blocks & modules…"
+                                aria-label="Search blocks and modules"
+                                value={query}
+                                onChange={(e) => setQuery(e.target.value)}
+                            />
+                        </div>
+                        <div className="i-list">
+                            {writeEntries.length ? (
+                                <>
+                                    <h3>Write</h3>
+                                    {writeEntries.map((entry) => (
+                                        <AddEntry
+                                            key={entry.key}
+                                            title={entry.title}
+                                            description={entry.description}
+                                            onClick={entry.onClick}
+                                        />
+                                    ))}
+                                </>
+                            ) : null}
+                            {libraryEntries.length ? (
+                                <>
+                                    <h3>My groups</h3>
+                                    {libraryEntries.map((entry) => (
+                                        <AddEntry
+                                            key={entry.id}
+                                            title={entry.file.title}
+                                            onClick={() => addGroup(entry.file)}
+                                        />
+                                    ))}
+                                </>
+                            ) : null}
+                            {blockEntries.length ? (
+                                <>
+                                    <h3>Blocks</h3>
+                                    {blockEntries.map((file) => (
+                                        <AddEntry
+                                            key={file.title}
+                                            title={file.title.replace(/^AO3 · /, '')}
+                                            onClick={() => addGroup(file)}
+                                        />
+                                    ))}
+                                </>
+                            ) : null}
+                            {filteredMirrors.length ? (
+                                <>
+                                    <h3>Mirror from other chapters</h3>
+                                    {filteredMirrors.map((choice, i) => (
+                                        <AddEntry
+                                            key={i}
+                                            title={choice.title}
+                                            description={choice.description}
+                                            onClick={() => {
+                                                setOpen(false);
+                                                choice.add();
+                                            }}
+                                        />
+                                    ))}
+                                </>
+                            ) : null}
+                            {showMore ? (
+                                <>
+                                    <h3>More</h3>
+                                    <AddEntry
+                                        title="Other module types…"
+                                        description="Sass, Svelte, effects and more."
+                                        onClick={() => {
+                                            setOpen(false);
+                                            setAllTypes(true);
+                                        }}
+                                    />
+                                </>
+                            ) : null}
+                            {!hasMatches ? (
+                                <div className="i-empty">
+                                    <p>No matching items.</p>
+                                    <AddEntry
+                                        title="Browse all module types…"
+                                        description="Sass, Svelte, effects and more."
+                                        onClick={() => {
+                                            setOpen(false);
+                                            setAllTypes(true);
+                                        }}
+                                    />
+                                </div>
+                            ) : null}
+                        </div>
+                    </div>
+                ) : null}
             </DirPopover>
             <ModulePicker
                 open={allTypes}
@@ -972,7 +1097,7 @@ function AddEntry({
     onClick: () => void;
 }) {
     return (
-        <button className="i-entry" role="menuitem" onClick={onClick}>
+        <button type="button" className="i-entry" role="menuitem" onClick={onClick}>
             <span className="i-title">{title}</span>
             {description ? <span className="i-description">{description}</span> : null}
         </button>

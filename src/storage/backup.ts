@@ -11,6 +11,12 @@ import {
 } from './checkpoints';
 import { LibraryGroup, listLibraryGroups, replaceLibraryGroups } from './group-library';
 import { parseGroupFile } from './group-file';
+import {
+    LibraryStyle,
+    listLibraryStyles,
+    parseLibraryStyle,
+    replaceLibraryStyles,
+} from './style-library';
 import { deserialize, IStorage, nextDocumentId, serialize, StoredWork } from './index';
 
 export interface LibraryBackup {
@@ -20,6 +26,7 @@ export interface LibraryBackup {
     works: StoredWork[];
     groups: LibraryGroup[];
     profiles: TargetProfile[];
+    styles?: LibraryStyle[];
 }
 
 export async function createBackup(
@@ -42,6 +49,7 @@ export async function createBackup(
         works: [...works.values()],
         groups: listLibraryGroups(),
         profiles: listProfiles(),
+        styles: listLibraryStyles(),
     };
 }
 
@@ -146,7 +154,31 @@ export function parseBackup(source: string): LibraryBackup {
         profileIds.add(profile.id);
         return profile;
     });
-    return { eo3: 'backup', version: 1, createdAt: value.createdAt, works, groups, profiles };
+    const styleIds = new Set<string>();
+    const styles: LibraryStyle[] =
+        value.styles === undefined
+            ? []
+            : Array.isArray(value.styles)
+            ? value.styles.map((raw: unknown) => {
+                  const parsed = parseLibraryStyle(raw);
+                  if (!parsed || styleIds.has(parsed.id)) {
+                      throw new Error('The backup contains an invalid custom style.');
+                  }
+                  styleIds.add(parsed.id);
+                  return parsed;
+              })
+            : (() => {
+                  throw new Error('The backup contains an invalid custom styles list.');
+              })();
+    return {
+        eo3: 'backup',
+        version: 1,
+        createdAt: value.createdAt,
+        works,
+        groups,
+        profiles,
+        ...(styles.length ? { styles } : {}),
+    };
 }
 
 function remapTargets(source: string, targetIds: Map<string, string>) {
@@ -169,6 +201,7 @@ export async function importBackup(storage: IStorage, source: string): Promise<s
     const backup = parseBackup(source);
     const oldProfiles = listProfiles();
     const oldGroups = listLibraryGroups();
+    const oldStyles = listLibraryStyles();
     const profiles = oldProfiles.slice();
     const targetIds = new Map<string, string>();
     for (const profile of backup.profiles) {
@@ -210,14 +243,26 @@ export async function importBackup(storage: IStorage, source: string): Promise<s
         ...oldGroups,
         ...backup.groups.map((group) => ({ ...group, id: crypto.randomUUID() })),
     ];
+    const styles = [
+        ...oldStyles,
+        ...(backup.styles ?? []).map((entry) => ({
+            ...entry,
+            id: crypto.randomUUID().slice(0, 12),
+        })),
+    ];
     let profilesWritten = false;
     let groupsWritten = false;
+    let stylesWritten = false;
     try {
         // IDB commits all imported works/history atomically. Roll back library writes if it fails.
         replaceProfiles(profiles);
         profilesWritten = true;
         replaceLibraryGroups(groups);
         groupsWritten = true;
+        if (backup.styles?.length) {
+            replaceLibraryStyles(styles);
+            stylesWritten = true;
+        }
         await storage.importStoredWorks(works);
     } catch (error) {
         const rollback: string[] = [];
@@ -230,6 +275,11 @@ export async function importBackup(storage: IStorage, source: string): Promise<s
             if (groupsWritten) replaceLibraryGroups(oldGroups);
         } catch {
             rollback.push('My groups');
+        }
+        try {
+            if (stylesWritten) replaceLibraryStyles(oldStyles);
+        } catch {
+            rollback.push('custom styles');
         }
         if (rollback.length)
             throw new Error(

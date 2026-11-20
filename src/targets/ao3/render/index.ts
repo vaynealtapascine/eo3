@@ -52,16 +52,46 @@ export function renderAo3Content(
     return run.result;
 }
 
+export function renderAo3Preview(content: string): Ao3RenderResult {
+    let run = recentPreviewRuns.get(content);
+    if (run) {
+        recentPreviewRuns.delete(content);
+    } else {
+        run = runPipeline(content, () => {}, true);
+        if (recentPreviewRuns.size >= MAX_CACHED_RUNS) {
+            recentPreviewRuns.delete(recentPreviewRuns.keys().next().value!);
+        }
+    }
+    recentPreviewRuns.set(content, run);
+    return run;
+}
+
+/**
+ * Runs AO3's HTML sanitizer over an inline-editable fragment without ParagraphMaker, so inline
+ * hosts (`<span>`, `<p>`, `<strong>`) never get wrapped in illegal `<p>` tags.
+ */
+export function sanitizeAo3Fragment(html: string): string {
+    const root = document.createElement('myroot');
+    root.innerHTML = fixBadCharacters(html).replace(UNSUITABLE_CHARS, '');
+    sanitizeFragment(
+        root,
+        buildContentConfig(() => {})
+    );
+    return root.innerHTML.replace(/&nbsp;/g, ' ');
+}
+
 /** Enough for every chapter of a long work; the least recently used run is dropped first. */
 const MAX_CACHED_RUNS = 256;
 const recentRuns = new Map<
     string,
     { result: Ao3RenderResult; diagnostics: Ao3RenderDiagnostic[] }
 >();
+const recentPreviewRuns = new Map<string, Ao3RenderResult>();
 
 function runPipeline(
     content: string,
-    onDiagnostic: (diagnostic: Ao3RenderDiagnostic) => void
+    onDiagnostic: (diagnostic: Ao3RenderDiagnostic) => void,
+    preserveEditorMarkers = false
 ): Ao3RenderResult {
     const root = document.createElement('myroot');
     root.innerHTML = fixBadCharacters(rubyStrip(content)).replace(UNSUITABLE_CHARS, '');
@@ -70,7 +100,9 @@ function runPipeline(
     // (e.g. a <p> inside raw-text <title> becomes text), so do the same.
     root.innerHTML = root.innerHTML;
     const css = liftInlineStyles(root, onDiagnostic);
-    sanitizeFragment(root, buildContentConfig(onDiagnostic), onDiagnostic);
+    sanitizeFragment(root, buildContentConfig(onDiagnostic), onDiagnostic, {
+        preserveEditorMarkers,
+    });
     // sanitize_value turns &nbsp; entities into literal U+00A0, so the output equals what AO3 stores.
     return { html: root.innerHTML.replace(/&nbsp;/g, ' '), css };
 }

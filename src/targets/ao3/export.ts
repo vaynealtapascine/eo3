@@ -8,10 +8,15 @@ export function exportWork(
     input: WorkExportInput<RenderConfig>,
     pushError: PushError
 ): WorkExportOutput {
-    return exportSharedStylesheet(input, pushError, renderAo3Content, (css, report) =>
-        cleanWorkskinCss(css, {
-            prefix: '#workskin',
-            onDiagnostic: (d) => report(`css-${d.kind}`, d),
-        })
+    return exportSharedStylesheet(
+        input,
+        pushError,
+        renderAo3Content,
+        (css, report) =>
+            cleanWorkskinCss(css, {
+                prefix: '#workskin',
+                onDiagnostic: (d) => report(`css-${d.kind}`, d),
+            }),
+        '#workskin'
     );
 }

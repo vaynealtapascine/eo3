@@ -40,3 +40,69 @@
         height: 50vh;
     }
 }
+
+.i-text-footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5em;
+    font-size: 0.88em;
+
+    .i-view-toggle {
+        display: inline-flex;
+        border: 1px solid var(--P-separator);
+        border-radius: 0.4em;
+        overflow: hidden;
+
+        button {
+            font: inherit;
+            color: inherit;
+            background: none;
+            border: none;
+            padding: 0.15em 0.6em;
+            cursor: pointer;
+
+            &:hover:not(.is-active),
+            &:focus-visible:not(.is-active) {
+                background: var(--P-item-selected-bg);
+            }
+
+            &.is-active {
+                background: rgb(var(--P-color-accent));
+                color: rgb(var(--P-color-accent-fg));
+            }
+        }
+    }
+
+    .i-footer-btn {
+        font: inherit;
+        color: inherit;
+        background: none;
+        border: 1px solid var(--P-separator);
+        border-radius: 0.4em;
+        padding: 0.15em 0.55em;
+        cursor: pointer;
+
+        &:hover,
+        &:focus-visible {
+            background: var(--P-item-selected-bg);
+        }
+    }
+
+    .i-mode-control {
+        margin-left: auto;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3em;
+        opacity: 0.85;
+
+        select {
+            font: inherit;
+            color: inherit;
+            background: rgb(var(--P-card-bg));
+            border: 1px solid var(--P-separator);
+            border-radius: 0.35em;
+            padding: 0.1em 0.35em;
+        }
+    }
+}

@@ -1,0 +1,1117 @@
+import React, { memo, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { AnyModule, Document, JsonValue, ModuleGroup } from '../../document';
+import { constrainNumber, settingType } from '../../plugins/source/settings-values';
+import { renderAo3Preview } from '../../targets/ao3/render';
+import { DirPopover } from '../../uikit/dir-popover';
+import { RenderContext } from '../render-context';
+import { EditIcon } from './icons';
+import {
+    annotateInteractivePreview,
+    cleanEditableRichHtml,
+    editableModeOf,
+    findHtmlSourceModule,
+    findNamedInputModule,
+    findSettingsField,
+    stampEditableSlots,
+    TextHelpMetadata,
+    updateSettingsFieldValue,
+    updateTextModuleContents,
+    writeEditableSlot,
+} from './inline-template-helpers';
+
+export interface InlinePreviewIslandProps {
+    document: Document;
+    group?: ModuleGroup;
+    module?: AnyModule;
+    name: string;
+    rawHtml: string;
+    editor?: React.ReactNode;
+    renderEditor?: () => React.ReactNode;
+    showReorder: boolean;
+    canMoveUp: boolean;
+    canMoveDown: boolean;
+    onMoveUp: () => void;
+    onMoveDown: () => void;
+    onRemove: () => void;
+}
+
+interface CleanupOptions {
+    /** True when transitioning directly to another editable slot in the same island. */
+    handoff?: boolean;
+}
+
+interface ActiveDomEdit {
+    kind: 'editable' | 'field' | 'input';
+    el: HTMLElement;
+    cleanup: (options?: CleanupOptions) => void;
+}
+
+interface ActiveInputPortal {
+    container: HTMLElement;
+    moduleId: string;
+    label: string;
+    initialValue: string;
+    help?: TextHelpMetadata;
+}
+
+const INLINE_DEBOUNCE_MS = 120;
+
+const INLINE_FORMAT_TAGS = new Set([
+    'A',
+    'B',
+    'CODE',
+    'DEL',
+    'EM',
+    'I',
+    'INS',
+    'S',
+    'SMALL',
+    'STRONG',
+    'SUB',
+    'SUP',
+    'U',
+]);
+
+let measureCtx: CanvasRenderingContext2D | null | undefined;
+function getMeasureContext(): CanvasRenderingContext2D | null {
+    if (measureCtx !== undefined) return measureCtx;
+    if (
+        typeof document === 'undefined' ||
+        (typeof navigator !== 'undefined' && /jsdom/i.test(navigator.userAgent))
+    ) {
+        measureCtx = null;
+        return null;
+    }
+    try {
+        measureCtx = document.createElement('canvas').getContext('2d');
+    } catch {
+        measureCtx = null;
+    }
+    return measureCtx;
+}
+
+function applyTextTransform(text: string, transform: string): string {
+    if (transform === 'uppercase') return text.toUpperCase();
+    if (transform === 'lowercase') return text.toLowerCase();
+    return text;
+}
+
+function measureTextPx(text: string, styleEl: HTMLElement): number {
+    const ctx = getMeasureContext();
+    if (!ctx || typeof window === 'undefined' || !window.getComputedStyle) return 0;
+    const style = window.getComputedStyle(styleEl);
+    const font =
+        style.font && style.font.trim()
+            ? style.font
+            : `${style.fontStyle || 'normal'} ${style.fontWeight || '400'} ${
+                  style.fontSize || '14px'
+              } ${style.fontFamily || 'sans-serif'}`;
+    ctx.font = font;
+    const sample = applyTextTransform(text, style.textTransform || 'none');
+    const metrics = ctx.measureText(sample);
+    if (!Number.isFinite(metrics.width) || metrics.width <= 0) return 0;
+    const letterSpacing = parseFloat(style.letterSpacing || '0');
+    const extraSpacing =
+        Number.isFinite(letterSpacing) && letterSpacing !== 0 && sample.length > 1
+            ? letterSpacing * (sample.length - 1)
+            : 0;
+    return metrics.width + extraSpacing;
+}
+
+function measureLeadingNodesWidth(el: HTMLElement, firstStructuralChild?: ChildNode): number {
+    if (typeof document === 'undefined') return 0;
+    try {
+        if (!firstStructuralChild) {
+            return el.getBoundingClientRect().width;
+        }
+        const range = document.createRange();
+        range.setStart(el, 0);
+        range.setEndBefore(firstStructuralChild);
+        return range.getBoundingClientRect().width;
+    } catch {
+        return 0;
+    }
+}
+
+function sizeInlineInput(
+    input: HTMLInputElement,
+    styleEl: HTMLElement,
+    initialMeasuredPx = 0
+): void {
+    const text = input.value || input.placeholder || '   ';
+    const px = measureTextPx(text, styleEl);
+    if (px > 0 || initialMeasuredPx > 0) {
+        const targetPx = Math.ceil(Math.max(px + 8, initialMeasuredPx + 4, 28));
+        input.style.width = `${targetPx}px`;
+        return;
+    }
+    const len = Math.max(input.value.length, input.placeholder.length, 3);
+    input.style.width = `${Math.min(len + 1.5, 60)}ch`;
+}
+
+function sizeTextarea(textarea: HTMLTextAreaElement): void {
+    textarea.style.height = 'auto';
+    textarea.style.height = `${Math.max(textarea.scrollHeight, 36)}px`;
+}
+
+function selectAllEditableContent(el: HTMLElement): void {
+    if (typeof window === 'undefined' || !window.getSelection) return;
+    const selection = window.getSelection();
+    if (!selection) return;
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    selection.removeAllRanges();
+    selection.addRange(range);
+}
+
+/**
+ * Renders a ready-made block or custom/raw-HTML module as a live AO3 preview island inside the
+ * chapter. Templates that mark regions with `data-edit`, `data-edit-field`, or `data-edit-input`
+ * can be edited directly in-place inside the styled preview, while the compact floating pill bar
+ * still opens the full input/code popover when needed.
+ */
+export const InlinePreviewIsland = memo(function InlinePreviewIsland({
+    document: doc,
+    group,
+    module,
+    name,
+    rawHtml,
+    editor,
+    renderEditor,
+    showReorder,
+    canMoveUp,
+    canMoveDown,
+    onMoveUp,
+    onMoveDown,
+    onRemove,
+}: InlinePreviewIslandProps) {
+    const { renderNow } = useContext(RenderContext);
+    const [popoverOpen, setPopoverOpen] = useState(false);
+    const [inlineEditing, setInlineEditing] = useState(false);
+    const [activeInput, setActiveInput] = useState<ActiveInputPortal | null>(null);
+    const [syncTick, setSyncTick] = useState(0);
+
+    const islandRef = useRef<HTMLDivElement>(null);
+    const editBtnRef = useRef<HTMLButtonElement>(null);
+    const previewRef = useRef<HTMLDivElement>(null);
+    const activeEditRef = useRef<ActiveDomEdit | null>(null);
+    const handoffInProgressRef = useRef(false);
+    const handledMouseDownElRef = useRef<HTMLElement | null>(null);
+    const lastAppliedHtmlRef = useRef<string | null>(null);
+    const lastSyncTickRef = useRef(-1);
+    const updatingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const draftFlushRef = useRef<(() => boolean) | null>(null);
+
+    const previewHtml = useMemo(
+        () => (rawHtml.trim() ? renderAo3Preview(stampEditableSlots(rawHtml)).html : ''),
+        [rawHtml]
+    );
+
+    // Keep latest props available to imperative DOM event handlers without re-binding listeners.
+    const docRef = useRef(doc);
+    docRef.current = doc;
+    const groupRef = useRef(group);
+    groupRef.current = group;
+    const moduleRef = useRef(module);
+    moduleRef.current = module;
+    const renderNowRef = useRef(renderNow);
+    renderNowRef.current = renderNow;
+
+    // Sync rendered AO3 HTML into the live preview DOM whenever no inline edit is actively locked.
+    useEffect(() => {
+        const container = previewRef.current;
+        if (!container) {
+            lastAppliedHtmlRef.current = null;
+            return;
+        }
+        if (activeEditRef.current || handoffInProgressRef.current) return;
+
+        const htmlChanged = lastAppliedHtmlRef.current !== previewHtml;
+        const tickChanged = lastSyncTickRef.current !== syncTick;
+        if (!htmlChanged && !tickChanged) return;
+
+        if (htmlChanged) {
+            if (updatingTimeoutRef.current) {
+                clearTimeout(updatingTimeoutRef.current);
+                updatingTimeoutRef.current = null;
+            }
+            container.innerHTML = previewHtml;
+            lastAppliedHtmlRef.current = previewHtml;
+        }
+        lastSyncTickRef.current = syncTick;
+        annotateInteractivePreview(container, docRef.current, groupRef.current, moduleRef.current);
+    }, [previewHtml, syncTick, doc, group, module]);
+
+    // Flush & tear down any active inline edit on unmount.
+    useEffect(() => {
+        return () => {
+            if (updatingTimeoutRef.current) {
+                clearTimeout(updatingTimeoutRef.current);
+                updatingTimeoutRef.current = null;
+            }
+            activeEditRef.current?.cleanup({ handoff: true });
+            activeEditRef.current = null;
+        };
+    }, []);
+
+    const closeInputPortal = useCallback(() => {
+        if (activeEditRef.current?.kind === 'input') {
+            activeEditRef.current.cleanup();
+        }
+    }, []);
+
+    const activateRef = useRef<
+        (el: HTMLElement, opts?: { fromMouseDown?: boolean; selectAll?: boolean }) => void
+    >(() => {});
+
+    const navigateFrom = useCallback((currentEl: HTMLElement, direction: 1 | -1): boolean => {
+        const container = previewRef.current;
+        if (!container) return false;
+        const list = Array.from(container.querySelectorAll<HTMLElement>('[data-edit-interactive]'));
+        const idx = list.indexOf(currentEl);
+        if (idx === -1) return false;
+        const nextIdx = idx + direction;
+        if (nextIdx < 0 || nextIdx >= list.length) return false;
+        const nextEl = list[nextIdx];
+        handoffInProgressRef.current = true;
+        try {
+            activeEditRef.current?.cleanup({ handoff: true });
+            activateRef.current(nextEl, { selectAll: true });
+        } finally {
+            handoffInProgressRef.current = false;
+        }
+        return true;
+    }, []);
+
+    const startEditableSlot = useCallback(
+        (el: HTMLElement, opts?: { fromMouseDown?: boolean; selectAll?: boolean }) => {
+            const htmlMod = findHtmlSourceModule(
+                docRef.current,
+                groupRef.current,
+                moduleRef.current
+            );
+            if (!htmlMod) return;
+            const slotAttr = el.getAttribute('data-edit-slot-index');
+            if (slotAttr === null) return;
+            const slotIndex = Number(slotAttr);
+            if (!Number.isInteger(slotIndex) || slotIndex < 0) return;
+
+            const mode = editableModeOf(el);
+            const originalHtml = el.innerHTML;
+            const originalText = el.textContent ?? '';
+            const moduleId = htmlMod.id;
+            let timer: ReturnType<typeof setTimeout> | null = null;
+            let reverted = false;
+            let finished = false;
+
+            const commitValue = (value: string) => {
+                const currentMod = docRef.current.findModule(moduleId);
+                if (!currentMod) return;
+                const currentSource = String(
+                    (currentMod.data as { contents?: unknown } | null)?.contents ?? ''
+                );
+                const nextSource = writeEditableSlot(currentSource, slotIndex, mode, value);
+                if (nextSource !== currentSource) {
+                    updateTextModuleContents(docRef.current, moduleId, nextSource);
+                }
+            };
+
+            const flush = () => {
+                if (timer) {
+                    clearTimeout(timer);
+                    timer = null;
+                }
+                if (!reverted) {
+                    commitValue(mode === 'rich' ? el.innerHTML : el.textContent ?? '');
+                }
+            };
+
+            const onInput = () => {
+                if (timer) clearTimeout(timer);
+                timer = setTimeout(flush, INLINE_DEBOUNCE_MS);
+            };
+
+            const onKeyDown = (e: KeyboardEvent) => {
+                if (e.key === 'Escape') {
+                    e.preventDefault();
+                    reverted = true;
+                    if (timer) {
+                        clearTimeout(timer);
+                        timer = null;
+                    }
+                    if (mode === 'rich') {
+                        el.innerHTML = originalHtml;
+                        commitValue(originalHtml);
+                    } else {
+                        el.textContent = originalText;
+                        commitValue(originalText);
+                    }
+                    el.blur();
+                    return;
+                }
+                if (e.key === 'Tab') {
+                    const moved = navigateFrom(el, e.shiftKey ? -1 : 1);
+                    if (moved) {
+                        e.preventDefault();
+                        return;
+                    }
+                }
+                if (mode === 'text' && e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    el.blur();
+                }
+            };
+
+            const onPaste = (e: ClipboardEvent) => {
+                const clip = e.clipboardData;
+                if (!clip) return;
+                e.preventDefault();
+                const selection = window.getSelection();
+                if (!selection || !selection.rangeCount) return;
+                const range = selection.getRangeAt(0);
+                range.deleteContents();
+                if (mode === 'rich') {
+                    const rawClipHtml = clip.getData('text/html');
+                    if (rawClipHtml) {
+                        const cleaned = cleanEditableRichHtml(rawClipHtml, el.tagName);
+                        const frag = document.createRange().createContextualFragment(cleaned);
+                        range.insertNode(frag);
+                        range.collapse(false);
+                    } else {
+                        const textNode = document.createTextNode(clip.getData('text/plain'));
+                        range.insertNode(textNode);
+                        range.setStartAfter(textNode);
+                        range.collapse(true);
+                    }
+                } else {
+                    const text = clip.getData('text/plain').replace(/\r?\n/g, ' ');
+                    const textNode = document.createTextNode(text);
+                    range.insertNode(textNode);
+                    range.setStartAfter(textNode);
+                    range.collapse(true);
+                }
+                selection.removeAllRanges();
+                selection.addRange(range);
+                onInput();
+            };
+
+            const finish = (cleanupOpts?: CleanupOptions) => {
+                if (finished) return;
+                finished = true;
+                flush();
+                el.removeEventListener('input', onInput);
+                el.removeEventListener('keydown', onKeyDown);
+                el.removeEventListener('paste', onPaste);
+                el.removeEventListener('blur', onBlur);
+                el.contentEditable = 'false';
+                el.classList.remove('is-inline-editing');
+                if (activeEditRef.current?.cleanup === finish) {
+                    activeEditRef.current = null;
+                }
+                if (!cleanupOpts?.handoff) {
+                    setInlineEditing(false);
+                    setSyncTick((v) => v + 1);
+                }
+            };
+
+            const onBlur = () => {
+                if (handoffInProgressRef.current) return;
+                finish();
+            };
+
+            activeEditRef.current = { kind: 'editable', el, cleanup: finish };
+            setInlineEditing(true);
+            el.contentEditable = 'true';
+            el.classList.add('is-inline-editing');
+            el.addEventListener('input', onInput);
+            el.addEventListener('keydown', onKeyDown);
+            el.addEventListener('paste', onPaste);
+            el.addEventListener('blur', onBlur);
+
+            if (opts?.fromMouseDown) {
+                // Letting native mousedown run places the caret at the exact clicked character;
+                // ensure focus on the next frame in case the click was on an empty/padding edge.
+                requestAnimationFrame(() => {
+                    if (!finished && document.activeElement !== el) {
+                        el.focus();
+                    }
+                });
+            } else {
+                el.focus();
+                if (opts?.selectAll) {
+                    selectAllEditableContent(el);
+                }
+            }
+        },
+        [navigateFrom]
+    );
+
+    const startSettingsField = useCallback(
+        (el: HTMLElement, opts?: { selectAll?: boolean }) => {
+            const key = el.getAttribute('data-edit-field') ?? '';
+            const resolved = findSettingsField(docRef.current, groupRef.current, key);
+            if (!resolved) return;
+
+            const { module: settingsMod, field, value } = resolved;
+            const type = settingType(field);
+            const prefix = el.getAttribute('data-edit-prefix') ?? '';
+            const initialValue = value;
+            const initialStr = typeof value === 'string' ? value : String(value ?? '');
+
+            // Detect whether `el` has trailing structural children (like `<br>` or `<span data-edit-field>`)
+            // so we only replace the leading text nodes and leave child fields/lines intact.
+            const firstStructuralChild = Array.from(el.childNodes).find(
+                (node) =>
+                    node.nodeType === Node.ELEMENT_NODE &&
+                    !INLINE_FORMAT_TAGS.has((node as Element).tagName)
+            );
+            const initialWidthPx = Math.max(
+                0,
+                measureLeadingNodesWidth(el, firstStructuralChild) -
+                    (prefix ? measureTextPx(prefix, el) : 0)
+            );
+            const savedLeadingNodes: ChildNode[] = [];
+            const savedInnerHtml = el.innerHTML;
+
+            let control: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
+            if (type === 'choice') {
+                const select = document.createElement('select');
+                select.className = 'eo3-inline-field-input is-select';
+                select.setAttribute('aria-label', field.label || field.key);
+                for (const opt of field.options ?? []) {
+                    const optionEl = document.createElement('option');
+                    optionEl.value = opt;
+                    optionEl.textContent = opt;
+                    select.appendChild(optionEl);
+                }
+                select.value = initialStr;
+                control = select;
+            } else if (type === 'paragraph') {
+                const textarea = document.createElement('textarea');
+                textarea.className = 'eo3-inline-field-input is-multiline';
+                textarea.setAttribute('aria-label', field.label || field.key);
+                textarea.rows = 2;
+                textarea.value = initialStr;
+                control = textarea;
+            } else {
+                const input = document.createElement('input');
+                input.type = type === 'number' ? 'number' : 'text';
+                input.className = 'eo3-inline-field-input';
+                input.setAttribute('aria-label', field.label || field.key);
+                if (type === 'number') {
+                    if (field.min !== undefined) input.min = String(field.min);
+                    if (field.max !== undefined) input.max = String(field.max);
+                    if (field.step !== undefined) input.step = String(field.step);
+                }
+                input.value = initialStr;
+                input.placeholder = field.label || field.key;
+                sizeInlineInput(input, el, initialWidthPx);
+                control = input;
+            }
+
+            const prefixNode = prefix ? document.createTextNode(prefix) : null;
+            if (firstStructuralChild) {
+                while (el.firstChild && el.firstChild !== firstStructuralChild) {
+                    const removed = el.removeChild(el.firstChild);
+                    savedLeadingNodes.push(removed);
+                }
+                if (prefixNode) el.insertBefore(prefixNode, firstStructuralChild);
+                el.insertBefore(control, firstStructuralChild);
+            } else {
+                el.textContent = '';
+                if (prefixNode) el.appendChild(prefixNode);
+                el.appendChild(control);
+            }
+
+            if (control instanceof HTMLTextAreaElement) {
+                sizeTextarea(control);
+            }
+
+            let timer: ReturnType<typeof setTimeout> | null = null;
+            let reverted = false;
+            let finished = false;
+            let dirty = false;
+
+            const parseControlValue = (): JsonValue => {
+                if (type === 'number') {
+                    const n = Number(control.value);
+                    return Number.isFinite(n) ? constrainNumber(field, n) : initialValue;
+                }
+                return control.value;
+            };
+
+            const commitNow = (val: JsonValue) => {
+                updateSettingsFieldValue(docRef.current, settingsMod.id, field.key, val);
+            };
+
+            const onInput = () => {
+                dirty = true;
+                if (control instanceof HTMLInputElement) sizeInlineInput(control, el);
+                if (control instanceof HTMLTextAreaElement) sizeTextarea(control);
+                if (timer) clearTimeout(timer);
+                const nextVal = parseControlValue();
+                if (type === 'choice') {
+                    commitNow(nextVal);
+                    renderNowRef.current();
+                } else {
+                    timer = setTimeout(() => commitNow(nextVal), INLINE_DEBOUNCE_MS);
+                }
+            };
+
+            const onKeyDown = (e: KeyboardEvent) => {
+                if (e.key === 'Escape') {
+                    e.preventDefault();
+                    reverted = true;
+                    if (timer) {
+                        clearTimeout(timer);
+                        timer = null;
+                    }
+                    if (dirty) {
+                        commitNow(initialValue);
+                        renderNowRef.current();
+                    }
+                    control.blur();
+                    return;
+                }
+                if (e.key === 'Tab') {
+                    const moved = navigateFrom(el, e.shiftKey ? -1 : 1);
+                    if (moved) {
+                        e.preventDefault();
+                        return;
+                    }
+                }
+                if (
+                    e.key === 'Enter' &&
+                    (!(control instanceof HTMLTextAreaElement) || e.ctrlKey || e.metaKey)
+                ) {
+                    e.preventDefault();
+                    control.blur();
+                }
+            };
+
+            const finish = (cleanupOpts?: CleanupOptions) => {
+                if (finished) return;
+                finished = true;
+                if (timer) {
+                    clearTimeout(timer);
+                    timer = null;
+                }
+                const committedVal = reverted ? initialValue : parseControlValue();
+                const changed = !reverted && committedVal !== initialValue;
+                if (!reverted) commitNow(committedVal);
+
+                control.removeEventListener('input', onInput);
+                control.removeEventListener('change', onInput);
+                (control as HTMLElement).removeEventListener('keydown', onKeyDown);
+                control.removeEventListener('blur', onBlur);
+                el.classList.remove('is-inline-editing');
+
+                // Immediately show the committed text in-place so there is zero flash before Svelte re-renders.
+                if (reverted) {
+                    if (firstStructuralChild) {
+                        prefixNode?.remove();
+                        control.remove();
+                        for (const node of savedLeadingNodes) {
+                            el.insertBefore(node, firstStructuralChild);
+                        }
+                    } else {
+                        el.innerHTML = savedInnerHtml;
+                    }
+                } else {
+                    const display = String(committedVal ?? '');
+                    if (firstStructuralChild) {
+                        prefixNode?.remove();
+                        control.replaceWith(document.createTextNode(prefix + display));
+                    } else {
+                        el.textContent = prefix + display;
+                    }
+                }
+
+                if (changed) {
+                    renderNowRef.current();
+                }
+
+                if (activeEditRef.current?.cleanup === finish) {
+                    activeEditRef.current = null;
+                }
+                if (!cleanupOpts?.handoff) {
+                    setInlineEditing(false);
+                    setSyncTick((v) => v + 1);
+                }
+            };
+
+            const onBlur = () => {
+                if (handoffInProgressRef.current) return;
+                finish();
+            };
+
+            activeEditRef.current = { kind: 'field', el, cleanup: finish };
+            setInlineEditing(true);
+            el.classList.add('is-inline-editing');
+            control.addEventListener('input', onInput);
+            control.addEventListener('change', onInput);
+            (control as HTMLElement).addEventListener('keydown', onKeyDown);
+            control.addEventListener('blur', onBlur);
+            control.focus();
+            if (control instanceof HTMLInputElement && control.type === 'text') {
+                if (opts?.selectAll) {
+                    control.select();
+                } else {
+                    const end = control.value.length;
+                    control.setSelectionRange(end, end);
+                }
+            }
+        },
+        [navigateFrom]
+    );
+
+    const startInputRegion = useCallback((el: HTMLElement) => {
+        const inputName = el.getAttribute('data-edit-input') ?? '';
+        const targetMod = findNamedInputModule(docRef.current, groupRef.current, inputName);
+        if (!targetMod) return;
+
+        const data = targetMod.data as { contents?: unknown; help?: TextHelpMetadata } | null;
+        const initialValue = String(data?.contents ?? '');
+        const inputEntry = groupRef.current?.inputs?.find((i) => i.moduleId === targetMod.id);
+        const label = inputEntry?.label || targetMod.title || inputName || 'Text';
+
+        let finished = false;
+        const finish = (cleanupOpts?: CleanupOptions) => {
+            if (finished) return;
+            finished = true;
+            const changed = draftFlushRef.current?.() ?? false;
+            draftFlushRef.current = null;
+            el.classList.remove('is-inline-input-editing');
+            if (activeEditRef.current?.cleanup === finish) {
+                activeEditRef.current = null;
+            }
+            setActiveInput(null);
+            if (changed) {
+                el.classList.add('is-inline-updating');
+                if (updatingTimeoutRef.current) clearTimeout(updatingTimeoutRef.current);
+                updatingTimeoutRef.current = setTimeout(() => {
+                    el.classList.remove('is-inline-updating');
+                    updatingTimeoutRef.current = null;
+                }, 1500);
+                renderNowRef.current();
+            }
+            if (!cleanupOpts?.handoff) {
+                setInlineEditing(false);
+                setSyncTick((v) => v + 1);
+            }
+        };
+
+        activeEditRef.current = { kind: 'input', el, cleanup: finish };
+        el.classList.add('is-inline-input-editing');
+        setInlineEditing(true);
+        setActiveInput({
+            container: el,
+            moduleId: targetMod.id,
+            label,
+            initialValue,
+            help: data?.help,
+        });
+    }, []);
+
+    const activateInteractive = useCallback(
+        (el: HTMLElement, opts?: { fromMouseDown?: boolean; selectAll?: boolean }) => {
+            const kind = el.getAttribute('data-edit-interactive');
+            if (!kind) return;
+            if (kind === 'editable') {
+                startEditableSlot(el, opts);
+            } else if (kind === 'field') {
+                startSettingsField(el, opts);
+            } else if (kind === 'input') {
+                startInputRegion(el);
+            }
+        },
+        [startEditableSlot, startSettingsField, startInputRegion]
+    );
+    activateRef.current = activateInteractive;
+
+    const findTargetInteractive = useCallback(
+        (rawTarget: HTMLElement | null): HTMLElement | null => {
+            if (!rawTarget) return null;
+            if (
+                rawTarget.closest(
+                    '.eo3-inline-field-input, .eo3-inline-draft-editor, .is-inline-editing'
+                )
+            ) {
+                return null;
+            }
+            if (rawTarget.closest('summary')) return null;
+            const interactive = rawTarget.closest<HTMLElement>('[data-edit-interactive]');
+            if (!interactive || !previewRef.current?.contains(interactive)) return null;
+            return interactive;
+        },
+        []
+    );
+
+    const handlePreviewMouseDown = useCallback(
+        (e: React.MouseEvent<HTMLDivElement>) => {
+            if (e.button !== 0) return;
+            const rawTarget = e.target as HTMLElement | null;
+            const interactive = findTargetInteractive(rawTarget);
+            if (!interactive) return;
+            if (activeEditRef.current?.el === interactive) return;
+
+            const kind = interactive.getAttribute('data-edit-interactive');
+            if (!kind) return;
+
+            if (rawTarget?.closest('a[href]')) {
+                e.preventDefault();
+            }
+
+            // For non-contentEditable targets (`field` / `input`), prevent default mousedown focus/blur
+            // churn so the new input/textarea gets clean focus on the very first click.
+            if (kind !== 'editable') {
+                e.preventDefault();
+            }
+
+            handledMouseDownElRef.current = interactive;
+            handoffInProgressRef.current = true;
+            try {
+                if (activeEditRef.current) {
+                    activeEditRef.current.cleanup({ handoff: true });
+                }
+                activateInteractive(interactive, { fromMouseDown: kind === 'editable' });
+            } finally {
+                handoffInProgressRef.current = false;
+            }
+        },
+        [activateInteractive, findTargetInteractive]
+    );
+
+    const handlePreviewClick = useCallback(
+        (e: React.MouseEvent<HTMLDivElement>) => {
+            const rawTarget = e.target as HTMLElement | null;
+            if (rawTarget?.closest('a[href]') && rawTarget.closest('[data-edit-interactive]')) {
+                e.preventDefault();
+            }
+
+            const interactive = findTargetInteractive(rawTarget);
+            if (!interactive) {
+                handledMouseDownElRef.current = null;
+                return;
+            }
+
+            if (handledMouseDownElRef.current === interactive) {
+                handledMouseDownElRef.current = null;
+                return;
+            }
+            handledMouseDownElRef.current = null;
+
+            if (activeEditRef.current?.el === interactive) return;
+
+            handoffInProgressRef.current = true;
+            try {
+                if (activeEditRef.current) {
+                    activeEditRef.current.cleanup({ handoff: true });
+                }
+                activateInteractive(interactive);
+            } finally {
+                handoffInProgressRef.current = false;
+            }
+        },
+        [activateInteractive, findTargetInteractive]
+    );
+
+    const preventBlurOnBarMouseDown = useCallback((e: React.MouseEvent) => {
+        if (activeEditRef.current) {
+            e.preventDefault();
+        }
+    }, []);
+
+    const openPopover = () => {
+        if (activeEditRef.current) activeEditRef.current.cleanup();
+        setPopoverOpen((v) => !v);
+    };
+
+    const handleMoveUp = () => {
+        if (activeEditRef.current) activeEditRef.current.cleanup();
+        onMoveUp();
+    };
+
+    const handleMoveDown = () => {
+        if (activeEditRef.current) activeEditRef.current.cleanup();
+        onMoveDown();
+    };
+
+    const handleRemove = () => {
+        if (activeEditRef.current) activeEditRef.current.cleanup();
+        onRemove();
+    };
+
+    return (
+        <div
+            ref={islandRef}
+            className={'eo3-inline-island' + (popoverOpen || inlineEditing ? ' is-editing' : '')}
+        >
+            <div
+                className="eo3-island-bar"
+                aria-label={`${name} block controls`}
+                onMouseDown={preventBlurOnBarMouseDown}
+            >
+                <span className="eo3-island-label">{name}</span>
+                <button
+                    ref={editBtnRef}
+                    type="button"
+                    className={'eo3-island-edit' + (popoverOpen ? ' is-active' : '')}
+                    aria-expanded={popoverOpen}
+                    onClick={openPopover}
+                >
+                    <EditIcon />
+                    <span>Edit</span>
+                </button>
+                {showReorder ? (
+                    <>
+                        <button
+                            type="button"
+                            title="Move up"
+                            aria-label={`Move ${name} up`}
+                            disabled={!canMoveUp}
+                            onClick={handleMoveUp}
+                        >
+                            ↑
+                        </button>
+                        <button
+                            type="button"
+                            title="Move down"
+                            aria-label={`Move ${name} down`}
+                            disabled={!canMoveDown}
+                            onClick={handleMoveDown}
+                        >
+                            ↓
+                        </button>
+                    </>
+                ) : null}
+                <button
+                    type="button"
+                    title="Remove"
+                    aria-label={`Remove ${name}`}
+                    onClick={handleRemove}
+                >
+                    ×
+                </button>
+            </div>
+            {previewHtml ? (
+                <div
+                    ref={previewRef}
+                    className="eo3-island-preview"
+                    onMouseDown={handlePreviewMouseDown}
+                    onClick={handlePreviewClick}
+                    onDoubleClick={(e) => {
+                        const target = e.target as HTMLElement | null;
+                        if (
+                            target?.closest(
+                                '[data-edit-interactive], .eo3-inline-field-input, .eo3-inline-draft-editor, .is-inline-editing'
+                            )
+                        ) {
+                            return;
+                        }
+                        openPopover();
+                    }}
+                />
+            ) : (
+                <div className="eo3-island-empty" onClick={() => setPopoverOpen(true)}>
+                    <span>{name}</span> — click Edit to fill in
+                </div>
+            )}
+            {activeInput
+                ? createPortal(
+                      <InlineDraftEditor
+                          document={doc}
+                          moduleId={activeInput.moduleId}
+                          label={activeInput.label}
+                          initialValue={activeInput.initialValue}
+                          help={activeInput.help}
+                          islandRoot={islandRef.current}
+                          flushRef={draftFlushRef}
+                          onClose={closeInputPortal}
+                      />,
+                      activeInput.container
+                  )
+                : null}
+            <DirPopover
+                portal
+                anchor={editBtnRef.current}
+                anchorBias="left"
+                open={popoverOpen}
+                onClose={() => setPopoverOpen(false)}
+            >
+                {popoverOpen ? (
+                    <div className="eo3-island-popover">
+                        <header className="eo3-popover-head">
+                            <h4>{name}</h4>
+                            <button
+                                type="button"
+                                className="eo3-popover-close"
+                                aria-label={`Close ${name} editor`}
+                                onClick={() => setPopoverOpen(false)}
+                            >
+                                ×
+                            </button>
+                        </header>
+                        <div className="eo3-popover-scroll">
+                            {renderEditor ? renderEditor() : editor}
+                        </div>
+                    </div>
+                ) : null}
+            </DirPopover>
+        </div>
+    );
+});
+
+/**
+ * In-place text editor mounted directly inside a `[data-edit-input]` region of a styled template
+ * (keeping the surrounding card/letter/chat/terminal frame visible).
+ */
+function InlineDraftEditor({
+    document: doc,
+    moduleId,
+    label,
+    initialValue,
+    help,
+    islandRoot,
+    flushRef,
+    onClose,
+}: {
+    document: Document;
+    moduleId: string;
+    label: string;
+    initialValue: string;
+    help?: TextHelpMetadata;
+    islandRoot: HTMLElement | null;
+    flushRef: React.MutableRefObject<(() => boolean) | null>;
+    onClose: () => void;
+}) {
+    const [value, setValue] = useState(initialValue);
+    const valueRef = useRef(value);
+    valueRef.current = value;
+    const docRef = useRef(doc);
+    docRef.current = doc;
+    const wrapRef = useRef<HTMLDivElement>(null);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const revertedRef = useRef(false);
+    const closedRef = useRef(false);
+
+    const flush = useCallback((): boolean => {
+        if (timerRef.current) {
+            clearTimeout(timerRef.current);
+            timerRef.current = null;
+        }
+        if (revertedRef.current) return false;
+        updateTextModuleContents(docRef.current, moduleId, valueRef.current);
+        return valueRef.current !== initialValue;
+    }, [initialValue, moduleId]);
+
+    flushRef.current = flush;
+
+    const commitAndClose = useCallback(() => {
+        if (closedRef.current) return;
+        closedRef.current = true;
+        onClose();
+    }, [onClose]);
+
+    useEffect(() => {
+        const ta = textareaRef.current;
+        if (!ta) return;
+        sizeTextarea(ta);
+        ta.focus();
+        ta.setSelectionRange(ta.value.length, ta.value.length);
+    }, []);
+
+    useEffect(() => {
+        const onDocMouseDown = (e: MouseEvent) => {
+            if (!wrapRef.current) return;
+            const target = e.target as HTMLElement | null;
+            if (!target || wrapRef.current.contains(target)) return;
+            // Let same-island interactive fields or control bar perform a clean single-click handoff
+            // instead of collapsing the textarea mid-click and shifting the target away.
+            if (
+                islandRoot &&
+                islandRoot.contains(target) &&
+                target.closest('[data-edit-interactive], .eo3-island-bar')
+            ) {
+                return;
+            }
+            commitAndClose();
+        };
+        document.addEventListener('mousedown', onDocMouseDown, true);
+        return () => {
+            document.removeEventListener('mousedown', onDocMouseDown, true);
+            flush();
+        };
+    }, [commitAndClose, flush, islandRoot]);
+
+    const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        const next = e.target.value;
+        setValue(next);
+        valueRef.current = next;
+        sizeTextarea(e.target);
+        if (timerRef.current) clearTimeout(timerRef.current);
+        timerRef.current = setTimeout(() => {
+            updateTextModuleContents(docRef.current, moduleId, next);
+        }, INLINE_DEBOUNCE_MS);
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            revertedRef.current = true;
+            closedRef.current = true;
+            if (timerRef.current) {
+                clearTimeout(timerRef.current);
+                timerRef.current = null;
+            }
+            updateTextModuleContents(docRef.current, moduleId, initialValue);
+            onClose();
+        } else if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            e.preventDefault();
+            commitAndClose();
+        }
+    };
+
+    const hints = help?.examples?.slice(0, 3) ?? [];
+
+    return (
+        <div
+            ref={wrapRef}
+            className="eo3-inline-draft-editor"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+        >
+            <textarea
+                ref={textareaRef}
+                className="eo3-inline-draft-textarea"
+                aria-label={`Edit ${label}`}
+                value={value}
+                onChange={handleChange}
+                onKeyDown={handleKeyDown}
+                rows={4}
+            />
+            <div className="eo3-inline-draft-bar">
+                <div className="eo3-inline-draft-hints">
+                    {hints.length > 0 ? (
+                        hints.map((ex, i) => (
+                            <span key={i} className="eo3-inline-draft-hint" title={ex.description}>
+                                <code>{ex.syntax}</code>
+                            </span>
+                        ))
+                    ) : help?.summary ? (
+                        <span className="eo3-inline-draft-summary">{help.summary}</span>
+                    ) : (
+                        <span className="eo3-inline-draft-summary">
+                            Ctrl+Enter to finish · Esc to cancel
+                        </span>
+                    )}
+                </div>
+                <button type="button" className="eo3-inline-draft-done" onClick={commitAndClose}>
+                    Done
+                </button>
+            </div>
+        </div>
+    );
+}

@@ -10,22 +10,28 @@
     border: none;
     background: none;
     color: rgb(var(--P-color-fg));
+    font-family: 'Atkinson Hyperlegible', system-ui, sans-serif;
+    font-size: var(--P-font-size-ui);
+    line-height: 1.35;
 
     &::backdrop {
         opacity: 0;
         pointer-events: none;
     }
 
-    >.inner-backdrop {
+    > .inner-backdrop {
         position: absolute;
         inset: 0;
         background: rgba(0, 0, 0, 0.2);
+        opacity: 0;
     }
 
-    >.i-arrow {
+    > .i-arrow {
         position: absolute;
         top: 0;
         left: 0;
+        display: none;
+        opacity: 0;
         --arrow-size: 16px;
         --arrow-color: var(--P-dialog-bg);
 
@@ -69,14 +75,16 @@
         }
     }
 
-    >.inner-popover {
+    > .inner-popover {
         position: absolute;
         background: var(--P-dialog-bg);
         box-shadow: 0 0.5em 1em rgba(0, 0, 0, 0.3), 0 0 0 1px var(--P-dialog-outline);
         border-radius: 0.5rem;
         overflow: hidden;
+        opacity: 0;
+        will-change: transform, opacity;
 
-        >.i-content {
+        > .i-content {
             position: absolute;
             top: 0;
             left: 0;

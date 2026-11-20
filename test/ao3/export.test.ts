@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { exportWork } from '../../src/targets/ao3/export';
 import { PartExportInput } from '../../src/targets/types';
+import { scopeCss } from '../../src/targets/delivery/scope-css';
 import {
     diffSkinRules,
     liftedSkinRules,
     removeLiftedSkinRules,
 } from '../../src/targets/delivery/skin-record';
 import { renderAo3Content } from '../../src/targets/ao3/render';
+import { EXAMPLE_GROUPS } from '../../src/groups/examples';
 
 const part = (id: string, source: string, css = ''): PartExportInput => ({
     id,
@@ -183,5 +185,68 @@ describe('AO3 export over a work', () => {
                 () => {}
             ).work.get('css')
         ).toBe(withoutRule);
+    });
+
+    it('inserts part scopes inside #workskin rather than duplicating #workskin', () => {
+        const css = [
+            '#workskin .fic-message { color: #243a34; }',
+            '#workskin .fic-in, #workskin .fic-out { padding: 1em; }',
+            '#workskin > .direct { margin: 0; }',
+            '#workskin { background: #fff; }',
+            '#workskin-note .other { color: red; }',
+        ].join('\n');
+
+        const out = exportWork(
+            {
+                parts: [part('a', '<p>one</p>'), part('b', '<p>two</p>')],
+                workCss: '',
+                cssSources: [{ id: 's1', css, partIds: ['b'] }],
+                config: {},
+            },
+            () => {}
+        );
+        const skin = out.work.get('css')!;
+        expect(skin).toContain('#workskin .eo3-part-b .fic-message');
+        expect(skin).toContain('#workskin .eo3-part-b .fic-in,\n#workskin .eo3-part-b .fic-out');
+        expect(skin).toContain('#workskin .eo3-part-b>.direct');
+        expect(skin).toContain('#workskin .eo3-part-b {\n  background: #fff;\n}');
+        expect(skin).toContain('#workskin .eo3-part-b #workskin-note .other');
+        expect(skin).not.toMatch(/#workskin[^,{]*#workskin(?![\w-])/);
+
+        // Idempotent when already scoped under both #workskin and the part class
+        expect(
+            scopeCss(
+                '#workskin .eo3-part-b .fic-message { color: red; }',
+                '.eo3-part-b',
+                '#workskin'
+            )
+        ).toBe('#workskin .eo3-part-b .fic-message{color:red}');
+    });
+
+    it('exports every bundled EXAMPLE_GROUPS block without double #workskin in multi-chapter works', () => {
+        for (const groupFile of EXAMPLE_GROUPS) {
+            const rawCss = groupFile.modules
+                .filter(
+                    (m) =>
+                        m.plugin === 'source.text' &&
+                        (m.data as { language?: string } | null)?.language === 'css'
+                )
+                .map((m) => String((m.data as { contents?: string } | null)?.contents ?? ''))
+                .join('\n');
+            if (!rawCss.trim()) continue;
+            const out = exportWork(
+                {
+                    parts: [part('ch1', '<p>one</p>'), part('ch2', '<p>two</p>')],
+                    workCss: '',
+                    cssSources: [{ id: 'blk', css: rawCss, partIds: ['ch1'] }],
+                    config: {},
+                },
+                () => {}
+            );
+            const skin = out.work.get('css')!;
+            expect(skin.length, groupFile.title).toBeGreaterThan(0);
+            expect(skin, groupFile.title).toContain('#workskin .eo3-part-ch1 ');
+            expect(skin, groupFile.title).not.toMatch(/#workskin[^,{]*#workskin(?![\w-])/);
+        }
     });
 });

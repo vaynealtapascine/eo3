@@ -180,6 +180,8 @@ export interface SiteTargetPreviewProps<Config extends JsonValue> {
     error: Error | null | undefined;
     renderErrors: ErrorMessage[];
     asyncErrors: ErrorMessage[];
+    /** Optional inline editor rendered in place of static chapter HTML inside the target mockup. */
+    chapterBody?: ReactNode;
 }
 
 /**

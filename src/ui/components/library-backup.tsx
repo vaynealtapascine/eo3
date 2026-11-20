@@ -39,8 +39,8 @@ export function LibraryBackupControls({
             <h2 className="i-title">Backups</h2>
             <div className="i-card">
                 <p>
-                    Download one file with all your works, their version history, My groups and
-                    custom sites. Keep it somewhere safe: browser data can be cleared.
+                    Download one file with all your works, their version history, My groups, custom
+                    styles and custom sites. Keep it somewhere safe: browser data can be cleared.
                 </p>
                 <div className="i-buttons">
                     <Button
@@ -81,9 +81,12 @@ export function LibraryBackupControls({
                     <div className="i-confirm">
                         <p>
                             This backup has {plural(pending.backup.works.length, 'work')},{' '}
-                            {plural(pending.backup.groups.length, 'group')} and{' '}
-                            {plural(pending.backup.profiles.length, 'custom site')}. Importing adds
-                            them as copies; nothing you have now is replaced or removed.
+                            {plural(pending.backup.groups.length, 'group')}
+                            {pending.backup.styles?.length
+                                ? `, ${plural(pending.backup.styles.length, 'custom style')}`
+                                : ''}{' '}
+                            and {plural(pending.backup.profiles.length, 'custom site')}. Importing
+                            adds them as copies; nothing you have now is replaced or removed.
                         </p>
                         <div className="i-buttons">
                             <Button

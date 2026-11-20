@@ -18,7 +18,8 @@ export function exportSharedStylesheet<Config>(
     { parts, workCss, cssSources, skinRecord, protectedSkinClasses }: WorkExportInput<Config>,
     pushError: PushError,
     renderPart: (source: string) => SharedStylesheetPart,
-    canonicalize: (css: string, pushError: PushError) => string
+    canonicalize: (css: string, pushError: PushError) => string,
+    outerScope?: string
 ): WorkExportOutput {
     const partOutputs = new Map<string, SiteTargetExportOutput>();
     const liftedRules = new Map<string, string>();
@@ -60,12 +61,14 @@ export function exportSharedStylesheet<Config>(
         ? cssSources.flatMap(({ css, partIds }) =>
               partIds.length === parts.length
                   ? [css]
-                  : partIds.map((id) => scopeCss(css, `.${partScopeClass(id)}`))
+                  : partIds.map((id) => scopeCss(css, `.${partScopeClass(id)}`, outerScope))
           )
         : [
               workCss,
               ...parts.map((part) =>
-                  parts.length > 1 ? scopeCss(part.css, `.${partScopeClass(part.id)}`) : part.css
+                  parts.length > 1
+                      ? scopeCss(part.css, `.${partScopeClass(part.id)}`, outerScope)
+                      : part.css
               ),
           ];
     const authoredClasses = new Set(Object.keys(liftedSkinRules(authored.join('\n\n'))));

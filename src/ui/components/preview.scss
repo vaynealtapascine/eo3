@@ -55,6 +55,44 @@
             gap: 0.5em;
             flex: 1;
 
+            .panel-toggle-button,
+            .add-part-button {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.35em;
+                font: inherit;
+                color: inherit;
+                background: none;
+                border: 1px solid var(--P-separator);
+                border-radius: 0.5em;
+                padding: 0.16em 0.55em;
+                margin: 0;
+                line-height: 1.25;
+                cursor: pointer;
+                transition: background 0.15s, border-color 0.15s;
+
+                svg {
+                    width: 1.15em;
+                    height: 1.15em;
+                    flex-shrink: 0;
+                }
+
+                &:hover,
+                &:focus-visible {
+                    background: rgb(var(--P-color-shade) / var(--P-color-shade-opacity));
+                }
+
+                &:focus-visible {
+                    outline: 2px solid rgb(var(--P-color-accent));
+                    outline-offset: 1px;
+                }
+
+                &.is-open {
+                    background: rgb(var(--P-color-accent) / 0.14);
+                    border-color: rgb(var(--P-color-accent) / 0.55);
+                }
+            }
+
             .output-select {
                 width: 100%;
                 max-width: 8em;

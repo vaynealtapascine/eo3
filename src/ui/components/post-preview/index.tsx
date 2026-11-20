@@ -234,6 +234,7 @@ export function PostPreview({
     onCleanupUnusedStyles,
     onPruneProtectedStyles,
     onSplitPart,
+    chapterBody,
 }: PostPreview.Props) {
     const partIndex = Math.max(
         0,
@@ -466,6 +467,7 @@ export function PostPreview({
         error,
         renderErrors,
         asyncErrors,
+        chapterBody,
     };
 
     const proseRenderer = (
@@ -494,6 +496,7 @@ export function PostPreview({
                 (siteDarkTheme ? ' is-site-dark-theme' : '')
             }
         >
+            {!error && styleOutputs.map((css, i) => <style key={i}>{css}</style>)}
             {plugin.PreviewHeader ? <plugin.PreviewHeader {...previewProps} /> : null}
             {error ? (
                 <div className="prose-container p-prose-outer">
@@ -515,9 +518,6 @@ export function PostPreview({
                     style={plugin.disableProseInteraction ? { pointerEvents: 'none' } : undefined}
                 >
                     <DynamicStyles reducedMotion={reducedMotion} />
-                    {styleOutputs.map((css, i) => (
-                        <style key={i}>{css}</style>
-                    ))}
                     {needsPartScope ? (
                         <div className={partScopeClass(part.id)}>{proseRenderer}</div>
                     ) : (
@@ -568,6 +568,8 @@ namespace PostPreview {
          * `fits` measures a candidate piece the way this target renders it.
          */
         onSplitPart: (partId: string, fits: (html: string) => boolean) => string | null;
+        /** Optional inline editor rendered in place of static chapter HTML inside the target mockup. */
+        chapterBody?: React.ReactNode;
     }
 }
 

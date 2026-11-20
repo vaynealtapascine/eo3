@@ -8,27 +8,24 @@ export class AnimationController {
     animationId = 0;
     lastTime = 0;
 
+    private nowMs(): number {
+        const timelineNow = typeof document !== 'undefined' ? document.timeline?.currentTime : null;
+        if (typeof timelineNow === 'number' && timelineNow > 0) return timelineNow;
+        return typeof performance !== 'undefined' ? performance.now() : Date.now();
+    }
+
     start() {
         this.running = true;
-        const now = document.timeline.currentTime;
-        if (!now) {
-            setTimeout(() => this.start(), 1000); // try again later
-            return;
-        }
-        this.lastTime = Number(now);
+        this.lastTime = this.nowMs();
         requestAnimationFrame(() => this.loop(++this.animationId));
     }
 
     loop(animationId: number) {
-        if (animationId !== this.animationId) return;
+        if (animationId !== this.animationId || !this.running) return;
 
-        const now = document.timeline.currentTime;
-        if (!now) {
-            setTimeout(() => this.loop(animationId), 1000); // try again later
-            return;
-        }
-        const dt = (Number(now) - this.lastTime) / 1000;
-        this.lastTime = Number(now);
+        const now = this.nowMs();
+        const dt = (now - this.lastTime) / 1000;
+        this.lastTime = now;
 
         const targetsToRemove = [];
         for (const target of this.targets) {
@@ -37,7 +34,9 @@ export class AnimationController {
         }
         for (const target of targetsToRemove) this.remove(target);
 
-        requestAnimationFrame(() => this.loop(animationId));
+        if (this.running && animationId === this.animationId) {
+            requestAnimationFrame(() => this.loop(animationId));
+        }
     }
 
     stop() {
