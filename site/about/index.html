@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EO3 — Workskin editor for AO3 fics</title>
+  <meta name="description" content="An editor for AO3 fics. Explore 14 editable workskin examples for messages, letters, found documents, and typography. Preview, adapt, and export with EO3.">
+  <link rel="canonical" href="https://eo3.dev/about">
+  <link rel="icon" href="/about/brand/eo3.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/about/about.css?v=archive-editor-1">
+  <script src="/about/about.js?v=scroll-fit-1" defer></script>
+</head>
+<body class="eo3-about">
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="eo3-header">
+    <div class="eo3-wrap eo3-nav">
+      <a class="eo3-wordmark" href="/about" aria-label="EO3 home"><img src="/about/brand/eo3.svg" width="70" height="70" alt=""><span class="eo3-brand-name"><strong>Editor of Our Own</strong><span>HTML &amp; workskins for AO3</span></span></a>
+      <a class="eo3-header-home" href="https://dev.vayne.garden/">dev.vayne.garden</a>
+    </div>
+    <div class="eo3-nav-ribbon"><nav class="eo3-wrap" aria-label="Main navigation"><a href="#examples">Examples</a><a href="#how">How it works</a><a href="#faq-title">Help</a><a class="eo3-nav-open" href="/">Open EO3 <span aria-hidden="true">↗</span></a></nav></div>
+  </header>
+  <main id="main">
+    <section class="eo3-wrap eo3-hero" aria-labelledby="hero-title">
+      <div class="eo3-hero-copy">
+        <p class="eo3-eyebrow">HTML and workskin editor</p>
+        <h1 id="hero-title">Make workskins<br>for <em>AO3 fics.</em></h1>
+        <p class="eo3-lead">Format the messages, letters, and newspaper clippings in your fic.</p>
+        <p class="eo3-intro">Build with reusable modules, check the live preview, then copy the HTML and workskin CSS to AO3.</p>
+        <div class="eo3-actions"><a class="eo3-button" href="/">Open EO3 <span aria-hidden="true">↗</span></a><a class="eo3-text-link" href="#examples">Explore the examples <span aria-hidden="true">↓</span></a></div>
+        <p class="eo3-small">Free &amp; open source. Runs in your browser.</p>
+      </div>
+      <figure class="eo3-hero-example">
+        <div class="eo3-window-bar"><span>EO3 <span aria-hidden="true">/</span> Letter</span><span>Local document</span></div>
+        <div class="eo3-window-tabs" aria-hidden="true"><span>Writing</span><span>Workskin</span><span>AO3 preview</span></div>
+        <div class="eo3-node-canvas" role="img" aria-label="The writing input connects to a reusable Letter component. Its HTML and a separate workskin stylesheet feed the AO3 preview below.">
+          <div class="eo3-demo-node eo3-demo-writing"><strong><span>1</span> Write here</strong><code>Dear Person B,<br>Lorem ipsum…</code></div>
+          <div class="eo3-demo-node eo3-demo-style"><strong><span>2</span> Workskin</strong><code>colors &amp; spacing</code></div>
+          <svg class="eo3-node-wires" viewBox="0 0 42 150" preserveAspectRatio="none" aria-hidden="true"><path d="M0 37.5 C25 37.5 17 75 42 75 M0 120.5 H21 V172"/></svg>
+          <div class="eo3-demo-node eo3-demo-renderer"><strong><span>3</span> Letter</strong><span>Reusable renderer</span><code>Letter.svelte</code><small>HTML <span aria-hidden="true">↘</span></small></div>
+        </div>
+        <div class="eo3-preview-label"><span>AO3 preview</span><span>Creator’s style on</span></div>
+        <iframe src="/about/examples/letter-preview.html" title="A personal letter example with warm paper, a dateline, and a signature" sandbox="allow-same-origin" data-example-preview></iframe>
+        <figcaption><span>04 / Letter</span><a href="/?example=ao3-letter.toml">Open this example <span aria-hidden="true">↗</span></a></figcaption>
+      </figure>
+    </section>
+
+    <div class="eo3-facts"><div class="eo3-wrap"><p><strong>14</strong> reusable examples</p><p><strong>Plain text</strong> becomes chapter HTML</p><p><strong>Your browser</strong> saves your work locally</p></div></div>
+
+    <section class="eo3-wrap eo3-why" aria-labelledby="why-title">
+      <div><p class="eo3-eyebrow">Why use a workskin?</p><h2 id="why-title">Use formatting<br>readers recognize.</h2></div>
+      <div class="eo3-reasons"><p><strong>Make the medium recognizable.</strong> Give messages chat bubbles, letters a paper background, and case files report headings.</p><p><strong>Help readers follow the scene.</strong> Distinct speakers, timestamps, stanzas, and section labels give complicated passages a clear rhythm.</p><p><strong>Keep labels readable.</strong> These examples use real text and simple HTML. Try hiding the skins below: names, dates, and reading order stay with the content.</p></div>
+    </section>
+
+    <section class="eo3-wrap eo3-writing" aria-labelledby="writing-title">
+      <p class="eo3-eyebrow">Write first, reuse the format</p><h2 id="writing-title">Type the conversation.</h2>
+      <p class="eo3-section-intro">Type <code>NAME: text</code> and a Svelte component turns it into a chat log. Add a time, quoted reply, or reaction when the scene needs it. Try the other formats in the menu, too.</p>
+      <iframe class="eo3-writing-lab" src="/about/examples/writing-lab.html?v=archive-editor-1" title="Try the plain-text writing examples with a live preview" loading="lazy"></iframe>
+      <p class="eo3-gallery-hint">In EO3, your writing, the reusable component, and the workskin are separate modules. Use the same component for another conversation or document, with its own text input.</p>
+    </section>
+
+    <section class="eo3-wrap eo3-gallery" id="examples" aria-labelledby="examples-title">
+      <div class="eo3-section-head"><div><p class="eo3-eyebrow">Workskin examples</p><h2 id="examples-title">14 examples to edit.</h2></div><a class="eo3-download" href="/about/examples/eo3-workskin-examples.zip" download>Download all 14 <span aria-hidden="true">↓</span></a></div>
+      <p class="eo3-section-intro">Open an example and write in its “Write here” module. Each has a reusable renderer, a separate workskin, and a guide to the writing syntax. Every preview uses standard Lorem ipsum and neutral labels—no generated story content.</p>
+      <div class="eo3-gallery-controls" id="gallery-controls" hidden>
+        <div class="eo3-filters" role="group" aria-label="Filter examples"><button type="button" data-filter="All" aria-pressed="true">All examples</button><button type="button" data-filter="Conversations" aria-pressed="false">Conversations</button><button type="button" data-filter="Documents" aria-pressed="false">Documents</button><button type="button" data-filter="Reading" aria-pressed="false">Reading details</button></div>
+        <button class="eo3-skin-toggle" id="skin-toggle" type="button" aria-pressed="true"><span class="eo3-toggle-dot" aria-hidden="true"></span><span id="skin-label">Workskins on</span></button>
+      </div>
+      <p class="eo3-gallery-hint">Each preview is live HTML. Scroll inside to read the full example; try the footnote links and expandable notes.</p>
+      <p class="eo3-count" id="example-count" aria-live="polite">14 examples</p>
+      <div class="eo3-example-grid">
+        <!-- EO3_GALLERY -->
+      </div>
+      <noscript><p>All examples and downloads work without JavaScript. Open a preview separately to read it in full.</p></noscript>
+    </section>
+
+    <section class="eo3-process" id="how" aria-labelledby="how-title"><div class="eo3-wrap">
+      <p class="eo3-eyebrow">From example to your own fic</p><h2 id="how-title">How to use an example</h2>
+      <ol class="eo3-steps"><li><span class="eo3-step-number">01</span><h3>Open &amp; write</h3><p>Choose an example and edit “Write here.” The component builds the HTML. Change colors and spacing in the Workskin module.</p></li><li><span class="eo3-step-number">02</span><h3>Check the preview</h3><p>Watch the AO3 preview as you edit. EO3 applies a tested copy of AO3’s HTML and CSS processing rules. Type the title, author, and chapter title straight into the preview; it counts your words and chapters as you go.</p></li><li><span class="eo3-step-number">03</span><h3>Take it to AO3</h3><p>Use “Copy Workskin CSS” to create a Work Skin on AO3, choose it for your work, then use “Copy HTML” in the chapter’s HTML editor.</p></li></ol>
+      <p class="eo3-process-note">Preview your AO3 draft before posting. EO3 prepares the content; you publish it yourself. <a href="https://archiveofourown.org/faq/tutorial-creating-a-work-skin?language_id=en">AO3’s workskin tutorial <span aria-hidden="true">↗</span></a></p>
+    </div></section>
+
+    <section class="eo3-wrap eo3-editor-section" aria-labelledby="editor-title">
+      <div><p class="eo3-eyebrow">Chapters and reusable modules</p><h2 id="editor-title">Keep chapters and<br>styles together.</h2><p>EO3 opens in a simple view: each chapter is a list of your text, styles, and ready-made blocks. Keep chapters together, share a stylesheet across the work, or style one chapter separately. Switch to the nodes view to connect the modules yourself.</p><p>Add any of these examples to an existing fic. In the simple view, choose “+ add” → “Blocks.” In the nodes view, search for it in “add node,” or open “Groups and templates” there, then connect its Compose and Workskin modules to your chapter. Its writing input and renderer are already linked.</p><p class="eo3-small">AO3 is the focus of this collection. EO3 also has targets for wafrn, custom sites, and the preserved cohost format.</p><a class="eo3-text-link" href="/">Explore the editor <span aria-hidden="true">↗</span></a></div>
+      <figure class="eo3-editor-shot"><img src="/about/brand/eo3-editor.webp" width="1800" height="1166" loading="lazy" alt="EO3’s editor with content and style modules beside an AO3 preview, and a graph showing how the modules connect."><figcaption>Content, styles, and the preview in one place.</figcaption></figure>
+    </section>
+
+    <section class="eo3-wrap eo3-faq" aria-labelledby="faq-title"><div><p class="eo3-eyebrow">Using EO3</p><h2 id="faq-title">Before you begin.</h2></div><div class="eo3-faq-items">
+      <details><summary>What exactly is a workskin?</summary><p>A workskin is a stylesheet attached to an AO3 work. It styles your chapter content—messages, letters, headings, and more. The chapter’s HTML supplies the structure; the skin supplies the appearance.</p></details>
+      <details><summary>Do I need to know HTML or CSS?</summary><p>You can write in these examples without editing HTML. Each uses plain text and a small set of markers shown in its guide. The Svelte component handles the structure. Changing the appearance uses CSS; changing a component’s layout uses Svelte.</p></details>
+      <details><summary>Can readers turn the formatting off?</summary><p>AO3 readers can hide the creator’s style. These templates keep names, dates, meaningful labels, and line breaks in HTML, rather than relying on color or generated decoration. Check your own finished fic with the style hidden, too.</p></details>
+      <details><summary>Where does my work go?</summary><p>EO3 saves your work in this browser as you type, and the toolbar says when it’s saved. Use “download” to keep a portable copy of one work, or “Backups” in the sidebar to download everything at once and import it again later. Clearing browser data can remove local saves, so keep a backup. Modules that load external URLs make their own network requests.</p></details>
+      <details><summary>Can I go back to an earlier version?</summary><p>Yes, if you turn it on. Choose “history” in the toolbar and tick “Keep versions of this work.” EO3 then keeps a version for each minute you spend editing and lists what changed in each one, such as words or chapters added. Restore any version, or download it; restoring keeps your current draft as a version too.</p></details>
+      <details><summary>What if the preview shows an error?</summary><p>EO3 names the part that stopped the preview and offers “Open this module” to take you to it. Your writing stays as it is, and the preview comes back once that part is fixed. If your browser blocks copying, EO3 shows the text so you can copy it by hand.</p></details>
+      <details><summary>Can I mix examples in one fic?</summary><p>Yes. Import their groups and connect them to a chapter output. Most formats use distinct class names; text messages and group chats share ChatLog with different layouts. Set a unique Id for each footnote passage, and test the combined work in the editor and on AO3.</p></details>
+      <details><summary>What is in the download?</summary><p>All 14 examples as editable EO3 documents and importable groups, plain-text writing samples, matching chapter HTML fragments, workskin CSS, a usage guide, and the MIT license. The gallery previews are rendered from those same Svelte components. There are no external images or fonts to host.</p></details>
+    </div></section>
+
+    <section class="eo3-wrap eo3-final-cta"><p class="eo3-eyebrow">Try an example in EO3</p><h2>Choose a workskin for your fic.</h2><div class="eo3-actions"><a class="eo3-button" href="/">Open EO3 <span aria-hidden="true">↗</span></a><a class="eo3-text-link" href="/about/examples/eo3-workskin-examples.zip" download>Take the example collection <span aria-hidden="true">↓</span></a></div></section>
+  </main>
+  <footer class="eo3-footer"><div class="eo3-wrap"><p><a href="https://dev.vayne.garden/">dev.vayne.garden</a><span>Little tools, grown slowly.</span></p><p>EO3 is built on <a href="https://github.com/cpsdqs/prechoster">cpsdqs’s prechoster</a>.<br><a href="https://github.com/vaynealtapascine/eo3">Source &amp; MIT license</a> · An independent tool, unaffiliated with AO3.</p></div></footer>
+</body>
+</html>

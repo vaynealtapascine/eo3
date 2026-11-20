@@ -4,7 +4,7 @@
 
 Write directly inside a live AO3 work page with WYSIWYG formatting, one-click AO3-safe effects, shareable style packs, and 14 ready-made workskin templates—then copy clean chapter HTML and validated Work Skin CSS in one click. Everything runs locally in your browser with no account or server required.
 
-[**Open eo3**](https://dev.vayne.garden/eo3/) · [**About & Workskin Gallery**](https://dev.vayne.garden/eo3/about)
+[**Open eo3**](https://eo3.dev/) · [**About & Workskin Gallery**](https://eo3.dev/about)
 
 ![Writing directly on a live AO3 page in eo3 Simple view, showing inline-editable title and author, hover translation, redacted text, a parchment letter block, chat bubbles, the floating side rail, and AO3 export controls](docs/screenshots/hero-wysiwyg.png)
 
@@ -74,13 +74,13 @@ Open **Examples and Templates** in the sidebar (or **+ add → Blocks** in any c
 
 | Conversations | Documents | Reading |
 | --- | --- | --- |
-| [Text messages](https://dev.vayne.garden/eo3/?example=ao3-text-messages.toml) | [Personal letter](https://dev.vayne.garden/eo3/?example=ao3-letter.toml) | [Poetry & lyrics](https://dev.vayne.garden/eo3/?example=ao3-poetry.toml) |
-| [Group chat](https://dev.vayne.garden/eo3/?example=ao3-group-chat.toml) | [Journal entries](https://dev.vayne.garden/eo3/?example=ao3-journal.toml) | [Chapter opening & scene breaks](https://dev.vayne.garden/eo3/?example=ao3-chapter-opening.toml) |
-| [Email correspondence](https://dev.vayne.garden/eo3/?example=ao3-email.toml) | [Newspaper clipping](https://dev.vayne.garden/eo3/?example=ao3-newspaper.toml) | [Linked footnotes](https://dev.vayne.garden/eo3/?example=ao3-footnotes.toml) |
-| [Social feed](https://dev.vayne.garden/eo3/?example=ao3-social-thread.toml) | [Case file](https://dev.vayne.garden/eo3/?example=ao3-case-file.toml) | [Collapsible extras](https://dev.vayne.garden/eo3/?example=ao3-collapsible-notes.toml) |
-| [Recording transcript](https://dev.vayne.garden/eo3/?example=ao3-transcript.toml) | [Terminal log](https://dev.vayne.garden/eo3/?example=ao3-terminal.toml) | |
+| [Text messages](https://eo3.dev/?example=ao3-text-messages.toml) | [Personal letter](https://eo3.dev/?example=ao3-letter.toml) | [Poetry & lyrics](https://eo3.dev/?example=ao3-poetry.toml) |
+| [Group chat](https://eo3.dev/?example=ao3-group-chat.toml) | [Journal entries](https://eo3.dev/?example=ao3-journal.toml) | [Chapter opening & scene breaks](https://eo3.dev/?example=ao3-chapter-opening.toml) |
+| [Email correspondence](https://eo3.dev/?example=ao3-email.toml) | [Newspaper clipping](https://eo3.dev/?example=ao3-newspaper.toml) | [Linked footnotes](https://eo3.dev/?example=ao3-footnotes.toml) |
+| [Social feed](https://eo3.dev/?example=ao3-social-thread.toml) | [Case file](https://eo3.dev/?example=ao3-case-file.toml) | [Collapsible extras](https://eo3.dev/?example=ao3-collapsible-notes.toml) |
+| [Recording transcript](https://eo3.dev/?example=ao3-transcript.toml) | [Terminal log](https://eo3.dev/?example=ao3-terminal.toml) | |
 
-Browse live styled vs. unstyled comparisons and download offline bundles in the [workskin gallery](https://dev.vayne.garden/eo3/about#examples).
+Browse live styled vs. unstyled comparisons and download offline bundles in the [workskin gallery](https://eo3.dev/about#examples).
 
 ---
 

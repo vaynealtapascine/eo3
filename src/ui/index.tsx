@@ -19,8 +19,9 @@ import { useOptHeld } from './opt-held';
 import { shouldReduceMotion } from '../uikit/animation';
 import { DirPopover } from '../uikit/dir-popover';
 import { Button } from '../uikit/button';
-import { showAlert } from './dialogs';
+import { showAlert, showConfirm } from './dialogs';
 import { exampleFromSearch } from '../storage/example-link';
+import { listenForOriginMigration } from '../storage/origin-migration';
 import { SaveController, SaveState } from '../storage/save-controller';
 import { downloadFile, safeFileName } from '../util/download';
 import { SaveErrorBanner, SaveStatus, VersionHistory } from './components/save-recovery';
@@ -184,6 +185,23 @@ export default function ApplicationFrame({
         window.addEventListener('popstate', onPopState);
         return () => window.removeEventListener('popstate', onPopState);
     }, []);
+
+    useEffect(() => {
+        return listenForOriginMigration({
+            storage,
+            onImported: (ids) => {
+                setOpenDocs((current) => [...new Set([...current, ...ids])]);
+                if (ids.length) {
+                    setVirtualOpenDoc(null);
+                    setCurrentTab(ids[ids.length - 1]);
+                }
+                closeSidebarIfOverlay();
+            },
+            confirm: (message, title, confirmLabel) =>
+                showConfirm(message, { title, confirmLabel }),
+            alert: (message, title) => showAlert(message, { title }),
+        });
+    }, [storage]);
 
     // close a document if it was deleted
     const onDeleteDocument = (event: CustomEvent) => {

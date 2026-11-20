@@ -1,0 +1,11 @@
+// Static site on Cloudflare Workers (assets only, no Worker code).
+// `wrangler deploy` ships dist/ to eo3.dev.
+{
+  "name": "eo3-dev",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "404-page"
+  },
+  "routes": [{ "pattern": "eo3.dev", "custom_domain": true }]
+}
