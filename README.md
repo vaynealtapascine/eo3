@@ -1,151 +1,143 @@
 # eo3
-A graph-based HTML generator to make fancy AO3 fics easier.
-Built upon the work of cpsdqs on [prechoster](https://github.com/cpsdqs/prechoster). Eggbug forever!
 
-[Open EO3](https://dev.vayne.garden/eo3/) · [About and workskin examples](https://dev.vayne.garden/eo3/about)
+**A visual, browser-based fic editor and HTML/CSS studio for Archive of Our Own.**
 
-## AO3 workskin examples
+Write directly inside a live AO3 work page with WYSIWYG formatting, one-click AO3-safe effects, shareable style packs, and 14 ready-made workskin templates—then copy clean chapter HTML and validated Work Skin CSS in one click. Everything runs locally in your browser with no account or server required.
 
-The example library includes 14 ready-to-edit AO3 documents: text messages, group chat,
-email, a personal letter, a journal, a newspaper, a case file, a social feed, a recording
-transcript, a terminal log, verse, a chapter opening, linked footnotes, and collapsible notes.
-They use standard Lorem ipsum and neutral labels, with no generated story content or external
-images or fonts. Each is one block: a **Details** form (date, names, labels), a plain-text
-writing input, and a reusable Svelte renderer, plus a shared CSS module; open one from
-**Examples and Templates**, or link directly with `?example=ao3-letter.toml`.
+[**Open eo3**](https://dev.vayne.garden/eo3/) · [**About & Workskin Gallery**](https://dev.vayne.garden/eo3/about)
 
-The [gallery](https://dev.vayne.garden/eo3/about#examples) previews the actual documents,
-compares their styled and unstyled appearance, and offers a ZIP of documents, chapter HTML,
-CSS, writing inputs, importable groups, and a usage guide. `npm run build` packages those files
-under `dist/workskin-examples`. Components, shared parsing helpers, styles and writing samples
-in `assets/workskins` are the source of truth; `workskins.json` holds the gallery descriptions.
-Run `node scripts/build-workskin-documents.mjs` to regenerate the self-contained TOML documents,
-then `node scripts/export-workskin-examples.mjs` to render the previews and package downloads.
+![Writing directly on a live AO3 page in eo3 Simple view, showing inline-editable title and author, hover translation, redacted text, a parchment letter block, chat bubbles, the floating side rail, and AO3 export controls](docs/screenshots/hero-wysiwyg.png)
 
-Fill in **Details**, then write in **Your text** (in the nodes view, **Write here**).
-**Writing help** disclosure gives syntax examples for each block. All 14 examples include
-**Advanced settings → Appearance** for text size, width, and typeface; **Original** keeps
-the sample's styling. Optional fields can be cleared. These settings and instructions
-are included in exported groups.
+> Built upon the work of cpsdqs on [prechoster](https://github.com/cpsdqs/prechoster). Eggbug forever!
 
-The details become the text's header, and a header written in the text itself wins. Chat accepts
-`NAME: text`, optional `[09:41]` timestamps, continuations, `! event`, `> quote` and
-`+ reaction`. Letters and found documents use headers between `---`
-lines and plain paragraphs. Journal entries use `## date`; footnotes use `[^key]` references
-and definitions; optional extras use `::: title` / `:::` panels. Prose supports `*emphasis*`,
-`**strong**`, `~~crossed out~~`, and backtick code. This is a small syntax rather than full Markdown.
+---
 
-In the simple view, add any example to a chapter from **+ add → Blocks**. In the nodes view,
-the reusable renderer group starts folded to leave the writing input visible; import any
-example from **add node** (search for it, or open **Groups and templates**, where all 14 are
-bundled too), then connect **Compose** and **Workskin** to a chapter output. Internal named sends are already wired. The same Svelte
-component can take a second named text input in Compose. ChatLog accepts `variant` and `self`;
-Footnotes accepts `id` to keep anchors unique when composing multiple passages.
+## Why eo3?
 
-## Simple and nodes views
+Formatting fancy fics on AO3 usually means wrestling with raw HTML, guessing which CSS properties AO3's sanitizer will silently strip, and copying snippets back and forth between tools.
 
-eo3 opens in the **simple** view: each chapter is a list of text, styles and ready-made blocks,
-top to bottom, and the wiring follows from the order. Text and styles go to the chapter. An
-effect (Style Inliner, SVG to backgrounds…) applies to everything above it, back to the previous
-effect. A block is a group of modules used as one item: it shows the members its author marked
-as inputs (its text, a **Settings** form) and folds the rest under **Customize**. "All chapters"
-and chapter styles stay pinned at the top.
+eo3 fixes that at both ends:
 
-Any text, styles or block can be **mirrored** into other chapters (⋯ → **Mirror in…**, or
-**+ add → Mirror from other chapters**). A mirror is the same item, not a copy: in the nodes
-view it is one node (or group) wired to each of those chapters, editing it anywhere changes
-it everywhere, and its CSS goes into the Work Skin once. **Make a separate copy here** splits a
-chapter's mirror off to edit on its own. Mirrored items keep the same order relative to each
-other in every chapter they share, since a chapter's content follows the work's module order.
+- **Write visually, right on the page.** Simple view puts a chrome-less WYSIWYG editor directly inside a live AO3 mockup—edit the work title, author, chapter title, prose, and styled blocks in place.
+- **What you see is what AO3 allows.** Preview and export both run through a port of AO3's real Ruby (`otwarchive`) HTML sanitizer and Work Skin CSS validator, parity-tested against AO3's actual codebase.
+- **Zero-code effects, full power when you want it.** Start with one-click styles and templates; flip to **Nodes view** anytime for Svelte components, Sass/Less, custom pipelines, and reusable blocks.
 
-The **nodes** view is the full graph. The first time eo3 opens it asks which you prefer; switch
-any time with **simple / nodes** in the toolbar, and that choice is kept for every work. Works
-wired in ways a list can't show (named inputs from outside a block, an effect sent to two
-chapters, an effect that skips something above it) open in the simple view with a note and a
-button to switch. Nothing about the simple view is saved in the work: it reads the graph and
-rewrites it (`src/linear.ts`).
+---
 
-To make your own block, group the modules in the nodes view, then in the simple view choose
-**show up front** on the members a writer should fill in (and **fold away** to hide them
-again). A **Settings** module, sent to a Svelte module as a named input, is a form in the block
-(`import settings from './settings'`). Group inputs are saved with the work and in group files.
+## Live WYSIWYG Editing
 
-Settings fields have an **Options** disclosure in the nodes editor. Authors can add help text,
-organize fields into sections, put less-used controls under **Advanced settings**, set defaults
-and numeric bounds, or show a field only when another field has a particular value.
-The simple view uses the same form, without the field-building controls.
-See [Authoring group settings](docs/group-settings.md) for the declarative format.
+### Write & format directly on the AO3 canvas
 
-## Saving and recovery
+Highlight any text to bring up the floating formatting bar—and click its chevron to expand the full three-row toolbar with headings, bold/italic/underline/strikethrough, subscript & superscript, text colors & highlights, links, **ruby / furigana (`漢`)**, images, blockquotes, lists, alignment, RTL, and manual **chapter breaks (`+ Break`)**.
 
-Works save in this browser as you edit. The indicator next to **download** in the toolbar
-shows whether the latest changes are saved. When a save fails, a red bar above the editor
-offers **Retry save** and **Download work**, and closing the tab waits until the work is
-saved (a failed save leaves the tab open).
+![Highlighting prose in eo3 to open the expanded three-row floating formatting bar over the live AO3 chapter](docs/screenshots/wysiwyg-formatting.png)
 
-Click **history** (or the indicator) for **Version history**. Turn on **Keep versions of this
-work** to keep earlier versions (off by default, per work). While the work is on screen and you are editing,
-a version is recorded for every minute of editing, skipping minutes with no changes; every
-ten minutes of editing it stores a full copy instead of only the changes. Time stops counting
-after a minute without input and while the tab is hidden or unfocused. The newest 120
-versions (or about 20 MiB) are kept; the latest is always kept. Each version lists what changed since the one
-before it (words and chapters added or removed). Pick a version to see what it contains,
-download it, or restore it. Restoring keeps the current draft as a version too and
-can be undone. Turning history off keeps the versions you have; **Delete all versions…**
-removes them.
+A compact floating **side rail** stays at the edge of the chapter for quick access to:
 
-The sidebar's **Backups** section downloads all works, their version history, My groups and
-custom sites as one JSON file, including the latest edits of open works. **import backup…**
-validates a backup before writing anything and adds its works as copies; nothing existing is
-replaced, and custom sites that conflict with yours are kept as separate sites. Backups up to
-100 MiB can be imported. The section can also ask the browser to keep eo3's data.
+- **`✦` Styles** — apply built-in or imported AO3-safe CSS pieces and selection templates
+- **`Aa` Format** — open the formatting toolbar from the cursor
+- **`+` Insert** — add text sections, chapter styles, ready-made workskin blocks, or mirrored items from other chapters
+- **`{ }` Work Skin CSS** — inspect or tweak the work's CSS without leaving the chapter
+- **Panel toggle** — expand the left panel for multi-chapter navigation, raw HTML, and block settings
 
-Browser storage is not a substitute for downloaded backups. If it is unavailable, the toolbar
-says so, the indicator reads **Saved in memory**, and everything disappears when the page
-closes. Everything runs in the browser; no application server is required.
+### One-click AO3-safe styles & interactive effects
 
-## Overview
-Documents are a directed graph of modules.
-Every module is JSON data associated with a plugin implementation.
-The plugin implementation evaluates result `Data` and provides it to connected modules on the graph.
-Modules have “sends,” which simply input data into other modules in evaluation order,
-and “named sends,” which are sort of like side inputs that don’t make sense as regular inputs (e.g. variable definitions).
+Open **✦ Styles** to wrap text or paragraphs in tested, AO3-compatible styles. Applying any style automatically adds its CSS to your work's Work Skin—no `#workskin` prefixing or copy-pasting required.
 
-Plugins are defined in `src/plugins` (indexed in `src/plugins/index.tsx`) and are composed of a module data interface, a UI component that edits module data, and an evaluation function.
+![The Styles picker popover showing search, Import and Create/Export buttons, built-in visual swatches, imported custom styles, and a custom class bar](docs/screenshots/styles-picker.png)
 
-Do not change module data interfaces in a backwards-incompatible way because people are apparently using this software sometimes!!
+| Category | Built-in pieces | What they do |
+| --- | --- | --- |
+| **Inline styles** | **Redacted**, **Translate on hover**, **Small caps**, **Whisper**, **Highlighter**, **Tag pill** | Style selected words inline. **Redacted** reveals on hover; **Translate on hover** shows a tooltip on desktop hover / mobile tap and degrades gracefully to `Original (Translation)` in EPUBs and when Creator's Style is off. |
+| **Block wrappers** | **Callout box**, **Letter / parchment**, **Terminal / system**, **Epigraph**, **Journal entry** | Wrap paragraphs in styled `<div class="fx-...">` containers with live Work Skin preview. |
+| **Selection templates** | **Text messages**, **Collapsible spoiler** | Turn highlighted lines (including `Name: message` lines) into alternating chat bubbles, or wrap text in an expandable `<details>` drawer. |
+| **Your work's CSS** | Detected classes + custom class bar | Reuse any class already defined in your Work Skin, or apply any custom `<span>` / `<div>` class on the fly. |
 
-## Changes from prechoster
--   Rich Text Editor has been replaced with TipTap (ProseMirror).
--   Svelte 3.55.1 is the default for now, but Svelte 4 and 5 have been added as options.
--	Modularized the render pipeline, so `SiteTargetPlugin`s can be used to extend EO3 to work with new or other sites.
--   A work has parts (chapters or posts), each with its own output, styles and posted state, and long parts can be split.
--   AO3 output runs through a port of AO3's own HTML sanitizer and Work Skin validator, tested against AO3's Ruby code.
--   Targets for AO3, wafrn and cohost, plus custom sites described without code.
--   Packaged effects and reusable groups of modules.
+### Shareable Style Packs (`.eo3styles.json`)
 
-### Building
-in the repository:
+Want more styles—or want to design custom effects for less-technical writers to use? Click **Import…** or **+ Create / Export** right inside **✦ Styles** to open **Custom styles & packs**.
+
+![The Custom styles and packs Create & export modal showing the HTML template builder, live Styles swatch preview, full chapter preview, and real-time AO3 Work Skin compatibility check](docs/screenshots/style-pack-builder.png)
+
+- **For writers (zero code):** Drop or paste a `.eo3styles.json` file to preview every style with its live-rendered swatch, name, description, creator credit, and AO3 compatibility check before adding it to **✦ Styles**.
+- **For designers & coders:** Build **inline styles**, **block wrappers**, or **HTML snippet templates** (with `{{selection}}` / `{{selection|Fallback}}` slots) with live miniature swatch + full chapter previews and real-time AO3 Work Skin validation—then export a single style or bundle a whole pack as `.eo3styles.json` (or copy JSON to share).
+
+Custom styles are saved in your browser's library across all works and are included automatically in full eo3 backups.
+
+---
+
+## 14 Ready-Made AO3 Workskin Templates
+
+Open **Examples and Templates** in the sidebar (or **+ add → Blocks** in any chapter) to drop in complete, accessible AO3 workskin templates. Each template separates a **Details** form (dates, names, labels, plus **Advanced settings → Appearance** for text size, width, and typeface) from a plain-text writing box with built-in **Writing help**—and many regions can also be clicked and edited directly in the live preview.
+
+![The AO3 Group chat workskin template with the side panel open, showing the Chapters list, Details form, plain-text chat input, and live styled AO3 group chat preview](docs/screenshots/workskin-templates.png)
+
+| Conversations | Documents | Reading |
+| --- | --- | --- |
+| [Text messages](https://dev.vayne.garden/eo3/?example=ao3-text-messages.toml) | [Personal letter](https://dev.vayne.garden/eo3/?example=ao3-letter.toml) | [Poetry & lyrics](https://dev.vayne.garden/eo3/?example=ao3-poetry.toml) |
+| [Group chat](https://dev.vayne.garden/eo3/?example=ao3-group-chat.toml) | [Journal entries](https://dev.vayne.garden/eo3/?example=ao3-journal.toml) | [Chapter opening & scene breaks](https://dev.vayne.garden/eo3/?example=ao3-chapter-opening.toml) |
+| [Email correspondence](https://dev.vayne.garden/eo3/?example=ao3-email.toml) | [Newspaper clipping](https://dev.vayne.garden/eo3/?example=ao3-newspaper.toml) | [Linked footnotes](https://dev.vayne.garden/eo3/?example=ao3-footnotes.toml) |
+| [Social feed](https://dev.vayne.garden/eo3/?example=ao3-social-thread.toml) | [Case file](https://dev.vayne.garden/eo3/?example=ao3-case-file.toml) | [Collapsible extras](https://dev.vayne.garden/eo3/?example=ao3-collapsible-notes.toml) |
+| [Recording transcript](https://dev.vayne.garden/eo3/?example=ao3-transcript.toml) | [Terminal log](https://dev.vayne.garden/eo3/?example=ao3-terminal.toml) | |
+
+Browse live styled vs. unstyled comparisons and download offline bundles in the [workskin gallery](https://dev.vayne.garden/eo3/about#examples).
+
+---
+
+## Publishing to AO3 & Beyond
+
+eo3 is built for multi-chapter works and real posting workflows—not just one-off snippets:
+
+- **Exact AO3 sanitization & Work Skin validation:** Inline styles are automatically lifted into canonical, sorted `eo3-*` classes and merged into one Work Skin with `#workskin` scoping; chapter-specific CSS is scoped automatically to its chapters.
+- **Multi-chapter works & mirroring:** Manage chapters in the panel, share Work Skin rules via **All chapters**, and **mirror** any text, style, or block across multiple chapters (editing it anywhere updates it everywhere, with its CSS emitted once).
+- **Size meter & chapter splitting:** Tracks chapter size against AO3's 500,000-character limit and splits cleanly at top-level blocks—or right at your own `+ Break` (`<!-- eo3:split -->`) markers—while keeping both halves editable.
+- **Posting tracker & Work Skin diffs:** Click **mark as posted** after copying a chapter to record its classes and Work Skin baseline. Later edits show exactly how many styles were added or removed, protect rules still used by already-posted chapters, and let you review and clean up unused styles.
+- **Import existing AO3 works:** Paste an existing Work Skin and chapter HTML to bring an in-progress fic into eo3 without breaking rules on chapters you haven't imported yet.
+- **Crossposting & custom sites:** Switch the preview/export target between **Archive of Our Own**, **wafrn** (parity-tested against wafrn's `sanitize-html` config), **Cohost** (legacy), or **custom sites** defined with declarative, no-code profiles (shared stylesheet, inline styles, `<style>` block, or plain HTML). Posting state is tracked independently per site.
+
+---
+
+## Full Power Under the Hood: Nodes View
+
+Every eo3 work is a directed graph of modules. Simple view reads and rewrites that graph automatically (`src/linear.ts`), and you can switch between **simple** and **nodes** anytime in the toolbar.
+
+![eo3 Nodes view showing the module editor list on the left, live AO3 preview on the top right, and the interactive node graph wiring modules and Work Skin CSS to the AO3 output on the bottom right](docs/screenshots/nodes-view.png)
+
+Use **Nodes view** whenever you want to:
+
+- Wire **HTML / TipTap rich text**, **CSS**, **Sass**, **Less**, **JavaScript**, **Svelte 3 / 4 / 5** components, **Settings** forms, uploaded files, and external URLs together with ordered sends and named side-inputs.
+- Run transforms like **Style Inliner**, **SVG to backgrounds**, **SVGO**, and data/blob URL converters.
+- Package any sub-graph into a reusable **block** (`.eo3group.json`) with a declarative Settings form—see [Authoring group settings](docs/group-settings.md)—and save it to **My groups** so writers can drop it into Simple view with one click.
+
+---
+
+## Saving, Version History & Backups
+
+Everything runs 100% client-side in your browser; no server ever sees your drafts.
+
+- **Automatic saving:** Works save continuously to browser storage (IndexedDB) as you edit, with a live status indicator in the toolbar and retry/download recovery if a write fails.
+- **Opt-in Version History:** Click **history** (or the save indicator) and enable **Keep versions of this work** to snapshot active editing minutes (up to 120 versions / ~20 MiB, with full snapshots every 10 active minutes, word/chapter diff summaries, and undoable restores).
+- **Whole-library Backups:** Use **Backups** in the sidebar to export all works, version history, **My groups**, custom **Styles**, and **custom sites** as a single JSON file—and import backups safely as copies without overwriting existing works.
+
+> Browser storage can be cleared by the browser or OS; download periodic backups (or individual `.toml` work files) for anything you can't afford to lose.
+
+---
+
+## Development & Contributing
 
 ```sh
 npm install
-npm run build # or npm run dev
-npm test
+npm run dev        # start local dev server
+npm run typecheck  # TypeScript check (tsc --noEmit)
+npm test           # Vitest suite (AO3 & wafrn parity, document, targets, UI)
+npm run build      # regenerate workskin docs, build dist/, and export gallery bundle
 ```
 
-See [AGENTS.md](AGENTS.md) for contributor notes and [docs/design/](docs/design/) for the publishing model.
+- Start with [AGENTS.md](AGENTS.md) for repo conventions and [docs/CODEMAP.md](docs/CODEMAP.md) for a map of every directory, feature, and test suite.
+- Architecture and publishing design notes live in [docs/design/publishing-model.md](docs/design/publishing-model.md).
+- To regenerate the 14 bundled workskin TOML documents from `assets/workskins`, run `node scripts/build-workskin-documents.mjs` followed by `node scripts/export-workskin-examples.mjs`.
+- **Do not break saved module data interfaces**—existing user documents and backups depend on backwards compatibility.
 
-Look in `dist` for the output.
+### Browser support
 
-### Browser Support
-Major feature gates:
-
-- script type module
-- dialog element
-- Web Workers
-
-According to caniuse, this means:
-
-- Firefox 114
-- Safari 15.4
-- Chrome 80
+Requires ES modules, `<dialog>`, and Web Workers (**Chrome 80+**, **Firefox 114+**, **Safari 15.4+**).
