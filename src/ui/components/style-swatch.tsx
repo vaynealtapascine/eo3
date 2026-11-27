@@ -1,6 +1,7 @@
 import { useId, useMemo } from 'react';
 import { scopeCanvasCss } from '../../editor/canvas-css';
-import { renderCustomTemplateHtml, type CssPiece } from '../../editor/css-pieces';
+import { renderStyleTemplate } from '../../editor/style-template';
+import type { CssPiece } from '../../editor/css-pieces';
 import { sanitizeStyleHtml } from '../../storage/style-file';
 
 function escapeHtml(text: string): string {
@@ -13,7 +14,14 @@ function escapeHtml(text: string): string {
 
 export type StyleSwatchPiece = Pick<
     CssPiece,
-    'kind' | 'className' | 'previewSample' | 'css' | 'templateHtml' | 'previewHtml' | 'previewCss'
+    | 'kind'
+    | 'className'
+    | 'previewSample'
+    | 'css'
+    | 'templateHtml'
+    | 'previewHtml'
+    | 'previewCss'
+    | 'fields'
 > & {
     id?: string;
     custom?: boolean;
@@ -50,6 +58,31 @@ export function StyleSwatch({
             return sanitizeStyleHtml(piece.previewHtml).html;
         }
 
+        const template = piece.templateHtml?.trim();
+        // Swatches show a field's placeholder ("e.g. I love you" → "I love you") where it has no
+        // default, so writers' forms don't start pre-filled just to make a nice preview.
+        const previewValues = Object.fromEntries(
+            (piece.fields ?? [])
+                .filter((f) => f.type !== 'toggle' && f.default === undefined && f.placeholder)
+                .map((f) => [f.key, f.placeholder!.replace(/^e\.g\.\s*/i, '')])
+        );
+        const fromTemplate = (tpl: string) =>
+            renderStyleTemplate(tpl, {
+                selection: sample,
+                fields: piece.fields,
+                values: previewValues,
+                fallback: sample,
+            });
+
+        if (piece.kind === 'inline' && template) {
+            // An inline template, filled in with its sample text and field defaults.
+            const inline = fromTemplate(template);
+            return mode === 'full'
+                ? sanitizeStyleHtml(`<p>The quick brown ${inline} jumped over the lazy dog.</p>`)
+                      .html
+                : inline;
+        }
+
         if (piece.kind === 'inline') {
             if (mode === 'full') {
                 return sanitizeStyleHtml(
@@ -67,15 +100,14 @@ export function StyleSwatch({
                 .html;
         }
 
-        const tpl =
-            piece.templateHtml?.trim() || `<div class="${safeClass}"><p>{{selection}}</p></div>`;
-        return renderCustomTemplateHtml(tpl, sample, sample);
+        return fromTemplate(template || `<div class="${safeClass}"><p>{{selection}}</p></div>`);
     }, [
         piece.kind,
         piece.className,
         piece.previewSample,
         piece.templateHtml,
         piece.previewHtml,
+        piece.fields,
         mode,
     ]);
 

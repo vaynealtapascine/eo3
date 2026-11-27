@@ -986,76 +986,6 @@
         overflow: hidden;
         white-space: nowrap;
         text-overflow: ellipsis;
-
-        &.is-redacted {
-            background: #1a1a1a;
-            color: #d0d0d0;
-            text-decoration: line-through;
-        }
-        &.is-translate {
-            background: rgb(var(--P-color-shade) / var(--P-color-shade-opacity));
-            border-bottom: 2px dotted currentColor;
-            border-radius: 0.3em 0.3em 0 0;
-            font-weight: 600;
-        }
-        &.is-smallcaps {
-            font-variant: small-caps;
-            letter-spacing: 0.06em;
-            border: 1px solid var(--P-separator);
-        }
-        &.is-whisper {
-            font-size: 0.7em;
-            opacity: 0.75;
-            border: 1px dashed var(--P-separator);
-        }
-        &.is-highlight {
-            background: #fff3a1;
-            color: #222;
-        }
-        &.is-pill {
-            border: 1px solid #888;
-            border-radius: 1em;
-        }
-        &.is-callout {
-            border-left: 3px solid #990000;
-            background: rgba(153, 0, 0, 0.12);
-            border-radius: 0 0.25em 0.25em 0;
-        }
-        &.is-letter {
-            background: #fbf7ee;
-            color: #2b241d;
-            border: 1px solid #dfd3bd;
-            font-family: Georgia, serif;
-        }
-        &.is-terminal {
-            background: #14181f;
-            color: #d8f3dc;
-            border: 1px solid #2d3a4b;
-            font-family: monospace;
-        }
-        &.is-epigraph {
-            border-top: 1px solid #999;
-            border-bottom: 1px solid #999;
-            border-radius: 0;
-            font-style: italic;
-        }
-        &.is-journal {
-            background: #fdfcf7;
-            color: #2a2a2a;
-            border: 1px solid #e2dcc8;
-            border-left: 3px solid #c99789;
-            font-family: Georgia, serif;
-        }
-        &.is-chat {
-            background: #0b84ff;
-            color: #fff;
-            border-radius: 0.8em 0.8em 0.2em 0.8em;
-        }
-        &.is-spoiler {
-            border: 1px solid var(--P-separator);
-            background: var(--P-info-box-bg);
-            font-weight: 600;
-        }
     }
 
     .i-piece-meta {
@@ -1207,6 +1137,11 @@
     font-family: 'Atkinson Hyperlegible', system-ui, sans-serif;
     font-size: var(--P-font-size-ui, 14px);
     line-height: 1.35;
+
+    .i-form-title {
+        margin: 0;
+        font-weight: 600;
+    }
 
     .i-field {
         display: flex;

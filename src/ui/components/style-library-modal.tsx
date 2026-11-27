@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import type { CssPieceKind } from '../../editor/css-pieces';
+import { CSS_PIECES, type CssPiece, type CssPieceKind } from '../../editor/css-pieces';
+import { lintStyleTemplate, type StyleField } from '../../editor/style-template';
 import {
     inspectStyleForAo3,
     isValidCssClassName,
@@ -39,6 +40,7 @@ interface DraftStyle {
     previewSample: string;
     css: string;
     templateHtml: string;
+    fields: StyleField[];
     previewHtml: string;
     previewCss: string;
     author: string;
@@ -61,6 +63,7 @@ const STARTERS: Record<CssPieceKind, Omit<DraftStyle, 'author' | 'pack'>> = {
   font-weight: bold;
 }`,
         templateHtml: '',
+        fields: [],
         previewHtml: '',
         previewCss: '',
     },
@@ -85,6 +88,7 @@ const STARTERS: Record<CssPieceKind, Omit<DraftStyle, 'author' | 'pack'>> = {
   margin-bottom: 0;
 }`,
         templateHtml: '',
+        fields: [],
         previewHtml: '',
         previewCss: '',
     },
@@ -126,6 +130,7 @@ const STARTERS: Record<CssPieceKind, Omit<DraftStyle, 'author' | 'pack'>> = {
   <p class="fx-social-body">{{selection|Write the post text here…}}</p>
   <p class="fx-social-meta">11:42 PM · 1.2K Likes</p>
 </div>`,
+        fields: [],
         previewHtml: '',
         previewCss: '',
     },
@@ -148,10 +153,38 @@ function entryToDraft(entry: LibraryStyle): DraftStyle {
         previewSample: entry.style.previewSample,
         css: entry.style.css,
         templateHtml: entry.style.templateHtml ?? '',
+        fields: entry.style.fields ?? [],
         previewHtml: entry.style.previewHtml ?? '',
         previewCss: entry.style.previewCss ?? '',
         author: entry.style.author ?? entry.author ?? '',
         pack: entry.pack ?? '',
+    };
+}
+
+/**
+ * A built-in style as a starting point for your own: everything it does is ordinary style data,
+ * so a copy behaves the same. Its main class gets a new name so the two don't clash.
+ */
+function pieceToDraft(piece: CssPiece): DraftStyle {
+    const next = `my-${piece.className.replace(/^fx-/, '')}`;
+    const pattern = new RegExp(
+        `(?<![\\w-])${piece.className.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\w-])`,
+        'g'
+    );
+    const rename = (text = '') => text.replace(pattern, next);
+    return {
+        label: `${piece.label} (copy)`,
+        description: piece.description,
+        kind: piece.kind,
+        className: next,
+        previewSample: piece.previewSample,
+        css: rename(piece.css),
+        templateHtml: rename(piece.templateHtml),
+        fields: (piece.fields ?? []).map((field) => ({ ...field })),
+        previewHtml: rename(piece.previewHtml),
+        previewCss: rename(piece.previewCss),
+        author: '',
+        pack: '',
     };
 }
 
@@ -176,6 +209,8 @@ export function StyleLibraryModal({
     const [tab, setTab] = useState<StyleLibraryTab>(initialTab);
     const [entries, setEntries] = useState<LibraryStyle[]>(() => listLibraryStyles());
     const [editingId, setEditingId] = useState<string | null>(initialEditId);
+    /** A built-in copied as the start of a new style ("Copy & edit"). */
+    const [seed, setSeed] = useState<DraftStyle | null>(null);
 
     // Sync library entries across mutations / tabs.
     useEffect(() => {
@@ -265,6 +300,7 @@ export function StyleLibraryModal({
                             <ImportPackTab onImported={() => setTab('library')} />
                         ) : tab === 'create' ? (
                             <CreateStyleTab
+                                seed={seed}
                                 editingEntry={
                                     editingId
                                         ? entries.find((e) => e.id === editingId) ?? null
@@ -277,6 +313,11 @@ export function StyleLibraryModal({
                                 entries={entries}
                                 onEdit={(id) => {
                                     setEditingId(id);
+                                    setTab('create');
+                                }}
+                                onDuplicate={(piece) => {
+                                    setEditingId(null);
+                                    setSeed(pieceToDraft(piece));
                                     setTab('create');
                                 }}
                                 onGoImport={() => setTab('import')}
@@ -524,16 +565,25 @@ function ImportPackTab({ onImported }: { onImported: () => void }) {
 /* ── Create / Edit & Single-Style Export Tab ────────────────────────────────────────────────── */
 
 function CreateStyleTab({
+    seed,
     editingEntry,
     onDoneEditing,
 }: {
+    seed: DraftStyle | null;
     editingEntry: LibraryStyle | null;
     onDoneEditing: () => void;
 }) {
     const [draft, setDraft] = useState<DraftStyle>(() =>
-        editingEntry ? entryToDraft(editingEntry) : blankDraft('inline')
+        editingEntry ? entryToDraft(editingEntry) : seed ?? blankDraft('inline')
     );
-    const [classTouched, setClassTouched] = useState<boolean>(!!editingEntry);
+    const [classTouched, setClassTouched] = useState<boolean>(!!editingEntry || !!seed);
+
+    useEffect(() => {
+        if (seed && !editingEntry) {
+            setDraft(seed);
+            setClassTouched(true);
+        }
+    }, [seed, editingEntry]);
     const [error, setError] = useState('');
     const [status, setStatus] = useState('');
 
@@ -584,21 +634,33 @@ function CreateStyleTab({
         setStatus('');
     };
 
+    /** Template HTML counts for templates, and makes an inline style an inline template. */
+    const usesTemplate = draft.kind === 'template' || (draft.kind === 'inline' && !!draft.templateHtml.trim());
+
     const previewPiece = useMemo(
         () => ({
             kind: draft.kind,
             className: draft.className.replace(/^\.+/, '').trim() || slugifyClassName(draft.label),
             previewSample: draft.previewSample.trim() || draft.label.trim() || 'Sample',
             css: draft.css,
-            templateHtml: draft.kind === 'template' ? draft.templateHtml : undefined,
+            templateHtml: usesTemplate ? draft.templateHtml : undefined,
+            fields: usesTemplate && draft.fields.length ? draft.fields : undefined,
             previewHtml: draft.previewHtml.trim() || undefined,
             previewCss: draft.previewCss.trim() || undefined,
         }),
-        [draft]
+        [draft, usesTemplate]
     );
 
     const inspection = useMemo(() => inspectStyleForAo3(previewPiece), [previewPiece]);
-    const allWarnings = [...inspection.cssWarnings, ...inspection.htmlWarnings];
+    const templateProblems = useMemo(
+        () => (usesTemplate ? lintStyleTemplate(draft.templateHtml, draft.fields) : []),
+        [usesTemplate, draft.templateHtml, draft.fields]
+    );
+    const allWarnings = [
+        ...templateProblems,
+        ...inspection.cssWarnings,
+        ...inspection.htmlWarnings,
+    ];
 
     const buildNormalizedStyle = (): StylePackStyle => {
         const cleanClass = draft.className.replace(/^\.+/, '').trim();
@@ -615,7 +677,8 @@ function CreateStyleTab({
             className: cleanClass,
             previewSample: draft.previewSample,
             css: draft.css,
-            ...(draft.kind === 'template' ? { templateHtml: draft.templateHtml } : {}),
+            ...(usesTemplate ? { templateHtml: draft.templateHtml } : {}),
+            ...(usesTemplate && draft.fields.length ? { fields: draft.fields } : {}),
             ...(draft.previewHtml.trim() ? { previewHtml: draft.previewHtml } : {}),
             ...(draft.previewCss.trim() ? { previewCss: draft.previewCss } : {}),
             ...(draft.author.trim() ? { author: draft.author.trim() } : {}),
@@ -785,25 +848,42 @@ function CreateStyleTab({
                         />
                     </label>
 
-                    {draft.kind === 'template' ? (
+                    {draft.kind !== 'block' ? (
                         <label className="i-field">
                             <span>
-                                Template HTML{' '}
+                                {draft.kind === 'template'
+                                    ? 'Template HTML'
+                                    : 'Inline template HTML (optional)'}{' '}
                                 <em className="i-field-hint">
-                                    (use <code>{'{{selection}}'}</code> or{' '}
-                                    <code>{'{{selection|Fallback}}'}</code>)
+                                    {draft.kind === 'template'
+                                        ? '(see Template syntax below)'
+                                        : '(makes this an inline template: inserted as one piece writers can edit again, like Translate on hover)'}
                                 </em>
                             </span>
                             <textarea
                                 className="i-code-input"
-                                rows={5}
+                                rows={draft.kind === 'template' ? 5 : 3}
                                 spellCheck={false}
-                                placeholder='<div class="my-card"><p>{{selection|Write here…}}</p></div>'
+                                placeholder={
+                                    draft.kind === 'template'
+                                        ? '<div class="my-card"><p>{{selection|Write here…}}</p></div>'
+                                        : `<span class="${draft.className || 'my-style'}">{{selection}}<span class="${draft.className || 'my-style'}-note">{{note}}</span></span>`
+                                }
                                 value={draft.templateHtml}
                                 onChange={(e) => update('templateHtml', e.target.value)}
                             />
                         </label>
                     ) : null}
+
+                    {usesTemplate ? (
+                        <StyleFieldsEditor
+                            fields={draft.fields}
+                            inline={draft.kind === 'inline'}
+                            onChange={(fields) => update('fields', fields)}
+                        />
+                    ) : null}
+
+                    {draft.kind !== 'block' ? <TemplateSyntaxHelp /> : null}
 
                     <details className="i-advanced-details">
                         <summary>Custom swatch preview (optional)</summary>
@@ -921,11 +1001,13 @@ function CreateStyleTab({
 function LibraryExportTab({
     entries,
     onEdit,
+    onDuplicate,
     onGoImport,
     onGoCreate,
 }: {
     entries: LibraryStyle[];
     onEdit: (id: string) => void;
+    onDuplicate: (piece: CssPiece) => void;
     onGoImport: () => void;
     onGoCreate: () => void;
 }) {
@@ -1030,6 +1112,7 @@ function LibraryExportTab({
                         Create a style
                     </button>
                 </div>
+                <BuiltInStyles onDuplicate={onDuplicate} />
             </div>
         );
     }
@@ -1137,6 +1220,8 @@ function LibraryExportTab({
                 ) : null}
             </div>
 
+            <BuiltInStyles onDuplicate={onDuplicate} />
+
             <div className="i-export-panel">
                 <h4>Export pack ({selectedEntries.length} selected)</h4>
                 <div className="i-three-col">
@@ -1195,5 +1280,244 @@ function LibraryExportTab({
                 </div>
             </div>
         </div>
+    );
+}
+
+/* ── Style fields, template help, built-ins ─────────────────────────────────────────────────── */
+
+const FIELD_KEY_RE = /^[A-Za-z_][\w-]*$/;
+
+/** What a template style asks the writer for when it's applied. */
+function StyleFieldsEditor({
+    fields,
+    inline,
+    onChange,
+}: {
+    fields: StyleField[];
+    inline: boolean;
+    onChange: (fields: StyleField[]) => void;
+}) {
+    const set = (i: number, changes: Partial<StyleField>) =>
+        onChange(fields.map((f, j) => (j === i ? { ...f, ...changes } : f)));
+    const keys = fields.map((f) => f.key);
+    const hasSelectionField = keys.includes('selection');
+    return (
+        <fieldset className="i-style-fields">
+            <legend>Fields writers fill in</legend>
+            <p className="i-field-hint">
+                Each field is asked for when the style is applied, and fills{' '}
+                <code>{'{{key}}'}</code> in the template (on/off fields work with{' '}
+                <code>{'{{#if key}}'}</code>).
+                {inline
+                    ? ' The selected text is asked for too; a field with the key “selection” sets its label.'
+                    : ''}
+            </p>
+            {fields.map((field, i) => {
+                const badKey =
+                    !FIELD_KEY_RE.test(field.key) || keys.indexOf(field.key) !== i;
+                return (
+                    <div className="i-style-field-row" key={i}>
+                        <label className="i-field">
+                            <span>Key</span>
+                            <input
+                                type="text"
+                                value={field.key}
+                                spellCheck={false}
+                                aria-invalid={badKey}
+                                onChange={(e) => set(i, { key: e.target.value.trim() })}
+                            />
+                        </label>
+                        <label className="i-field">
+                            <span>Label</span>
+                            <input
+                                type="text"
+                                value={field.label}
+                                placeholder={field.key}
+                                onChange={(e) => set(i, { label: e.target.value })}
+                            />
+                        </label>
+                        {field.key !== 'selection' ? (
+                            <label className="i-field">
+                                <span>Type</span>
+                                <select
+                                    value={field.type ?? 'text'}
+                                    onChange={(e) =>
+                                        set(i, {
+                                            type: e.target.value === 'toggle' ? 'toggle' : undefined,
+                                            default: undefined,
+                                            required: undefined,
+                                        })
+                                    }
+                                >
+                                    <option value="text">Text</option>
+                                    <option value="toggle">On/off</option>
+                                </select>
+                            </label>
+                        ) : null}
+                        {field.type === 'toggle' ? (
+                            <label className="i-check-row">
+                                <Checkbox
+                                    checked={field.default === true}
+                                    onChange={(checked) => set(i, { default: checked })}
+                                />
+                                <span>On by default</span>
+                            </label>
+                        ) : (
+                            <>
+                                {field.key !== 'selection' ? (
+                                    <label className="i-field">
+                                        <span>Default</span>
+                                        <input
+                                            type="text"
+                                            value={typeof field.default === 'string' ? field.default : ''}
+                                            onChange={(e) =>
+                                                set(i, { default: e.target.value || undefined })
+                                            }
+                                        />
+                                    </label>
+                                ) : null}
+                                <label className="i-field">
+                                    <span>Placeholder</span>
+                                    <input
+                                        type="text"
+                                        value={field.placeholder ?? ''}
+                                        onChange={(e) =>
+                                            set(i, { placeholder: e.target.value || undefined })
+                                        }
+                                    />
+                                </label>
+                                <label className="i-check-row">
+                                    <Checkbox
+                                        checked={!!field.required}
+                                        onChange={(checked) =>
+                                            set(i, { required: checked || undefined })
+                                        }
+                                    />
+                                    <span>Required</span>
+                                </label>
+                            </>
+                        )}
+                        <button
+                            type="button"
+                            className="i-btn-sm is-danger"
+                            aria-label={`Remove field ${field.label || field.key}`}
+                            onClick={() => onChange(fields.filter((_, j) => j !== i))}
+                        >
+                            Remove
+                        </button>
+                    </div>
+                );
+            })}
+            <div className="i-row-actions">
+                <button
+                    type="button"
+                    className="i-btn-sm"
+                    onClick={() => {
+                        let n = fields.length + 1;
+                        while (keys.includes(`field${n}`)) n++;
+                        onChange([...fields, { key: `field${n}`, label: `Field ${n}` }]);
+                    }}
+                >
+                    + Add field
+                </button>
+                {inline && !hasSelectionField ? (
+                    <button
+                        type="button"
+                        className="i-btn-sm"
+                        onClick={() =>
+                            onChange([
+                                { key: 'selection', label: 'Text', required: true },
+                                ...fields,
+                            ])
+                        }
+                    >
+                        + Label the selected text
+                    </button>
+                ) : null}
+            </div>
+        </fieldset>
+    );
+}
+
+const SYNTAX: [string, string][] = [
+    ['{{selection}}', 'The selected text (lines joined with line breaks).'],
+    ['{{selection|Starter text}}', 'Starter text when nothing is selected.'],
+    ['<p>{{selection}}</p>', 'One such paragraph per selected line.'],
+    ['{{key}}  {{key|Default}}', 'A field’s value.'],
+    ['{{#if key}}…{{else}}…{{/if}}', 'Shown when a field is filled in or switched on. {{#if !key}} for the opposite.'],
+    ['{{#lines|Line one\nLine two}}…{{/lines}}', 'Repeated for each selected line (or each starter line).'],
+    ['{{line}}  {{index}}', 'Inside {{#lines}}: the whole line; its number (1, 2, …).'],
+    ['{{speaker}}  {{text}}', 'Inside {{#lines}}: for “Name: message” lines, the name and the message.'],
+    ['{{alt:in|out}}', 'Inside {{#lines}}: cycles through the options, by speaker when every line names one.'],
+    ['{{#if many-speakers}}', 'Inside {{#lines}}: also speaker, first, last.'],
+];
+
+function TemplateSyntaxHelp() {
+    return (
+        <details className="i-advanced-details i-syntax-help">
+            <summary>Template syntax</summary>
+            <div className="i-advanced-body">
+                <p className="i-field-hint">
+                    Tags can sit anywhere, even inside attributes like{' '}
+                    <code>{'class="{{alt:in|out}}"'}</code>. Values are escaped, and the result is
+                    cleaned with AO3’s HTML rules. Every built-in style is made this way: copy one
+                    under Library to see how.
+                </p>
+                <dl>
+                    {SYNTAX.map(([tag, meaning]) => (
+                        <div key={tag}>
+                            <dt>
+                                <code>{tag}</code>
+                            </dt>
+                            <dd>{meaning}</dd>
+                        </div>
+                    ))}
+                </dl>
+            </div>
+        </details>
+    );
+}
+
+/** The built-in styles, each a starting point for your own. */
+function BuiltInStyles({ onDuplicate }: { onDuplicate: (piece: CssPiece) => void }) {
+    return (
+        <details className="i-builtins">
+            <summary>Built-in styles ({CSS_PIECES.length}): copy one to make your own</summary>
+            <div className="i-library-list">
+                {CSS_PIECES.map((piece) => (
+                    <div key={piece.id} className="i-style-card">
+                        <div className="i-style-card-main">
+                            <StyleSwatch piece={piece} mode="compact" />
+                            <div className="i-style-card-info">
+                                <div className="i-style-card-title">
+                                    <strong>{piece.label}</strong>
+                                    <span className="i-kind-pill">{kindLabel(piece.kind)}</span>
+                                    {piece.fields?.length ? (
+                                        <span className="i-kind-pill">
+                                            {piece.fields.length}{' '}
+                                            {piece.fields.length === 1 ? 'field' : 'fields'}
+                                        </span>
+                                    ) : null}
+                                </div>
+                                <p className="i-style-card-desc">{piece.description}</p>
+                                <p className="i-style-card-sub">
+                                    <code>.{piece.className}</code>
+                                </p>
+                            </div>
+                            <div className="i-style-card-actions">
+                                <button
+                                    type="button"
+                                    className="i-btn-sm"
+                                    aria-label={`Copy ${piece.label} and edit it`}
+                                    onClick={() => onDuplicate(piece)}
+                                >
+                                    Copy &amp; edit
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </details>
     );
 }

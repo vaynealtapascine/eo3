@@ -15,15 +15,20 @@ import { PluginKey } from '@tiptap/pm/state';
 import type { Editor } from '@tiptap/core';
 import { createEo3Extensions } from '../../editor/extensions';
 import { editorContentToHtml, htmlToEditorContent } from '../../editor/html-sync';
-import type { HoverTranslationAttrs } from '../../editor/hover-translation';
+import {
+    findInlineTemplatePiece,
+    isInlineTemplatePiece,
+    readInlineTemplate,
+    renderInlineTemplate,
+    setInlineTemplateLibrary,
+} from '../../editor/inline-template';
+import { fieldValues, type StyleFieldValues } from '../../editor/style-template';
 import type { RubyAttrs } from '../../editor/ruby';
 import type { TextDirection } from '../../editor/ao3-attributes';
 import { extractWorkCssClasses, scopeCanvasCss } from '../../editor/canvas-css';
 import {
     BUILTIN_PIECE_CLASSES,
     CSS_PIECES,
-    buildSpoilerHtml,
-    buildTextMessageThreadHtml,
     findPieceByClass,
     findPieceById,
     renderCustomTemplateHtml,
@@ -133,22 +138,32 @@ function getSelectedRuby(editor: Editor): RubyAttrs | null {
     return null;
 }
 
-function getSelectedHoverTranslation(editor: Editor): HoverTranslationAttrs | null {
+/** The inline template (Translate on hover, or a user's) the selection is, with its values. */
+function getSelectedInlineTemplate(editor: Editor): {
+    piece: CssPiece;
+    selection: string;
+    values: StyleFieldValues | null;
+} | null {
     const { selection } = editor.state;
-    if ('node' in selection && selection.node) {
-        const node = selection.node as {
-            type?: { name?: string };
-            attrs?: Partial<HoverTranslationAttrs>;
-        };
-        if (node.type?.name === 'hoverTranslation') {
-            return {
-                original: String(node.attrs?.original ?? ''),
-                translation: String(node.attrs?.translation ?? ''),
-                includeParens: node.attrs?.includeParens !== false,
-            };
-        }
-    }
-    return null;
+    if (!('node' in selection) || !selection.node) return null;
+    const node = selection.node as { type?: { name?: string }; attrs?: Record<string, unknown> };
+    if (node.type?.name !== 'inlineTemplate') return null;
+    const piece = findInlineTemplatePiece(String(node.attrs?.styleId ?? ''));
+    if (!piece) return null;
+    const html = String(node.attrs?.html ?? '');
+    const read = readInlineTemplate(piece, html);
+    if (read) return { piece, selection: read.selection, values: read.values };
+    const box = document.createElement('div');
+    box.innerHTML = html;
+    return { piece, selection: box.textContent ?? '', values: null };
+}
+
+/** Whether applying a piece asks for something first (its fields, or an inline template's text). */
+function pieceNeedsForm(piece: CssPiece): boolean {
+    return (
+        isInlineTemplatePiece(piece) ||
+        (piece.fields ?? []).some((field) => field.key !== 'selection')
+    );
 }
 
 function isSafeUrl(url: string, allowRelative: boolean): boolean {
@@ -221,6 +236,9 @@ const TipTapRichEditor = forwardRef<RichTextEditorHandle, RichTextEditorProps>(
             refresh();
             return subscribeLibraryStyles(refresh);
         }, []);
+
+        // The editor finds user-made inline templates in saved HTML by their class.
+        setInlineTemplateLibrary(customPieces);
 
         const knownPieceClasses = useMemo(
             () =>
@@ -334,10 +352,16 @@ const TipTapRichEditor = forwardRef<RichTextEditorHandle, RichTextEditorProps>(
 
         const [linkAnchor, setLinkAnchor] = useState<PopoverAnchor>(null);
         const [rubyAnchor, setRubyAnchor] = useState<PopoverAnchor>(null);
-        const [translateAnchor, setTranslateAnchor] = useState<PopoverAnchor>(null);
         const [stylesAnchor, setStylesAnchor] = useState<PopoverAnchor>(null);
         const [formatAnchor, setFormatAnchor] = useState<PopoverAnchor>(null);
         const [colorAnchor, setColorAnchor] = useState<PopoverAnchor>(null);
+        /** The style whose fields form is open (the selected inline template wins). */
+        const [fieldsRequest, setFieldsRequest] = useState<{
+            anchor: PopoverAnchor;
+            pieceId: string;
+        } | null>(null);
+        const setTranslateAnchor = (anchor: PopoverAnchor) =>
+            setFieldsRequest(anchor ? { anchor, pieceId: 'translate' } : null);
         const [imageAnchor, setImageAnchor] = useState<PopoverAnchor>(null);
         const [blockStyleAnchor, setBlockStyleAnchor] = useState<PopoverAnchor>(null);
         const [styleModal, setStyleModal] = useState<{
@@ -394,24 +418,45 @@ const TipTapRichEditor = forwardRef<RichTextEditorHandle, RichTextEditorProps>(
             [editor, emitNow, insertChapterBreakNow]
         );
 
-        const applyHoverTranslation = useCallback(
-            (attrs: HoverTranslationAttrs) => {
+        /** Applies a style that asked for its fields (see StyleFieldsPopover). */
+        const applyStyleFields = useCallback(
+            (piece: CssPiece, selectionText: string, values: StyleFieldValues) => {
                 if (!editor || editor.isDestroyed) return;
-                const translatePiece = findPieceById('translate');
-                if (translatePiece) {
-                    void onEnsurePieceCssRef.current?.(translatePiece);
-                }
+                void onEnsurePieceCssRef.current?.(piece);
                 setWorkskinEnabled(true);
-                editor.chain().focus().setHoverTranslation(attrs).run();
+                if (isInlineTemplatePiece(piece)) {
+                    editor
+                        .chain()
+                        .focus()
+                        .insertInlineTemplate({
+                            html: renderInlineTemplate(piece, selectionText, values),
+                            styleId: piece.id,
+                        })
+                        .run();
+                } else {
+                    editor
+                        .chain()
+                        .focus()
+                        .insertContent(
+                            renderCustomTemplateHtml(
+                                piece.templateHtml ?? '',
+                                selectionText,
+                                piece.previewSample || 'Your text here…',
+                                piece.fields,
+                                values
+                            )
+                        )
+                        .run();
+                }
                 dirtyRef.current = true;
                 emitNow(editor);
             },
             [editor, emitNow]
         );
 
-        const removeHoverTranslation = useCallback(() => {
+        const removeInlineTemplate = useCallback(() => {
             if (!editor || editor.isDestroyed) return;
-            editor.chain().focus().unsetHoverTranslation().run();
+            editor.chain().focus().removeInlineTemplate().run();
             dirtyRef.current = true;
             emitNow(editor);
         }, [editor, emitNow]);
@@ -429,15 +474,13 @@ const TipTapRichEditor = forwardRef<RichTextEditorHandle, RichTextEditorProps>(
                 } else if (piece.kind === 'template') {
                     const { from, to, empty } = editor.state.selection;
                     const selectedText = empty ? '' : editor.state.doc.textBetween(from, to, '\n');
-                    const templateHtml = piece.templateHtml
-                        ? renderCustomTemplateHtml(
-                              piece.templateHtml,
-                              selectedText,
-                              piece.previewSample || 'Your text here…'
-                          )
-                        : piece.id === 'chat'
-                        ? buildTextMessageThreadHtml(selectedText)
-                        : buildSpoilerHtml(selectedText);
+                    const templateHtml = renderCustomTemplateHtml(
+                        piece.templateHtml ??
+                            `<div class="${piece.className}"><p>{{selection}}</p></div>`,
+                        selectedText,
+                        piece.previewSample || 'Your text here…',
+                        piece.fields
+                    );
                     editor.chain().focus().insertContent(templateHtml).run();
                 }
 
@@ -569,10 +612,10 @@ const TipTapRichEditor = forwardRef<RichTextEditorHandle, RichTextEditorProps>(
                             customPieces={customPieces}
                             onApplyPiece={applyPiece}
                             onApplyCustomClass={applyCustomClass}
-                            onOpenTranslate={() => {
+                            onOpenFields={(piece) => {
                                 const nextAnchor = stylesAnchor;
                                 setStylesAnchor(null);
-                                setTranslateAnchor(nextAnchor);
+                                setFieldsRequest({ anchor: nextAnchor, pieceId: piece.id });
                             }}
                             onOpenStyleManager={(tab, editId = null) => {
                                 setStylesAnchor(null);
@@ -605,13 +648,14 @@ const TipTapRichEditor = forwardRef<RichTextEditorHandle, RichTextEditorProps>(
                                 editor.commands.focus();
                             }}
                         />
-                        <TranslatePopover
+                        <StyleFieldsPopover
                             editor={editor}
-                            anchor={translateAnchor}
-                            onApply={applyHoverTranslation}
-                            onRemove={removeHoverTranslation}
+                            request={fieldsRequest}
+                            customPieces={customPieces}
+                            onApply={applyStyleFields}
+                            onRemove={removeInlineTemplate}
                             onClose={() => {
-                                setTranslateAnchor(null);
+                                setFieldsRequest(null);
                                 editor.commands.focus();
                             }}
                         />
@@ -718,7 +762,9 @@ interface ToolbarEditorState {
     dir: TextDirection;
     styledBlockClass: string | null;
     styledSpanClass: string | null;
-    hoverTranslation: string | null;
+    /** The selected inline template's main field (or text), and its style's name. */
+    inlineTemplate: string | null;
+    inlineTemplateLabel: string | null;
     inDetails: boolean;
     canUndo: boolean;
     canRedo: boolean;
@@ -747,7 +793,8 @@ const EMPTY_TOOLBAR_STATE: ToolbarEditorState = {
     dir: null,
     styledBlockClass: null,
     styledSpanClass: null,
-    hoverTranslation: null,
+    inlineTemplate: null,
+    inlineTemplateLabel: null,
     inDetails: false,
     canUndo: false,
     canRedo: false,
@@ -778,7 +825,14 @@ function selectToolbarState(e: Editor): ToolbarEditorState {
     const styledSpanClass = e.isActive('styledSpan')
         ? (e.getAttributes('styledSpan').class as string | null) ?? null
         : null;
-    const selectedTranslation = getSelectedHoverTranslation(e);
+    const selectedTemplate = getSelectedInlineTemplate(e);
+    const templateSummary = selectedTemplate
+        ? (selectedTemplate.piece.fields ?? [])
+              .filter((f) => f.key !== 'selection' && f.type !== 'toggle')
+              .map((f) => selectedTemplate.values?.[f.key])
+              .find((v): v is string => typeof v === 'string' && !!v.trim()) ??
+          selectedTemplate.selection
+        : null;
     return {
         blockStyle,
         bold: e.isActive('bold'),
@@ -802,7 +856,8 @@ function selectToolbarState(e: Editor): ToolbarEditorState {
         dir,
         styledBlockClass,
         styledSpanClass,
-        hoverTranslation: selectedTranslation ? selectedTranslation.translation : null,
+        inlineTemplate: templateSummary,
+        inlineTemplateLabel: selectedTemplate ? selectedTemplate.piece.label : null,
         inDetails: e.isActive('details'),
         canUndo: e.can().undo(),
         canRedo: e.can().redo(),
@@ -827,7 +882,7 @@ function ActiveStyleChips({
     editor: Editor;
     state: Pick<
         ToolbarEditorState,
-        'styledBlockClass' | 'styledSpanClass' | 'hoverTranslation' | 'inDetails'
+        'styledBlockClass' | 'styledSpanClass' | 'inlineTemplate' | 'inlineTemplateLabel' | 'inDetails'
     >;
     customPieces: readonly CssPiece[];
     onEditTranslate: (anchor: HTMLElement) => void;
@@ -889,17 +944,17 @@ function ActiveStyleChips({
                 </span>
             ) : null}
 
-            {state.hoverTranslation !== null ? (
+            {state.inlineTemplate !== null ? (
                 <span
                     className="i-active-chip"
-                    title={`Translate on hover: ${state.hoverTranslation}`}
+                    title={`${state.inlineTemplateLabel}: ${state.inlineTemplate}`}
                 >
-                    <span className="i-chip-label">{state.hoverTranslation}</span>
+                    <span className="i-chip-label">{state.inlineTemplate}</span>
                     <button
                         type="button"
                         className="i-chip-btn"
-                        aria-label="Edit hover translation"
-                        title="Edit translation"
+                        aria-label={`Edit ${state.inlineTemplateLabel}`}
+                        title={`Edit ${state.inlineTemplateLabel}`}
                         onMouseDown={preventFocusSteal}
                         onClick={(e) => onEditTranslate(e.currentTarget)}
                     >
@@ -908,10 +963,10 @@ function ActiveStyleChips({
                     <button
                         type="button"
                         className="i-chip-btn"
-                        aria-label="Remove hover translation"
-                        title="Remove hover translation"
+                        aria-label={`Remove ${state.inlineTemplateLabel}`}
+                        title={`Remove ${state.inlineTemplateLabel}, keeping its text`}
                         onMouseDown={preventFocusSteal}
-                        onClick={() => editor.chain().focus().unsetHoverTranslation().run()}
+                        onClick={() => editor.chain().focus().removeInlineTemplate().run()}
                     >
                         ×
                     </button>
@@ -1075,7 +1130,7 @@ function EditorToolbar({
     const hasActiveStyle = !!(
         state.styledBlockClass ||
         state.styledSpanClass ||
-        state.hoverTranslation !== null ||
+        state.inlineTemplate !== null ||
         state.inDetails
     );
 
@@ -1468,7 +1523,7 @@ function SelectionBubble({
         expanded,
         state.styledBlockClass,
         state.styledSpanClass,
-        state.hoverTranslation,
+        state.inlineTemplate,
         state.inDetails,
     ]);
 
@@ -1498,7 +1553,7 @@ function SelectionBubble({
     const hasActiveStyle = !!(
         state.styledBlockClass ||
         state.styledSpanClass ||
-        state.hoverTranslation !== null ||
+        state.inlineTemplate !== null ||
         state.inDetails
     );
 
@@ -2041,100 +2096,149 @@ function RubyPopover({
     );
 }
 
-function TranslatePopover({
+/**
+ * The form a style with fields shows when it's applied: Translate on hover's original text and
+ * translation, a spoiler's summary, or whatever a user's style asks for. With an inline template
+ * selected, it edits that one instead (and can remove it, keeping its text).
+ */
+function StyleFieldsPopover({
     editor,
-    anchor,
+    request,
+    customPieces,
     onApply,
     onRemove,
     onClose,
 }: {
     editor: Editor;
-    anchor: PopoverAnchor;
-    onApply: (attrs: HoverTranslationAttrs) => void;
+    request: { anchor: PopoverAnchor; pieceId: string } | null;
+    customPieces: readonly CssPiece[];
+    onApply: (piece: CssPiece, selection: string, values: StyleFieldValues) => void;
     onRemove: () => void;
     onClose: () => void;
 }) {
-    const open = !!anchor;
-    const [original, setOriginal] = useState('');
-    const [translation, setTranslation] = useState('');
-    const [includeParens, setIncludeParens] = useState(true);
+    const open = !!request?.anchor;
+    const [piece, setPiece] = useState<CssPiece | null>(null);
+    const [text, setText] = useState('');
+    const [values, setValues] = useState<StyleFieldValues>({});
     const [editing, setEditing] = useState(false);
     const [error, setError] = useState('');
-    const originalRef = useRef<HTMLInputElement>(null);
-    const translationRef = useRef<HTMLInputElement>(null);
+    const firstRef = useRef<HTMLInputElement>(null);
+    const formId = useId();
 
     useEffect(() => {
-        if (!open) return;
-        const selected = getSelectedHoverTranslation(editor);
+        if (!open || !request) return;
+        const selected = getSelectedInlineTemplate(editor);
+        const target = selected?.piece ?? findPieceById(request.pieceId, customPieces) ?? null;
+        setPiece(target);
         if (selected) {
-            setOriginal(selected.original);
-            setTranslation(selected.translation);
-            setIncludeParens(selected.includeParens);
+            setText(selected.selection);
+            setValues(fieldValues(selected.piece.fields, selected.values ?? {}));
             setEditing(true);
         } else {
             const { from, to } = editor.state.selection;
-            const text = from !== to ? editor.state.doc.textBetween(from, to, ' ') : '';
-            setOriginal(text);
-            setTranslation('');
-            setIncludeParens(true);
+            const inline = target ? isInlineTemplatePiece(target) : false;
+            setText(from !== to ? editor.state.doc.textBetween(from, to, inline ? ' ' : '\n') : '');
+            setValues(fieldValues(target?.fields));
             setEditing(false);
         }
         setError('');
-    }, [open, editor]);
+    }, [open, request, editor, customPieces]);
 
-    useFocusWhenShown(open, () => (original ? translationRef.current : originalRef.current));
+    useFocusWhenShown(open, () => firstRef.current);
+
+    if (!piece) {
+        return <DirPopover portal anchor={request?.anchor ?? null} open={false} onClose={onClose}>{null}</DirPopover>;
+    }
+
+    const inline = isInlineTemplatePiece(piece);
+    const fields = piece.fields ?? [];
+    const textField = fields.find((f) => f.key === 'selection');
+    const otherFields = fields.filter((f) => f.key !== 'selection');
+    const textLabel = textField?.label ?? 'Text';
+    const textRequired = inline || !!textField?.required;
 
     const apply = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!original.trim() || !translation.trim()) {
-            setError('Both original text and translation are required.');
+        if (textRequired && inline && !text.trim()) {
+            setError(`“${textLabel}” is needed.`);
             return;
         }
-        onApply({ original, translation, includeParens });
+        const missing = otherFields.find(
+            (f) => f.required && f.type !== 'toggle' && !String(values[f.key] ?? '').trim()
+        );
+        if (missing) {
+            setError(`“${missing.label}” is needed.`);
+            return;
+        }
+        onApply(piece, text, values);
         onClose();
     };
 
+    let first = true;
+    const takeFirst = () => {
+        const isFirst = first;
+        first = false;
+        return isFirst ? firstRef : undefined;
+    };
+
     return (
-        <DirPopover portal anchor={anchor} open={open} onClose={onClose}>
+        <DirPopover portal anchor={request?.anchor ?? null} open={open} onClose={onClose}>
             <form
-                className="tiptap-popover-form tiptap-translate-popover"
-                aria-label="Translate on hover"
+                className="tiptap-popover-form tiptap-style-fields-popover"
+                aria-label={piece.label}
                 onSubmit={apply}
             >
-                <label className="i-field">
-                    <span>Original text</span>
-                    <input
-                        ref={originalRef}
-                        type="text"
-                        placeholder="e.g. Je t’aime"
-                        value={original}
-                        onChange={(e) => {
-                            setOriginal(e.target.value);
-                            setError('');
-                        }}
-                    />
-                </label>
-                <label className="i-field">
-                    <span>Translation (shown on hover)</span>
-                    <input
-                        ref={translationRef}
-                        type="text"
-                        placeholder="e.g. I love you"
-                        value={translation}
-                        onChange={(e) => {
-                            setTranslation(e.target.value);
-                            setError('');
-                        }}
-                    />
-                </label>
-                <label className="i-checkbox">
-                    <Checkbox
-                        checked={includeParens}
-                        onChange={(checked) => setIncludeParens(checked)}
-                    />
-                    <span>Show (translation) fallback when styles are off</span>
-                </label>
-                {error ? <p className="i-error">{error}</p> : null}
+                <p className="i-form-title">{piece.label}</p>
+                {inline ? (
+                    <label className="i-field">
+                        <span>{textLabel}</span>
+                        <input
+                            ref={takeFirst()}
+                            type="text"
+                            placeholder={textField?.placeholder}
+                            aria-required={textRequired}
+                            value={text}
+                            onChange={(e) => {
+                                setText(e.target.value);
+                                setError('');
+                            }}
+                        />
+                    </label>
+                ) : null}
+                {otherFields.map((field) =>
+                    field.type === 'toggle' ? (
+                        <label className="i-checkbox" key={field.key}>
+                            <Checkbox
+                                checked={values[field.key] === true}
+                                onChange={(checked) =>
+                                    setValues((v) => ({ ...v, [field.key]: checked }))
+                                }
+                            />
+                            <span>{field.label}</span>
+                        </label>
+                    ) : (
+                        <label className="i-field" key={field.key}>
+                            <span>{field.label}</span>
+                            <input
+                                ref={takeFirst()}
+                                id={`${formId}-${field.key}`}
+                                type="text"
+                                placeholder={field.placeholder}
+                                aria-required={!!field.required}
+                                value={String(values[field.key] ?? '')}
+                                onChange={(e) => {
+                                    setValues((v) => ({ ...v, [field.key]: e.target.value }));
+                                    setError('');
+                                }}
+                            />
+                        </label>
+                    )
+                )}
+                {error ? (
+                    <p className="i-error" role="alert">
+                        {error}
+                    </p>
+                ) : null}
                 <div className="i-actions">
                     {editing ? (
                         <button
@@ -2315,7 +2419,7 @@ function StylesPopover({
     customPieces,
     onApplyPiece,
     onApplyCustomClass,
-    onOpenTranslate,
+    onOpenFields,
     onOpenStyleManager,
     onClose,
 }: {
@@ -2325,7 +2429,7 @@ function StylesPopover({
     customPieces: readonly CssPiece[];
     onApplyPiece: (piece: CssPiece) => void;
     onApplyCustomClass: (className: string, target: 'inline' | 'block') => void;
-    onOpenTranslate: () => void;
+    onOpenFields: (piece: CssPiece) => void;
     onOpenStyleManager: (tab: StyleLibraryTab, editId?: string | null) => void;
     onClose: () => void;
 }) {
@@ -2348,7 +2452,7 @@ function StylesPopover({
     const activeSpanClass = open
         ? (editor.getAttributes('styledSpan').class as string | null) ?? ''
         : '';
-    const hasActiveHoverTranslation = open && getSelectedHoverTranslation(editor) !== null;
+    const selectedTemplateId = open ? getSelectedInlineTemplate(editor)?.piece.id ?? null : null;
     const hasSelection = open && !editor.state.selection.empty;
 
     const query = filter.trim().toLowerCase();
@@ -2376,8 +2480,8 @@ function StylesPopover({
     );
 
     const pickPiece = (piece: CssPiece) => {
-        if (piece.id === 'translate') {
-            onOpenTranslate();
+        if (pieceNeedsForm(piece)) {
+            onOpenFields(piece);
             return;
         }
         onApplyPiece(piece);
@@ -2401,11 +2505,7 @@ function StylesPopover({
                 title={piece.description}
                 onClick={() => pickPiece(piece)}
             >
-                {piece.custom ? (
-                    <StyleSwatch piece={piece} mode="compact" />
-                ) : (
-                    <span className={`i-piece-swatch is-${piece.id}`}>{piece.previewSample}</span>
-                )}
+                <StyleSwatch piece={piece} mode="compact" />
                 <span className="i-piece-meta">
                     <span className="i-piece-name">{piece.label}</span>
                     <span className="i-piece-desc">{piece.description}</span>
@@ -2465,8 +2565,8 @@ function StylesPopover({
                             <div className="i-piece-grid">
                                 {inlineItems.map((piece) => {
                                     const active =
-                                        piece.id === 'translate'
-                                            ? hasActiveHoverTranslation
+                                        isInlineTemplatePiece(piece)
+                                            ? selectedTemplateId === piece.id
                                             : activeSpanClass
                                                   .split(/\s+/)
                                                   .includes(piece.className);

@@ -73,6 +73,7 @@ export function libraryStyleToPiece(entry: LibraryStyle): CssPiece {
         previewSample: style.previewSample,
         css: style.css,
         ...(style.templateHtml ? { templateHtml: style.templateHtml } : {}),
+        ...(style.fields?.length ? { fields: style.fields } : {}),
         ...(style.previewHtml ? { previewHtml: style.previewHtml } : {}),
         ...(style.previewCss ? { previewCss: style.previewCss } : {}),
         ...(style.author || entry.author ? { author: style.author ?? entry.author } : {}),

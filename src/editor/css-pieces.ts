@@ -1,4 +1,4 @@
-import { sanitizeAo3Fragment } from '../targets/ao3/render';
+import { renderStyleTemplate, type StyleField } from './style-template';
 
 export type CssPieceKind = 'inline' | 'block' | 'template';
 
@@ -15,8 +15,13 @@ export interface CssPiece {
     previewSample: string;
     /** AO3-safe Work Skin CSS (no `#workskin` prefix needed; eo3 scopes it on export & canvas). */
     css: string;
-    /** Optional HTML snippet for custom `template` pieces; `{{selection}}` inserts selected text. */
+    /**
+     * HTML for `template` pieces, or for an inline piece inserted as one unit (like Translate on
+     * hover). The template language is in `style-template.ts`.
+     */
     templateHtml?: string;
+    /** What applying the piece asks for (`{{key}}` in the template). */
+    fields?: readonly StyleField[];
     /** Optional HTML rendered inside the swatch preview instead of auto-generated sample markup. */
     previewHtml?: string;
     /** Optional extra CSS used only for rendering the miniature swatch preview. */
@@ -56,7 +61,32 @@ export const CSS_PIECES: readonly CssPiece[] = [
         kind: 'inline',
         className: 'fx-translate',
         extraClasses: ['fx-translate-tip', 'fx-translate-paren'],
-        previewSample: 'Aa ↔ En',
+        previewSample: 'Bonjour',
+        // An inline template: inserted as one unit that can be edited again.
+        templateHtml:
+            '<span class="fx-translate">{{selection}}<span class="fx-translate-tip">' +
+            '{{#if parens}}<span class="fx-translate-paren"> (</span>{{/if}}{{translation}}' +
+            '{{#if parens}}<span class="fx-translate-paren">)</span>{{/if}}</span></span>',
+        fields: [
+            {
+                key: 'selection',
+                label: 'Original text',
+                placeholder: 'e.g. Je t’aime',
+                required: true,
+            },
+            {
+                key: 'translation',
+                label: 'Translation (shown on hover)',
+                placeholder: 'e.g. I love you',
+                required: true,
+            },
+            {
+                key: 'parens',
+                label: 'Show (translation) fallback when styles are off',
+                type: 'toggle',
+                default: true,
+            },
+        ],
         css: `.fx-translate {
   position: relative;
   border-bottom: 1px dotted currentColor;
@@ -268,7 +298,13 @@ export const CSS_PIECES: readonly CssPiece[] = [
         kind: 'template',
         className: 'fx-chat',
         extraClasses: ['fx-msg-in', 'fx-msg-out', 'fx-msg-sender'],
-        previewSample: 'Hey!',
+        previewSample: 'Alex: Hey!\nSam: Hi!',
+        // One bubble per selected line; `Name:` lines alternate by speaker.
+        templateHtml:
+            '<div class="fx-chat">{{#lines|Are you still awake?\nUnfortunately yes.}}' +
+            '<p class="{{alt:fx-msg-in|fx-msg-out}}">' +
+            '{{#if many-speakers}}<span class="fx-msg-sender">{{speaker}}</span> {{/if}}' +
+            '{{text}}</p>{{/lines}}</div>',
         css: `.fx-chat {
   max-width: 26em;
   margin: 1em auto;
@@ -320,7 +356,11 @@ export const CSS_PIECES: readonly CssPiece[] = [
         description: 'Expandable <details> drawer for spoilers or notes',
         kind: 'template',
         className: 'fx-spoiler',
-        previewSample: '▸ Spoiler',
+        previewSample: 'Hidden text…',
+        templateHtml:
+            '<details class="fx-spoiler" open=""><summary>{{summary|Spoiler}}</summary>' +
+            '<p>{{selection|Hidden text…}}</p></details>',
+        fields: [{ key: 'summary', label: 'Summary (always shown)', default: 'Spoiler' }],
         css: `.fx-spoiler {
   margin: 1em 0;
   padding: 0.6em 0.9em;
@@ -379,136 +419,42 @@ export function formatPieceCssBlock(piece: CssPiece): string {
     return `${pieceMarker(piece.id)}\n${piece.css.trim()}`;
 }
 
-function escapeHtml(text: string): string {
-    return text
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
-}
-
-/**
- * Turns selected text lines into an AO3-safe `<div class="fx-chat">` bubble thread.
- *
- * - Lines matching `Name: message` assign the first speaker to incoming bubbles (`fx-msg-in`)
- *   and the second speaker to outgoing bubbles (`fx-msg-out`). If 3+ speakers appear, each
- *   bubble keeps a `<span class="fx-msg-sender">Name</span>` prefix.
- * - Lines without `Name:` alternate incoming / outgoing per line.
- * - Empty input produces a friendly 2-message starter thread.
- */
+/** Text messages from selected lines: the built-in `chat` template. */
 export function buildTextMessageThreadHtml(selectedText: string): string {
-    const rawLines = selectedText
-        .split(/\r?\n/)
-        .map((line) => line.trim())
-        .filter(Boolean);
-
-    if (!rawLines.length) {
-        return (
-            '<div class="fx-chat">' +
-            '<p class="fx-msg-in">Are you still awake?</p>' +
-            '<p class="fx-msg-out">Unfortunately yes.</p>' +
-            '</div>'
-        );
-    }
-
-    const parsed = rawLines.map((line) => {
-        const match = /^([^:\n]{1,24}):\s+(.+)$/.exec(line);
-        if (!match) return { speaker: null as string | null, text: line };
-        return { speaker: match[1].trim(), text: match[2].trim() };
-    });
-
-    const speakers: string[] = [];
-    for (const entry of parsed) {
-        if (entry.speaker && !speakers.includes(entry.speaker)) {
-            speakers.push(entry.speaker);
-        }
-    }
-
-    const hasSpeakers = speakers.length > 0 && parsed.every((p) => p.speaker !== null);
-    const outgoingSpeaker = speakers.length >= 2 ? speakers[1] : null;
-    const showSenderLabels = hasSpeakers && speakers.length > 2;
-
-    const bubbles = parsed.map((entry, idx) => {
-        let isOut: boolean;
-        if (hasSpeakers) {
-            isOut = outgoingSpeaker !== null ? entry.speaker === outgoingSpeaker : idx % 2 === 1;
-        } else {
-            isOut = idx % 2 === 1;
-        }
-        const cls = isOut ? 'fx-msg-out' : 'fx-msg-in';
-        const senderHtml =
-            showSenderLabels && entry.speaker
-                ? `<span class="fx-msg-sender">${escapeHtml(entry.speaker)}</span> `
-                : '';
-        return `<p class="${cls}">${senderHtml}${escapeHtml(entry.text)}</p>`;
-    });
-
-    return `<div class="fx-chat">${bubbles.join('')}</div>`;
+    const chat = findPieceById('chat')!;
+    return renderStyleTemplate(chat.templateHtml!, { selection: selectedText });
 }
 
-/**
- * Wraps selected plain lines (or a starter placeholder) into a styled `<details class="fx-spoiler">`.
- */
+/** A collapsible spoiler from selected lines: the built-in `spoiler` template. */
 export function buildSpoilerHtml(selectedText: string, summary = 'Spoiler'): string {
-    const lines = selectedText
-        .split(/\r?\n/)
-        .map((line) => line.trim())
-        .filter(Boolean);
-    const body = lines.length
-        ? lines.map((line) => `<p>${escapeHtml(line)}</p>`).join('')
-        : '<p>Hidden text…</p>';
-    return `<details class="fx-spoiler" open=""><summary>${escapeHtml(
-        summary
-    )}</summary>${body}</details>`;
+    const spoiler = findPieceById('spoiler')!;
+    return renderStyleTemplate(spoiler.templateHtml!, {
+        selection: selectedText,
+        fields: spoiler.fields,
+        values: { summary },
+    });
 }
 
-const SELECTION_PARAGRAPH_RE = /<p(\s[^>]*)?>\s*\{\{\s*selection(?:\|([^}]*))?\s*\}\}\s*<\/p>/gi;
-const SELECTION_TOKEN_RE = /\{\{\s*selection(?:\|([^}]*))?\s*\}\}/gi;
+/** Whether applying a piece inserts template HTML (block templates and inline templates). */
+export function isTemplatePiece(piece: Pick<CssPiece, 'kind' | 'templateHtml'>): boolean {
+    return piece.kind === 'template' || (piece.kind === 'inline' && !!piece.templateHtml?.trim());
+}
 
 /**
- * Renders a designer-authored HTML template snippet for insertion into the editor, substituting
- * `{{selection}}` or `{{selection|Default text}}` with the author's selected text and sanitizing
- * the result through AO3's HTML allowlist.
+ * Renders a template snippet for insertion, substituting `{{selection}}` (and field tags) and
+ * sanitizing the result through AO3's HTML allowlist. See `style-template.ts`.
  */
 export function renderCustomTemplateHtml(
     templateHtml: string,
     selectedText: string,
-    fallbackText = 'Your text here…'
+    fallbackText = 'Your text here…',
+    fields?: readonly StyleField[],
+    values?: Record<string, string | boolean>
 ): string {
-    const cleanTemplate = sanitizeAo3Fragment(templateHtml);
-    const trimmed = selectedText.trim();
-    const lines = trimmed
-        ? selectedText
-              .split(/\r?\n/)
-              .map((line) => line.trim())
-              .filter(Boolean)
-        : [];
-
-    // When a `<p>` contains only `{{selection}}`, split multi-line selections into sibling `<p>`s
-    // while keeping any attributes (e.g. class="tweet-body") on each paragraph.
-    let rendered = cleanTemplate.replace(
-        SELECTION_PARAGRAPH_RE,
-        (_match, attrs: string | undefined, inlineFallback: string | undefined) => {
-            const openTag = attrs ? `<p${attrs}>` : '<p>';
-            if (lines.length) {
-                return lines.map((line) => `${openTag}${escapeHtml(line)}</p>`).join('');
-            }
-            const text = (inlineFallback ?? fallbackText).trim() || fallbackText;
-            return `${openTag}${escapeHtml(text)}</p>`;
-        }
-    );
-
-    // Remaining inline `{{selection}}` placeholders become escaped text with `<br>` for newlines.
-    rendered = rendered.replace(
-        SELECTION_TOKEN_RE,
-        (_match, inlineFallback: string | undefined) => {
-            if (lines.length) {
-                return lines.map((line) => escapeHtml(line)).join('<br>');
-            }
-            const text = (inlineFallback ?? fallbackText).trim() || fallbackText;
-            return escapeHtml(text);
-        }
-    );
-
-    return sanitizeAo3Fragment(rendered);
+    return renderStyleTemplate(templateHtml, {
+        selection: selectedText,
+        fallback: fallbackText,
+        fields,
+        values,
+    });
 }

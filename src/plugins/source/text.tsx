@@ -15,6 +15,8 @@ import { html } from '@codemirror/lang-html';
 import { css } from '@codemirror/lang-css';
 import { javascript } from '@codemirror/lang-javascript';
 import { stripTypes } from './script-runtime';
+import { TextField } from '../../uikit/text-field';
+import '../../uikit/controls.css';
 import './text.css';
 import { Select } from '../../uikit/select';
 
@@ -47,6 +49,83 @@ export type TextPluginData = {
         examples: { syntax: string; description: string }[];
     };
 };
+
+type WritingHelp = NonNullable<TextPluginData['help']>;
+
+/**
+ * Writing help for a text input in a block: what the writer sees under "Writing help". Block
+ * authors edit it here; it is saved in the module data (and group files) and never published.
+ */
+function WritingHelpEditor({
+    help,
+    onChange,
+}: {
+    help: TextPluginData['help'];
+    onChange: (help: TextPluginData['help']) => void;
+}) {
+    const value: WritingHelp = help ?? { summary: '', examples: [] };
+    const set = (next: WritingHelp) =>
+        onChange(next.summary.trim() || next.examples.length ? next : undefined);
+    const setExample = (i: number, changes: Partial<WritingHelp['examples'][number]>) =>
+        set({
+            ...value,
+            examples: value.examples.map((e, j) => (j === i ? { ...e, ...changes } : e)),
+        });
+    return (
+        <details className="i-writing-help-editor">
+            <summary>{help ? 'Edit writing help' : 'Add writing help for writers'}</summary>
+            <label className="i-help-field">
+                <span>What to write here</span>
+                <textarea
+                    className="uikit-text-area"
+                    rows={2}
+                    value={value.summary}
+                    placeholder="e.g. Write one message per line."
+                    onChange={(e) => set({ ...value, summary: e.target.value })}
+                />
+            </label>
+            {value.examples.map((example, i) => (
+                <div className="i-help-example" key={i}>
+                    <label className="i-help-field">
+                        <span>Example {i + 1}</span>
+                        <TextField
+                            value={example.syntax}
+                            placeholder="Alex [09:41]: Hello"
+                            onChange={(syntax) => setExample(i, { syntax })}
+                        />
+                    </label>
+                    <label className="i-help-field">
+                        <span>What it does</span>
+                        <TextField
+                            value={example.description}
+                            placeholder="Speaker, optional time, and message."
+                            onChange={(description) => setExample(i, { description })}
+                        />
+                    </label>
+                    <button
+                        type="button"
+                        className="uikit-action"
+                        aria-label={`Remove example ${i + 1}`}
+                        onClick={() =>
+                            set({ ...value, examples: value.examples.filter((_, j) => j !== i) })
+                        }
+                    >
+                        Remove
+                    </button>
+                </div>
+            ))}
+            <button
+                type="button"
+                className="uikit-action"
+                onClick={() =>
+                    set({ ...value, examples: [...value.examples, { syntax: '', description: '' }] })
+                }
+            >
+                + Add example
+            </button>
+        </details>
+    );
+}
 
 class TextEditor extends PureComponent<ModulePluginProps<TextPluginData>> {
     state = {
@@ -190,6 +269,16 @@ class TextEditor extends PureComponent<ModulePluginProps<TextPluginData>> {
                     </details>
                 ) : null}
                 {editor}
+                {/* Block inputs are plain text; chapter text (rich text) needs no help editor. */}
+                {data.help || data.language !== HTML_CONTENTEDITABLE ? (
+                    <WritingHelpEditor
+                        help={data.help}
+                        onChange={(help) => {
+                            const { help: _old, ...rest } = data;
+                            onChange(help ? { ...rest, help } : rest);
+                        }}
+                    />
+                ) : null}
             </div>
         );
     }

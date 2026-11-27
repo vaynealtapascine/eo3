@@ -154,8 +154,9 @@ in text mode passes a `.css` file on as CSS (so it can style chapters), `.html` 
 
 ## Writing help
 
-Text inputs can also carry a `help` object in their module data. It appears under
-**Writing help**, beside the editor, and never becomes part of the output:
+Text inputs can also carry writing help. It appears under **Writing help**, beside the
+editor, and never becomes part of the output. Edit it under the text input with **Add writing
+help for writers** (a summary and example rows), or put a `help` object in the module data:
 
 ```json
 {

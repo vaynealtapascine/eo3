@@ -97,3 +97,51 @@
         opacity: 0.85;
     }
 }
+
+/* Writing help, as block authors edit it. */
+.i-writing-help-editor {
+    margin-top: 0.5em;
+    font-size: 0.95em;
+
+    > summary {
+        cursor: pointer;
+        padding: 0.3em 0;
+        opacity: 0.8;
+    }
+
+    > .uikit-action {
+        margin-top: 0.4em;
+    }
+
+    .i-help-field {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25em;
+        min-width: 0;
+        margin: 0.4em 0;
+
+        > span {
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        .uikit-text-field {
+            width: 100%;
+        }
+    }
+
+    .i-help-example {
+        display: grid;
+        grid-template-columns: 1fr 1fr auto;
+        align-items: end;
+        gap: 0 0.5em;
+
+        @media (max-width: 500px) {
+            grid-template-columns: 1fr;
+        }
+
+        > .uikit-action {
+            margin-bottom: 0.4em;
+        }
+    }
+}

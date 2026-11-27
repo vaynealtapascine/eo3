@@ -7,7 +7,7 @@ import Subscript from '@tiptap/extension-subscript';
 import Superscript from '@tiptap/extension-superscript';
 import { Placeholder } from '@tiptap/extensions';
 import { ChapterBreak } from './chapter-break';
-import { HoverTranslation } from './hover-translation';
+import { InlineTemplate } from './inline-template';
 import { Ruby } from './ruby';
 import { Ao3Attributes, Details, DetailsSummary, StyledBlock, StyledSpan } from './ao3-attributes';
 
@@ -18,8 +18,8 @@ export interface Eo3ExtensionOptions {
 /**
  * Framework-agnostic TipTap / ProseMirror extension set tailored for eo3 & AO3 HTML.
  * Keeps markup clean (no bogus `target="_blank"` or `rel` noise AO3 strips/rewrites) and preserves
- * `class`, `dir`, `<ruby>`, `<details>`, styled `<div>` blocks, `<span class="...">`, hover
- * translations, and `<!-- eo3:split -->` markers.
+ * `class`, `dir`, `<ruby>`, `<details>`, styled `<div>` blocks, `<span class="...">`, inline templates (hover
+ * translations), and `<!-- eo3:split -->` markers.
  */
 export function createEo3Extensions(options: Eo3ExtensionOptions = {}): Extensions {
     return [
@@ -51,7 +51,7 @@ export function createEo3Extensions(options: Eo3ExtensionOptions = {}): Extensio
         }),
         ChapterBreak,
         Ruby,
-        HoverTranslation,
+        InlineTemplate,
         StyledSpan,
         StyledBlock,
         Details,

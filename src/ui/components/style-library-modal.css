@@ -848,3 +848,82 @@
         }
     }
 }
+
+/* Fields a template style asks for, template syntax help, and the built-in styles list. */
+.eo3-style-modal {
+    .i-style-fields {
+        display: flex;
+        flex-direction: column;
+        gap: 0.6em;
+        min-width: 0;
+        margin: 0;
+        padding: 0.7em 0.85em 0.85em;
+        border: 1.5px solid var(--m-field-border);
+        border-radius: 0.55em;
+
+        > legend {
+            padding: 0 0.35em;
+            font-size: 0.84em;
+            font-weight: 600;
+        }
+
+        > .i-field-hint {
+            margin: 0;
+            font-size: 0.82em;
+            color: var(--m-muted);
+        }
+    }
+
+    .i-style-field-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(8.5em, 1fr));
+        align-items: end;
+        gap: 0.5em;
+        padding-bottom: 0.6em;
+        border-bottom: 1px dashed var(--m-field-border);
+
+        .i-check-row {
+            min-height: 2.3em;
+        }
+
+        > .i-btn-sm {
+            justify-self: start;
+        }
+
+        input[aria-invalid='true'] {
+            border-color: var(--P-danger, #dc2626);
+        }
+    }
+
+    .i-syntax-help {
+        dl {
+            margin: 0.5em 0 0;
+        }
+
+        dl > div {
+            padding: 0.4em 0;
+            border-top: 1px solid var(--m-field-border);
+        }
+
+        dt code {
+            white-space: pre-wrap;
+            font-size: 0.86em;
+        }
+
+        dd {
+            margin: 0.2em 0 0;
+            font-size: 0.86em;
+            color: var(--m-muted);
+        }
+    }
+
+    .i-builtins {
+        margin-top: 1em;
+
+        > summary {
+            cursor: pointer;
+            font-weight: 600;
+            padding: 0.4em 0;
+        }
+    }
+}

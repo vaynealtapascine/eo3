@@ -1,5 +1,6 @@
 import { extractWorkCssClasses } from '../editor/canvas-css';
 import type { CssPieceKind } from '../editor/css-pieces';
+import { LINE_VARIABLES, type StyleField } from '../editor/style-template';
 import { cleanWorkskinCss, type CssDiagnostic } from '../targets/ao3/render/css-cleaner';
 import { fixBadCharacters } from '../targets/ao3/render/fix-bad-characters';
 import { sanitizeFragment, type Ao3Diagnostic } from '../targets/ao3/render/sanitize';
@@ -29,8 +30,14 @@ export interface StylePackStyle {
     previewSample: string;
     /** AO3 Work Skin CSS (no `#workskin` prefix needed; eo3 scopes it automatically). */
     css: string;
-    /** HTML snippet for `template` styles; supports `{{selection}}` and `{{selection|Default}}`. */
+    /**
+     * HTML for `template` styles, or for an `inline` style inserted as one editable unit. The
+     * template language (`{{selection}}`, `{{field}}`, `{{#if}}`, `{{#lines}}`, …) is described
+     * in `src/editor/style-template.ts` and `docs/style-packs.md`.
+     */
     templateHtml?: string;
+    /** What applying the style asks the writer for (`{{key}}` in `templateHtml`). */
+    fields?: StyleField[];
     /** Optional custom AO3-safe HTML for the miniature swatch preview. */
     previewHtml?: string;
     /** Optional CSS overrides applied only inside the miniature swatch preview. */
@@ -55,6 +62,45 @@ const CSS_CLASS_RE = /^[a-zA-Z_-][a-zA-Z0-9_-]*$/;
 const MAX_STYLES_PER_PACK = 200;
 const MAX_CSS_LENGTH = 64 * 1024;
 const MAX_HTML_LENGTH = 32 * 1024;
+const MAX_FIELDS = 12;
+const FIELD_KEY_RE = /^[A-Za-z_][\w-]*$/;
+
+/** Checks a style's `fields`, keeping only what eo3 understands. */
+export function normalizeStyleFields(raw: unknown, where: string): StyleField[] | undefined {
+    if (raw === undefined) return undefined;
+    if (!Array.isArray(raw)) throw new Error(`${where}: fields should be a list.`);
+    if (raw.length > MAX_FIELDS) {
+        throw new Error(`${where}: a style can ask for at most ${MAX_FIELDS} fields.`);
+    }
+    const keys = new Set<string>();
+    const fields = raw.map((entry, i): StyleField => {
+        const at = `${where}, field ${i + 1}`;
+        if (!entry || typeof entry !== 'object') throw new Error(`${at} isn’t an object.`);
+        const f = entry as Record<string, unknown>;
+        const key = typeof f.key === 'string' ? f.key.trim() : '';
+        if (!FIELD_KEY_RE.test(key)) {
+            throw new Error(`${at} needs a key made of letters, numbers, hyphens or underscores.`);
+        }
+        if ((LINE_VARIABLES as readonly string[]).includes(key)) {
+            throw new Error(`${at}: “${key}” is reserved inside {{#lines}}; choose another key.`);
+        }
+        if (keys.has(key)) throw new Error(`${at}: the key “${key}” is used twice.`);
+        keys.add(key);
+        const toggle = f.type === 'toggle';
+        const label =
+            typeof f.label === 'string' && f.label.trim() ? f.label.trim().slice(0, 80) : key;
+        const field: StyleField = { key, label };
+        if (toggle) field.type = 'toggle';
+        if (toggle && typeof f.default === 'boolean') field.default = f.default;
+        if (!toggle && typeof f.default === 'string') field.default = f.default.slice(0, 500);
+        if (typeof f.placeholder === 'string' && f.placeholder.trim()) {
+            field.placeholder = f.placeholder.trim().slice(0, 120);
+        }
+        if (!toggle && f.required === true) field.required = true;
+        return field;
+    });
+    return fields.length ? fields : undefined;
+}
 
 // Same control/non-character strip as AO3's Sanitize preprocess.
 const UNSUITABLE_CHARS =
@@ -183,6 +229,8 @@ export function normalizeStyleEntry(raw: unknown, indexLabel = 'Style'): StylePa
             ? obj.author.trim().slice(0, 80)
             : undefined;
 
+    const fields = normalizeStyleFields(obj.fields, `${indexLabel} (“${label}”)`);
+
     const rawId = typeof obj.id === 'string' && obj.id.trim() ? obj.id.trim() : undefined;
     const id = rawId ? rawId.replace(/[^a-zA-Z0-9_-]+/g, '-').slice(0, 64) : undefined;
 
@@ -196,6 +244,7 @@ export function normalizeStyleEntry(raw: unknown, indexLabel = 'Style'): StylePa
         previewSample,
         css,
         ...(templateHtml ? { templateHtml } : {}),
+        ...(fields ? { fields } : {}),
         ...(previewHtml ? { previewHtml } : {}),
         ...(previewCss ? { previewCss } : {}),
         ...(author ? { author } : {}),

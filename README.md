@@ -60,7 +60,8 @@ Want more styles—or want to design custom effects for less-technical writers t
 ![The Custom styles and packs Create & export modal showing the HTML template builder, live Styles swatch preview, full chapter preview, and real-time AO3 Work Skin compatibility check](docs/screenshots/style-pack-builder.png)
 
 - **For writers (zero code):** Drop or paste a `.eo3styles.json` file to preview every style with its live-rendered swatch, name, description, creator credit, and AO3 compatibility check before adding it to **✦ Styles**.
-- **For designers & coders:** Build **inline styles**, **block wrappers**, or **HTML snippet templates** (with `{{selection}}` / `{{selection|Fallback}}` slots) with live miniature swatch + full chapter previews and real-time AO3 Work Skin validation—then export a single style or bundle a whole pack as `.eo3styles.json` (or copy JSON to share).
+- **For designers & coders:** Build **inline styles**, **block wrappers**, **HTML snippet templates** or **inline templates**, with fields writers fill in, `{{#if}}` conditions and per-line `{{#lines}}` repeats (see [Authoring styles](docs/style-packs.md)). Every built-in style is made the same way, so you can copy one and change it.
+- Live miniature swatch + full chapter previews and real-time AO3 Work Skin validation—then export a single style or bundle a whole pack as `.eo3styles.json` (or copy JSON to share).
 
 Custom styles are saved in your browser's library across all works and are included automatically in full eo3 backups.
 

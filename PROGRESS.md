@@ -10,6 +10,32 @@ update it whenever a step lands (what changed, what's next, anything surprising)
 
 ## Status
 
+2026-11-27 — **Styles are all user-makeable.** Audit of the built-in ✦ Styles and the
+bundled workskins for anything users couldn't make themselves.
+
+-   Gaps found: Text messages and Collapsible spoiler were built by hard-coded functions,
+    Translate on hover was a dedicated editor node with its own popover, and built-in swatches
+    used app-only CSS. Workskins only lacked a UI for a text input's Writing help.
+-   **Style format extended** (`src/editor/style-template.ts`, `docs/style-packs.md`): `fields`
+    (text/toggle, default, placeholder, required) asked for in one form when applied;
+    `{{key}}`, `{{#if}}…{{else}}…{{/if}}`, `{{#lines}}…{{/lines}}` with `{{text}}`,
+    `{{speaker}}`, `{{alt:a|b}}`, `many-speakers`. Expanded as text, sanitized once (AO3 rules).
+-   **Inline templates** (`src/editor/inline-template.ts`): an inline style with template HTML
+    is one atomic node, recognized by class on load, editable (values read back by matching the
+    template) and removable keeping its text. Replaces `hover-translation.ts`; existing
+    `span.fx-translate` HTML round-trips unchanged (tested).
+-   **Built-ins are data**: chat, spoiler and translate are templates with fields; their old
+    builder functions are wrappers over the template (parity tested); swatches are live for
+    all. Library tab: **Built-in styles → Copy & edit**. Creator: fields editor, template
+    syntax help, template lint next to the AO3 checks, inline template HTML.
+-   Text module: **Add writing help for writers** editor (hidden on rich chapter text).
+-   Behaviour change: the spoiler now asks for its summary (default "Spoiler"), and templates'
+    `<details open>` is written by AO3's sanitizer as `open="open"` before the editor stores
+    `open=""` as before.
+-   Validation: typecheck, 714 tests (a test proves every built-in passes the user pack checks
+    and a user inline template round-trips in the editor), build; Chrome: styles menu,
+    translate/spoiler forms, chat from lines, copy & save a built-in, writing help editor.
+
 2026-11-27 — **TypeScript, Script module, typed data, growable Settings lists.** So a
 template author can define Settings (in code, with lists writers grow) and generate CSS,
 HTML, JavaScript, Svelte or any MIME type from them.

@@ -24,6 +24,7 @@ import {
 import { collectPartLiveCss, ensurePieceCssInDocument } from '../../src/editor/work-styles';
 import { cleanWorkskinCss, type CssDiagnostic } from '../../src/targets/ao3/render/css-cleaner';
 import TipTapRichEditor, { RichTextEditorHandle } from '../../src/ui/components/tiptap-rich-editor';
+import { renderInlineTemplate } from '../../src/editor/inline-template';
 import { InlineChapterEditor } from '../../src/ui/components/inline-chapter-editor';
 import { SplitPanel } from '../../src/ui/components/split-panel';
 import { SPLIT_MARKER, splitHtmlAtMarker } from '../../src/util/split-html';
@@ -185,11 +186,14 @@ describe('AO3 TipTap schema extensions', () => {
         const editor = headlessEditor('<p>Bonjour</p>');
         try {
             editor.commands.setTextSelection({ from: 1, to: 8 });
+            const translate = findPieceById('translate')!;
             expect(
-                editor.commands.setHoverTranslation({
-                    original: 'Bonjour',
-                    translation: 'Hello',
-                    includeParens: true,
+                editor.commands.insertInlineTemplate({
+                    html: renderInlineTemplate(translate, 'Bonjour', {
+                        translation: 'Hello',
+                        parens: true,
+                    }),
+                    styleId: translate.id,
                 })
             ).toBe(true);
             expect(editorContentToHtml(editor.getHTML())).toBe(
@@ -199,7 +203,7 @@ describe('AO3 TipTap schema extensions', () => {
             );
 
             editor.commands.setNodeSelection(1);
-            expect(editor.commands.unsetHoverTranslation()).toBe(true);
+            expect(editor.commands.removeInlineTemplate()).toBe(true);
             expect(editorContentToHtml(editor.getHTML())).toBe('<p>Bonjour</p>');
         } finally {
             editor.destroy();
@@ -462,7 +466,7 @@ describe('TipTapRichEditor component sync & responsiveness', () => {
             translateBtn!.click();
         });
 
-        const form = document.body.querySelector<HTMLFormElement>('.tiptap-translate-popover');
+        const form = document.body.querySelector<HTMLFormElement>('.tiptap-style-fields-popover');
         expect(form).not.toBeNull();
         const [origInput, transInput] = Array.from(
             form!.querySelectorAll<HTMLInputElement>('input[type="text"]')
@@ -495,14 +499,14 @@ describe('TipTapRichEditor component sync & responsiveness', () => {
             ref.current!.getEditor()!.commands.setNodeSelection(1);
         });
         const editChipBtn = container.querySelector<HTMLButtonElement>(
-            'button[aria-label="Edit hover translation"]'
+            'button[aria-label="Edit Translate on hover"]'
         );
         expect(editChipBtn).not.toBeNull();
 
         act(() => {
             editChipBtn!.click();
         });
-        const editForm = document.body.querySelector<HTMLFormElement>('.tiptap-translate-popover');
+        const editForm = document.body.querySelector<HTMLFormElement>('.tiptap-style-fields-popover');
         expect(editForm).not.toBeNull();
         const [, editTransInput] = Array.from(
             editForm!.querySelectorAll<HTMLInputElement>('input[type="text"]')
@@ -522,7 +526,7 @@ describe('TipTapRichEditor component sync & responsiveness', () => {
             ref.current!.getEditor()!.commands.setNodeSelection(1);
         });
         const removeChipBtn = container.querySelector<HTMLButtonElement>(
-            'button[aria-label="Remove hover translation"]'
+            'button[aria-label="Remove Translate on hover"]'
         )!;
         act(() => {
             removeChipBtn.click();
@@ -767,8 +771,10 @@ describe('CSS pieces, selection templates, and live canvas styling', () => {
         expect(threeSpeaker).toContain('<span class="fx-msg-sender">C</span> Hey');
 
         const spoiler = buildSpoilerHtml('Twist ending\nSecond line', 'Spoiler');
+        // Templates go through AO3's sanitizer, which writes `open="open"` (the editor stores
+        // `open=""` either way).
         expect(spoiler).toBe(
-            '<details class="fx-spoiler" open=""><summary>Spoiler</summary>' +
+            '<details class="fx-spoiler" open="open"><summary>Spoiler</summary>' +
                 '<p>Twist ending</p><p>Second line</p></details>'
         );
     });
