@@ -15,11 +15,13 @@ import {
     textData,
 } from '../../document';
 import { CodeEditor } from '../../ui/components/code-editor';
+import { TextField } from '../../uikit/text-field';
 import { SvelteComponentData } from './svelte-component';
 import { SettingsModuleData, settingsTypeScript } from './settings-values';
 import { buildScriptProgram, ScriptLanguage, ScriptModule } from './script-runtime';
 import { runScript } from './script-sandbox';
 import './script.css';
+import { Select } from '../../uikit/select';
 
 /** The output types offered by name; any other MIME type can be typed in. */
 export const SCRIPT_OUTPUT_TYPES: { mime: string; label: string }[] = [
@@ -65,7 +67,8 @@ function OutputControls({ data, onChange }: ModulePluginProps<ScriptPluginData>)
         <>
             <span className="i-script-control">
                 <label htmlFor={`${id}-language`}>Language: </label>
-                <select
+                <Select
+                    narrow
                     id={`${id}-language`}
                     value={data.language}
                     onChange={(e) =>
@@ -74,11 +77,12 @@ function OutputControls({ data, onChange }: ModulePluginProps<ScriptPluginData>)
                 >
                     <option value="typescript">TypeScript</option>
                     <option value="javascript">JavaScript</option>
-                </select>
+                </Select>
             </span>
             <span className="i-script-control">
                 <label htmlFor={`${id}-output`}>Output as: </label>
-                <select
+                <Select
+                    narrow
                     id={`${id}-output`}
                     value={custom ? '' : mime}
                     onChange={(e) =>
@@ -94,27 +98,29 @@ function OutputControls({ data, onChange }: ModulePluginProps<ScriptPluginData>)
                         </option>
                     ))}
                     <option value="">Other MIME type…</option>
-                </select>
+                </Select>
             </span>
             {custom ? (
                 <span className="i-script-control">
                     <label htmlFor={`${id}-mime`}>MIME type: </label>
-                    <input
+                    <TextField
                         id={`${id}-mime`}
+                        narrow
                         value={data.outputType}
                         spellCheck={false}
-                        onChange={(e) => onChange({ ...data, outputType: e.target.value })}
+                        onChange={(outputType) => onChange({ ...data, outputType })}
                     />
                 </span>
             ) : null}
             {mime === 'svelte-component' ? (
                 <span className="i-script-control">
                     <label htmlFor={`${id}-name`}>Component name: </label>
-                    <input
+                    <TextField
                         id={`${id}-name`}
+                        narrow
                         value={data.name ?? ''}
                         placeholder="Component"
-                        onChange={(e) => onChange({ ...data, name: e.target.value })}
+                        onChange={(name) => onChange({ ...data, name })}
                     />
                 </span>
             ) : null}

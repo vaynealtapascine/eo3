@@ -1,5 +1,7 @@
-import { createRef, PureComponent } from 'react';
+import { PureComponent } from 'react';
 import { ModulePlugin, ModulePluginProps, PlainTextData } from '../../document';
+import { FileButton } from '../../uikit/file-button';
+import '../../uikit/controls.css';
 import './file-data.less';
 
 export type FileDataUrlPluginData = {
@@ -7,17 +9,12 @@ export type FileDataUrlPluginData = {
 };
 
 class FileDataUrlEditor extends PureComponent<ModulePluginProps<FileDataUrlPluginData>> {
-    fileInput = createRef<HTMLInputElement>();
-
-    onFile = () => {
-        const fileInput = this.fileInput.current! as HTMLInputElement;
-        if (fileInput.files!.length) {
-            const fileReader = new FileReader();
-            fileReader.onload = () => {
-                this.props.onChange({ url: fileReader.result as string });
-            };
-            fileReader.readAsDataURL(fileInput.files![0]);
-        }
+    onFile = (file: File) => {
+        const fileReader = new FileReader();
+        fileReader.onload = () => {
+            this.props.onChange({ url: fileReader.result as string });
+        };
+        fileReader.readAsDataURL(file);
     };
 
     render() {
@@ -29,7 +26,7 @@ class FileDataUrlEditor extends PureComponent<ModulePluginProps<FileDataUrlPlugi
         if (type.startsWith('text/')) {
             const contents = atob(data.url.split(',')[1]);
             if (contents) {
-                preview = <textarea readOnly>{contents}</textarea>;
+                preview = <textarea className="uikit-text-area" readOnly value={contents} />;
             } else {
                 preview = <span />;
             }
@@ -43,7 +40,9 @@ class FileDataUrlEditor extends PureComponent<ModulePluginProps<FileDataUrlPlugi
 
         return (
             <div className="plugin-file-data-editor">
-                <input ref={this.fileInput} type="file" onChange={this.onFile} />
+                <FileButton onFiles={([file]) => this.onFile(file)}>
+                    {data.url ? 'Choose another file…' : 'Choose file…'}
+                </FileButton>
                 <div className="file-preview">{preview}</div>
             </div>
         );

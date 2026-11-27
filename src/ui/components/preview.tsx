@@ -28,6 +28,8 @@ import { PlusIcon, SidebarActiveIcon, SidebarIcon } from './icons';
 /** Site-selector entry that opens the custom site editor instead of switching targets. */
 const EDIT_PROFILES = '__edit-profiles';
 import './preview.scss';
+import { Select } from '../../uikit/select';
+import Checkbox from '../../uikit/checkbox';
 
 export function Preview({
     document,
@@ -274,8 +276,9 @@ export function Preview({
                             <span>Panel</span>
                         </button>
                     ) : null}
-                    <select
+                    <Select
                         className="output-select"
+                        wrapperClassName="output-select-wrap"
                         aria-label="What to preview"
                         title="What to preview: the finished page, or what one module produces"
                         value={render.target || 'output'}
@@ -287,9 +290,9 @@ export function Preview({
                     >
                         <option value="output">Site preview</option>
                         <optgroup label="One module’s output">{outputTargets}</optgroup>
-                    </select>
+                    </Select>
                     {!render.target && document.parts.length > 1 && (
-                        <select
+                        <Select
                             className="part-select"
                             aria-label={`${partLabel} to preview`}
                             value={partId ?? document.parts[0].id}
@@ -301,7 +304,7 @@ export function Preview({
                                     {part.title ? `: ${part.title}` : ''}
                                 </option>
                             ))}
-                        </select>
+                        </Select>
                     )}
                     {!render.target && isSimpleView && onTogglePanel && !panelOpen && (
                         <button
@@ -319,7 +322,7 @@ export function Preview({
                         </button>
                     )}
                     {!render.target && (
-                        <select
+                        <Select
                             className="site-target-select"
                             aria-label="Site to preview for"
                             title="The site this is previewed and exported for"
@@ -341,16 +344,15 @@ export function Preview({
                                 </option>
                             ))}
                             <option value={EDIT_PROFILES}>custom sites…</option>
-                        </select>
+                        </Select>
                     )}
                     <span className="live-update">
-                        <input
+                        <Checkbox
                             id={liveCheckbox}
                             checked={render.live}
-                            onChange={(e) => {
-                                onLiveChange((e.target as HTMLInputElement).checked);
+                            onChange={(checked) => {
+                                onLiveChange(checked);
                             }}
-                            type="checkbox"
                         />{' '}
                         <label htmlFor={liveCheckbox}>Live Update</label>
                     </span>

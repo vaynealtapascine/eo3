@@ -17,6 +17,7 @@ import {
     stylesToAttrs,
     stylesToBody,
 } from './inline-styles-core';
+import { Select } from '../../uikit/select';
 
 export type StyleInlinerData = {
     mode: StyleInlinerMode;
@@ -32,7 +33,7 @@ function StyleInliner({ data, onChange, userData }: ModulePluginProps<StyleInlin
     return (
         <Form>
             <FormItem label="mode" itemId={id1}>
-                <select
+                <Select
                     id={id1}
                     value={data.mode}
                     onChange={(e) => {
@@ -44,7 +45,7 @@ function StyleInliner({ data, onChange, userData }: ModulePluginProps<StyleInlin
                 >
                     <option value="attr">as style attributes</option>
                     <option value="element">as a &lt;style&gt; element</option>
-                </select>
+                </Select>
             </FormItem>
             {data.mode === 'attr' ? (
                 <FormItem

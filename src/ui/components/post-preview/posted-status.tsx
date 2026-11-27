@@ -1,6 +1,7 @@
 import { PartPosting } from '../../../targets/types';
 import { useState } from 'react';
 import './posted-status.css';
+import Checkbox from '../../../uikit/checkbox';
 
 /**
  * "Mark as posted" for the part on screen. Marking is explicit; copying a part without marking
@@ -47,12 +48,11 @@ export function PostedStatus({ posting, partName }: { posting: PartPosting; part
                         {posting.protectedStyles.map(({ className, css }) => (
                             <li key={className}>
                                 <label>
-                                    <input
-                                        type="checkbox"
+                                    <Checkbox
                                         checked={selectedProtected.includes(className)}
-                                        onChange={(event) =>
+                                        onChange={(checked) =>
                                             setSelectedProtected((names) =>
-                                                event.target.checked
+                                                checked
                                                     ? [...names, className]
                                                     : names.filter((name) => name !== className)
                                             )

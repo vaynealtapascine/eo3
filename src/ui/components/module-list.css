@@ -332,7 +332,7 @@
                     & > .i-send-target {
                         display: inline-block;
 
-                        select {
+                        .uikit-select {
                             width: 8em;
                         }
                     }
@@ -356,7 +356,7 @@
                         align-items: center;
                         gap: 0.5em;
 
-                        select {
+                        .uikit-select {
                             flex: 1;
                         }
                         .uikit-text-field,

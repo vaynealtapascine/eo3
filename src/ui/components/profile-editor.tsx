@@ -15,6 +15,8 @@ import {
 import { Document } from '../../document';
 import './profile-editor.css';
 import { showConfirm } from '../dialogs';
+import { Select } from '../../uikit/select';
+import Checkbox from '../../uikit/checkbox';
 
 /** Form state: lists are edited as text ("a: href title" lines, space-separated names). */
 interface Draft {
@@ -285,34 +287,38 @@ export function ProfileEditor({
                         </label>
                         <label>
                             How it takes CSS
-                            <select {...field('delivery')}>
+                            <Select {...field('delivery')}>
                                 {Object.entries(DELIVERY_STRATEGIES).map(([id, label]) => (
                                     <option key={id} value={id}>
                                         {label}
                                     </option>
                                 ))}
-                            </select>
+                            </Select>
                         </label>
                         <label>
                             Allowed elements
                             <textarea rows={3} {...field('elements')} />
                         </label>
                         <label>
-                            Allowed attributes, one element per line (<code>all:</code> for every
-                            element)
+                            <span>
+                                Allowed attributes, one element per line (<code>all:</code> for
+                                every element)
+                            </span>
                             <textarea rows={4} {...field('attributes')} />
                         </label>
                         <label>
-                            Allowed URL protocols, as <code>element.attribute: protocols</code> (
-                            <code>relative</code> allows links without one)
+                            <span>
+                                Allowed URL protocols, as{' '}
+                                <code>element.attribute: protocols</code> (<code>relative</code>{' '}
+                                allows links without one)
+                            </span>
                             <textarea rows={3} {...field('protocols')} />
                         </label>
                         <label className="i-check">
-                            <input
-                                type="checkbox"
+                            <Checkbox
                                 checked={draft.cssPropertiesEnabled}
-                                onChange={(e) =>
-                                    setDraft({ ...draft, cssPropertiesEnabled: e.target.checked })
+                                onChange={(checked) =>
+                                    setDraft({ ...draft, cssPropertiesEnabled: checked })
                                 }
                             />
                             Restrict stylesheet CSS properties
@@ -330,13 +336,12 @@ export function ProfileEditor({
                                 list empty to use an empty list.
                             </p>
                             <label className="i-check">
-                                <input
-                                    type="checkbox"
+                                <Checkbox
                                     checked={draft.styleAttributePropertiesEnabled}
-                                    onChange={(e) =>
+                                    onChange={(checked) =>
                                         setDraft({
                                             ...draft,
-                                            styleAttributePropertiesEnabled: e.target.checked,
+                                            styleAttributePropertiesEnabled: checked,
                                         })
                                     }
                                 />
@@ -349,13 +354,12 @@ export function ProfileEditor({
                                 </label>
                             )}
                             <label className="i-check">
-                                <input
-                                    type="checkbox"
+                                <Checkbox
                                     checked={draft.removeContentsEnabled}
-                                    onChange={(e) =>
+                                    onChange={(checked) =>
                                         setDraft({
                                             ...draft,
-                                            removeContentsEnabled: e.target.checked,
+                                            removeContentsEnabled: checked,
                                         })
                                     }
                                 />
@@ -368,13 +372,12 @@ export function ProfileEditor({
                                 </label>
                             )}
                             <label className="i-check">
-                                <input
-                                    type="checkbox"
+                                <Checkbox
                                     checked={draft.whitespaceElementsEnabled}
-                                    onChange={(e) =>
+                                    onChange={(checked) =>
                                         setDraft({
                                             ...draft,
-                                            whitespaceElementsEnabled: e.target.checked,
+                                            whitespaceElementsEnabled: checked,
                                         })
                                     }
                                 />

@@ -22,15 +22,25 @@
         }
     }
 
+    /* Same as `.uikit-action` (src/uikit/controls.css). */
     button {
         font: inherit;
         color: inherit;
-        background: rgb(var(--P-color-shade) / var(--P-color-shade-opacity));
-        border: none;
-        border-radius: 0.4em;
-        padding: 0.2em 0.6em;
+        background: none;
+        border: 1px solid var(--P-separator);
+        border-radius: 0.5em;
+        padding: 0.2em 0.75em;
         cursor: pointer;
 
+        &:hover:not(:disabled) {
+            background: var(--P-separator);
+        }
+        &:focus {
+            outline: none;
+        }
+        &:focus-visible {
+            box-shadow: 0 0 0 0.2em rgb(var(--P-color-accent) / 0.5);
+        }
         &:disabled {
             opacity: 0.4;
             cursor: default;
@@ -38,8 +48,28 @@
 
         &.is-current {
             background: rgb(var(--P-color-accent));
+            border-color: transparent;
             color: rgb(var(--P-color-accent-fg));
         }
+    }
+
+    /* Fields look like TextField. */
+    input:not([type='checkbox']):not([type='file']),
+    textarea {
+        font: inherit;
+        color: inherit;
+        padding: 0.35em 0.6em;
+        background: rgb(var(--P-color-shade) / var(--P-color-shade-opacity));
+        border: 1px solid rgb(var(--P-color-soft-outline) / var(--P-color-soft-outline-opacity));
+        border-radius: 0.5em;
+
+        &:focus {
+            outline: none;
+            box-shadow: 0 0 0 0.2em rgb(var(--P-color-accent) / 0.5);
+        }
+    }
+    textarea {
+        resize: vertical;
     }
 
     .i-intro {
@@ -93,13 +123,6 @@
             display: flex;
             flex-direction: column;
             gap: 0.2em;
-        }
-
-        input,
-        select,
-        textarea {
-            font: inherit;
-            padding: 0.2em 0.4em;
         }
 
         .i-check {

@@ -31,9 +31,11 @@ import {
 } from '../../editor/css-pieces';
 import { listCustomCssPieces, subscribeLibraryStyles } from '../../storage/style-library';
 import { DirPopover } from '../../uikit/dir-popover';
+import { ColorPickerPanel } from '../../uikit/color-picker';
 import { useFocusWhenShown } from '../focus-when-shown';
 import { StyleLibraryModal, type StyleLibraryTab } from './style-library-modal';
 import { StyleSwatch } from './style-swatch';
+import Checkbox from '../../uikit/checkbox';
 
 const SYNC_DEBOUNCE_MS = 200;
 
@@ -2008,10 +2010,9 @@ function RubyPopover({
                     />
                 </label>
                 <label className="i-checkbox">
-                    <input
-                        type="checkbox"
+                    <Checkbox
                         checked={useRp}
-                        onChange={(e) => setUseRp(e.target.checked)}
+                        onChange={(checked) => setUseRp(checked)}
                     />
                     <span>Include &lt;rp&gt; fallback parentheses</span>
                 </label>
@@ -2127,10 +2128,9 @@ function TranslatePopover({
                     />
                 </label>
                 <label className="i-checkbox">
-                    <input
-                        type="checkbox"
+                    <Checkbox
                         checked={includeParens}
-                        onChange={(e) => setIncludeParens(e.target.checked)}
+                        onChange={(checked) => setIncludeParens(checked)}
                     />
                     <span>Show (translation) fallback when styles are off</span>
                 </label>
@@ -2177,6 +2177,8 @@ function ColorPopover({
 }
 
 function ColorPopoverContent({ editor, onClose }: { editor: Editor; onClose: () => void }) {
+    // Which custom color picker is open under its swatches.
+    const [custom, setCustom] = useState<'text' | 'highlight' | null>(null);
     const { color, backgroundColor } = useEditorState({
         editor,
         selector: ({ editor: e }) => {
@@ -2221,16 +2223,26 @@ function ColorPopoverContent({ editor, onClose }: { editor: Editor; onClose: () 
                             }}
                         />
                     ))}
-                    <label className="i-custom-color" title="Custom text color">
-                        <span>+</span>
-                        <input
-                            type="color"
-                            aria-label="Custom text color"
-                            value={/^#[0-9a-f]{6}$/i.test(color) ? color : '#870000'}
-                            onChange={(e) => editor.chain().focus().setColor(e.target.value).run()}
-                        />
-                    </label>
+                    <button
+                        type="button"
+                        className="i-custom-color"
+                        title="Custom text color"
+                        aria-label="Custom text color"
+                        aria-expanded={custom === 'text'}
+                        onClick={() => setCustom(custom === 'text' ? null : 'text')}
+                    >
+                        +
+                    </button>
                 </div>
+                {custom === 'text' ? (
+                    <ColorPickerPanel
+                        className="i-inline-picker"
+                        value={/^#[0-9a-f]{6}$/i.test(color) ? color : '#870000'}
+                        // Not focusing the editor, so the hex field keeps focus while typing.
+                        onChange={(hex) => editor.chain().setColor(hex).run()}
+                        onDone={onClose}
+                    />
+                ) : null}
             </div>
 
             <div className="i-color-section">
@@ -2261,22 +2273,27 @@ function ColorPopoverContent({ editor, onClose }: { editor: Editor; onClose: () 
                             }}
                         />
                     ))}
-                    <label className="i-custom-color" title="Custom highlight color">
-                        <span>+</span>
-                        <input
-                            type="color"
-                            aria-label="Custom highlight color"
-                            value={
-                                /^#[0-9a-f]{6}$/i.test(backgroundColor)
-                                    ? backgroundColor
-                                    : '#fff59d'
-                            }
-                            onChange={(e) =>
-                                editor.chain().focus().setBackgroundColor(e.target.value).run()
-                            }
-                        />
-                    </label>
+                    <button
+                        type="button"
+                        className="i-custom-color"
+                        title="Custom highlight color"
+                        aria-label="Custom highlight color"
+                        aria-expanded={custom === 'highlight'}
+                        onClick={() => setCustom(custom === 'highlight' ? null : 'highlight')}
+                    >
+                        +
+                    </button>
                 </div>
+                {custom === 'highlight' ? (
+                    <ColorPickerPanel
+                        className="i-inline-picker"
+                        value={
+                            /^#[0-9a-f]{6}$/i.test(backgroundColor) ? backgroundColor : '#fff59d'
+                        }
+                        onChange={(hex) => editor.chain().setBackgroundColor(hex).run()}
+                        onDone={onClose}
+                    />
+                ) : null}
             </div>
         </div>
     );

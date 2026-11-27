@@ -12,6 +12,7 @@ import {
 import { CodeEditor } from '../../ui/components/code-editor';
 import { sass as cmSass } from '@codemirror/lang-sass';
 import { compileString, Importer, ImporterResult, Syntax } from 'sass';
+import { Select } from '../../uikit/select';
 
 export class SassModuleData extends PlainTextData {
     typeId = 'sass';
@@ -84,7 +85,8 @@ class SassEditor extends PureComponent<ModulePluginProps<SassPluginData> & { isM
             <div className="i-footer">
                 <span>
                     <label htmlFor={this.modeSelectId}>Mode: </label>
-                    <select
+                    <Select
+                        narrow
                         id={this.modeSelectId}
                         value={data.syntax}
                         onChange={(e) => {
@@ -94,7 +96,7 @@ class SassEditor extends PureComponent<ModulePluginProps<SassPluginData> & { isM
                     >
                         <option value="scss">SCSS</option>
                         <option value="indented">Indented</option>
-                    </select>
+                    </Select>
                 </span>
             </div>
         );

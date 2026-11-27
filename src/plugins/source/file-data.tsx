@@ -1,4 +1,4 @@
-import { createRef, PureComponent } from 'react';
+import { PureComponent } from 'react';
 import {
     ModulePlugin,
     ModulePluginProps,
@@ -6,8 +6,11 @@ import {
     canonicalMime,
     textData,
 } from '../../document';
+import { FileButton } from '../../uikit/file-button';
+import '../../uikit/controls.css';
 import base64js from 'base64-js';
 import './file-data.less';
+import { Select } from '../../uikit/select';
 
 export type FileDataPluginData = {
     dataBase64: string;
@@ -16,25 +19,16 @@ export type FileDataPluginData = {
 };
 
 class FileDataEditor extends PureComponent<ModulePluginProps<FileDataPluginData>> {
-    fileInput = createRef<HTMLInputElement>();
-
-    onFile = () => {
-        const fileInput = this.fileInput.current! as HTMLInputElement;
-        if (fileInput.files!.length) {
-            const file = fileInput.files![0];
-
-            const fileReader = new FileReader();
-            fileReader.onload = () => {
-                this.props.onChange({
-                    ...this.props.data,
-                    dataBase64: base64js.fromByteArray(
-                        new Uint8Array(fileReader.result as ArrayBuffer)
-                    ),
-                    mime: file.type,
-                });
-            };
-            fileReader.readAsArrayBuffer(file);
-        }
+    onFile = (file: File) => {
+        const fileReader = new FileReader();
+        fileReader.onload = () => {
+            this.props.onChange({
+                ...this.props.data,
+                dataBase64: base64js.fromByteArray(new Uint8Array(fileReader.result as ArrayBuffer)),
+                mime: file.type,
+            });
+        };
+        fileReader.readAsArrayBuffer(file);
     };
 
     render() {
@@ -45,7 +39,7 @@ class FileDataEditor extends PureComponent<ModulePluginProps<FileDataPluginData>
         if (type.startsWith('text/')) {
             const buf = base64js.toByteArray(data.dataBase64);
             const contents = new TextDecoder().decode(buf);
-            preview = <textarea readOnly>{contents}</textarea>;
+            preview = <textarea className="uikit-text-area" readOnly value={contents} />;
         } else if (type.startsWith('image/')) {
             const dataUrl = `data:${type};base64,${data.dataBase64}`;
 
@@ -60,11 +54,13 @@ class FileDataEditor extends PureComponent<ModulePluginProps<FileDataPluginData>
 
         return (
             <div className="plugin-file-data-editor">
-                <input ref={this.fileInput} type="file" onChange={this.onFile} />
+                <FileButton onFiles={([file]) => this.onFile(file)}>
+                    {data.dataBase64.length ? 'Choose another file…' : 'Choose file…'}
+                </FileButton>
                 <div className="file-preview">{preview}</div>
                 <div>
                     <label htmlFor={outputId}>Output as:</label>{' '}
-                    <select
+                    <Select
                         value={data.outputMode}
                         onChange={(e) => {
                             onChange({
@@ -75,7 +71,7 @@ class FileDataEditor extends PureComponent<ModulePluginProps<FileDataPluginData>
                     >
                         <option value="blob">data blob</option>
                         <option value="text">text (UTF-8), as its file type</option>
-                    </select>
+                    </Select>
                 </div>
             </div>
         );

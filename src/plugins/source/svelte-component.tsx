@@ -7,6 +7,7 @@ import {
     PlainTextData,
 } from '../../document';
 import { CodeEditor } from '../../ui/components/code-editor';
+import { TextField } from '../../uikit/text-field';
 import { EditorView } from '@codemirror/view';
 import { html } from '@codemirror/lang-html';
 
@@ -36,13 +37,22 @@ class SvelteComponentEditor extends PureComponent<ModulePluginProps<SvelteCompon
         const { data, onChange } = this.props;
         return (
             <div className="plugin-svelte-component-editor">
-                <label>Name:</label>{' '}
-                <input
-                    value={data.name}
-                    onChange={(e) =>
-                        onChange({ ...data, name: (e.target as HTMLInputElement).value })
-                    }
-                />
+                <label
+                    className="i-name"
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.4em',
+                        marginBottom: '0.5em',
+                    }}
+                >
+                    Name:{' '}
+                    <TextField
+                        narrow
+                        value={data.name}
+                        onChange={(name) => onChange({ ...data, name })}
+                    />
+                </label>
                 <CodeEditor
                     value={data.contents}
                     onChange={(contents) => onChange({ ...data, contents })}

@@ -26,6 +26,7 @@ import {
     SiteTargetPreviewProps,
     WorkExportOutput,
 } from '../../../targets/types';
+import Checkbox from '../../../uikit/checkbox';
 
 export type { PreviewConfig } from '../../../targets/types';
 export { makeDefaultPreviewConfig } from '../../../targets/types';
@@ -742,12 +743,11 @@ function RenderConfigPopover({
                 return (
                     <div className="config-item" key={k}>
                         <div className="item-header">
-                            <input
+                            <Checkbox
                                 id={checkboxId}
-                                type="checkbox"
                                 checked={v.get(config)}
-                                onChange={(e) => {
-                                    const value = (e.target as HTMLInputElement).checked;
+                                onChange={(checked) => {
+                                    const value = checked;
                                     onConfigChange(v.set(config, value));
                                     if (v.renderOnChange) {
                                         renderContext.scheduleRender();

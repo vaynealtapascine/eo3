@@ -58,7 +58,7 @@
         }
 
         .uikit-text-field,
-        select,
+        .uikit-select,
         .i-paragraph {
             width: 100%;
             box-sizing: border-box;
@@ -118,6 +118,22 @@
         [aria-invalid='true'] {
             outline: 1px solid var(--P-error);
         }
+
+        /* Fixed columns: the name and label fields share what the Type drop-down and the
+           remove button leave, so the table fits its card at any width. */
+        table {
+            table-layout: fixed;
+        }
+        th:nth-child(3) {
+            width: 8.5em;
+        }
+        th:nth-child(4) {
+            width: 2.2em;
+        }
+        td .uikit-text-field,
+        td > .uikit-select {
+            width: 100%;
+        }
     }
 }
 
@@ -151,12 +167,7 @@
     gap: 0.4em;
     justify-content: flex-end;
 }
-.i-list-item-actions button,
-.i-list-add,
-.i-fields-code-actions button {
-    min-height: 2em;
-    padding: 0.2em 0.7em;
-}
+
 .i-list-add {
     align-self: flex-start;
 }

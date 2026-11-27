@@ -25,6 +25,7 @@ import {
 import { downloadFile } from '../../util/download';
 import { StyleSwatch } from './style-swatch';
 import './style-library-modal.css';
+import Checkbox from '../../uikit/checkbox';
 
 export type StyleLibraryTab = 'create' | 'import' | 'library';
 
@@ -490,10 +491,9 @@ function ImportPackTab({ onImported }: { onImported: () => void }) {
 
                     {anyCssWarnings ? (
                         <label className="i-check-row">
-                            <input
-                                type="checkbox"
+                            <Checkbox
                                 checked={cleanCssOnImport}
-                                onChange={(e) => setCleanCssOnImport(e.target.checked)}
+                                onChange={(checked) => setCleanCssOnImport(checked)}
                             />
                             <span>
                                 Strip AO3-unsupported CSS rules on import (recommended for AO3
@@ -1089,8 +1089,7 @@ function LibraryExportTab({
                     return (
                         <div key={entry.id} className="i-style-card">
                             <div className="i-style-card-main">
-                                <input
-                                    type="checkbox"
+                                <Checkbox
                                     checked={checked}
                                     aria-label={`Select ${entry.style.label} for export`}
                                     onChange={() => toggleId(entry.id)}

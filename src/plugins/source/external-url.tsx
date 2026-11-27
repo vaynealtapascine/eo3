@@ -9,6 +9,7 @@ import { useMemo } from 'react';
 import { SassModuleData } from './sass';
 import { TextField } from '../../uikit/text-field';
 import { Form, FormItem } from '../../uikit/form';
+import { Select } from '../../uikit/select';
 
 export type ExternalUrlPluginData = {
     url: string;
@@ -31,7 +32,7 @@ function ExternalUrlEditor({ data, onChange }: ModulePluginProps<ExternalUrlPlug
                 />
             </FormItem>
             <FormItem label="Type" itemId={typeSelect}>
-                <select
+                <Select
                     id={typeSelect}
                     value={data.type}
                     onChange={(e) => {
@@ -41,7 +42,7 @@ function ExternalUrlEditor({ data, onChange }: ModulePluginProps<ExternalUrlPlug
                     <option value="javascript">Javascript</option>
                     <option value="css">CSS</option>
                     <option value="scss">SCSS Module</option>
-                </select>
+                </Select>
             </FormItem>
         </Form>
     );

@@ -19,6 +19,7 @@ import './module-list.css';
 import { TextField } from '../../uikit/text-field';
 import { EditIcon } from './icons';
 import { useSiteTarget } from '../../targets/context';
+import { Select } from '../../uikit/select';
 
 type ModuleSelection = {
     selected: ModuleId | null;
@@ -721,7 +722,8 @@ function ModuleSends({ document, sends, onChange }: ModuleSends.Props) {
         onChange: (v: ModuleId) => void
     ) => {
         return (
-            <select
+            <Select
+                narrow
                 className="send-target"
                 key={key}
                 value={value || ''}
@@ -751,7 +753,7 @@ function ModuleSends({ document, sends, onChange }: ModuleSends.Props) {
                             : 'output'}
                     </option>
                 ))}
-            </select>
+            </Select>
         );
     };
 
@@ -797,7 +799,8 @@ function ModuleNamedSends({ document, namedSends, onChange }: ModuleNamedSends.P
         onChange: (v: ModuleId) => void
     ) => {
         return (
-            <select
+            <Select
+                narrow
                 className="send-target"
                 key={key}
                 value={value || ''}
@@ -820,7 +823,7 @@ function ModuleNamedSends({ document, namedSends, onChange }: ModuleNamedSends.P
                         );
                     })
                     .filter((x) => x)}
-            </select>
+            </Select>
         );
     };
 

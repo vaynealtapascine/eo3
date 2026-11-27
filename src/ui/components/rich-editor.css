@@ -1382,13 +1382,19 @@
         background: rgb(var(--P-color-shade) / var(--P-color-shade-opacity));
         font-weight: bold;
         overflow: hidden;
+        color: inherit;
+        font: inherit;
+        font-weight: bold;
 
-        input {
-            position: absolute;
-            inset: 0;
-            opacity: 0;
-            cursor: pointer;
+        &[aria-expanded='true'] {
+            box-shadow: 0 0 0 2px var(--P-dialog-bg), 0 0 0 4px rgb(var(--P-color-accent));
         }
+    }
+
+    /* The custom color picker, opened under its swatches. */
+    .i-inline-picker {
+        width: auto;
+        padding: 0.2em 0 0;
     }
 }
 

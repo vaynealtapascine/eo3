@@ -16,6 +16,7 @@ import { css } from '@codemirror/lang-css';
 import { javascript } from '@codemirror/lang-javascript';
 import { stripTypes } from './script-runtime';
 import './text.css';
+import { Select } from '../../uikit/select';
 
 const HTML_CONTENTEDITABLE = 'html-contenteditable';
 
@@ -123,7 +124,8 @@ class TextEditor extends PureComponent<ModulePluginProps<TextPluginData>> {
                 )}
                 <span className="i-mode-control">
                     <label htmlFor={this.modeSelectId}>Mode: </label>
-                    <select
+                    <Select
+                        narrow
                         id={this.modeSelectId}
                         value={data.language}
                         onChange={(e) => {
@@ -142,7 +144,7 @@ class TextEditor extends PureComponent<ModulePluginProps<TextPluginData>> {
                                 {LANGUAGE_LABELS[k]}
                             </option>
                         ))}
-                    </select>
+                    </Select>
                 </span>
             </div>
         );

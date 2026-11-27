@@ -2,6 +2,7 @@ import { FormEvent, useId, useState } from 'react';
 import { Document } from '../../document';
 import { liftedSkinRules } from '../../targets/delivery/skin-record';
 import './ao3-import.css';
+import '../../uikit/controls.css';
 
 /** Paste an existing AO3 Work Skin first, then add chapters as editable HTML sources. */
 export function Ao3Import({
@@ -77,7 +78,7 @@ export function Ao3Import({
                     placeholder="Paste the CSS from your AO3 Work Skin"
                     rows={5}
                 />
-                <button type="submit" disabled={!skin.trim() || busy}>
+                <button type="submit" className="uikit-action" disabled={!skin.trim() || busy}>
                     {document.importedSkinModuleId ? 'replace imported skin' : 'import skin'}
                 </button>
             </form>
@@ -97,7 +98,7 @@ export function Ao3Import({
                     placeholder="Paste the chapter HTML source from AO3"
                     rows={7}
                 />
-                <button type="submit" disabled={!chapterHtml.trim() || busy}>
+                <button type="submit" className="uikit-action" disabled={!chapterHtml.trim() || busy}>
                     import chapter
                 </button>
             </form>

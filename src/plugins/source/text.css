@@ -95,14 +95,5 @@
         align-items: center;
         gap: 0.3em;
         opacity: 0.85;
-
-        select {
-            font: inherit;
-            color: inherit;
-            background: rgb(var(--P-card-bg));
-            border: 1px solid var(--P-separator);
-            border-radius: 0.35em;
-            padding: 0.1em 0.35em;
-        }
     }
 }

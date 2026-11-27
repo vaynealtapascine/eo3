@@ -15,6 +15,7 @@ import { EditorView } from '@codemirror/view';
 import { html } from '@codemirror/lang-html';
 import base64js from 'base64-js';
 import { SvelteBundler, SvelteModules, SvelteVersion } from './svelte-bundler';
+import { Select } from '../../uikit/select';
 export type { SvelteVersion } from './svelte-bundler';
 
 const SVELTE_VERSION_LABELS: Record<SvelteVersion, string> = {
@@ -55,7 +56,8 @@ class SvelteEditor extends PureComponent<ModulePluginProps<SveltePluginData>> {
             <div className="i-footer">
                 <span>
                     <label htmlFor={this.versionSelectId}>Svelte version: </label>
-                    <select
+                    <Select
+                        narrow
                         id={this.versionSelectId}
                         value={svelteVersionOf(data)}
                         onChange={(e) =>
@@ -71,7 +73,7 @@ class SvelteEditor extends PureComponent<ModulePluginProps<SveltePluginData>> {
                                 {SVELTE_VERSION_LABELS[v]}
                             </option>
                         ))}
-                    </select>
+                    </Select>
                 </span>
             </div>
         );

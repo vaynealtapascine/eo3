@@ -25,6 +25,7 @@ import {
 import { buildScriptProgram } from './script-runtime';
 import { runScript } from './script-sandbox';
 import './settings.css';
+import { Select } from '../../uikit/select';
 
 const TYPE_LABELS: Record<typeof SETTING_TYPES[number], string> = {
     text: 'Short text',
@@ -106,7 +107,7 @@ function SettingInput({
             );
         case 'choice':
             return (
-                <select
+                <Select
                     id={id}
                     aria-describedby={describedBy}
                     value={value as string}
@@ -117,7 +118,7 @@ function SettingInput({
                             {option}
                         </option>
                     ))}
-                </select>
+                </Select>
             );
         case 'list':
             return (
@@ -217,6 +218,7 @@ function ListInput({
                         <div className="i-list-item-actions">
                             <button
                                 type="button"
+                                className="uikit-action is-icon"
                                 disabled={i === 0}
                                 aria-label={`Move ${label} ${i + 1} up`}
                                 onClick={() => move(i, i - 1)}
@@ -225,6 +227,7 @@ function ListInput({
                             </button>
                             <button
                                 type="button"
+                                className="uikit-action is-icon"
                                 disabled={i === items.length - 1}
                                 aria-label={`Move ${label} ${i + 1} down`}
                                 onClick={() => move(i, i + 1)}
@@ -233,6 +236,7 @@ function ListInput({
                             </button>
                             <button
                                 type="button"
+                                className="uikit-action"
                                 disabled={items.length <= min}
                                 onClick={() => onChange(items.filter((_, j) => j !== i))}
                             >
@@ -244,7 +248,7 @@ function ListInput({
             })}
             <button
                 type="button"
-                className="i-list-add"
+                className="uikit-action i-list-add"
                 disabled={items.length >= max}
                 onClick={() => onChange([...items, listItemValue(fields, {})])}
             >
@@ -425,7 +429,7 @@ function FieldOptions({
                 : null}
             <label>
                 Show when
-                <select
+                <Select
                     value={field.showWhen?.key ?? ''}
                     onChange={(e) => {
                         const control = fields.find((f) => f.key === e.target.value);
@@ -452,7 +456,7 @@ function FieldOptions({
                                 {f.label || f.key}
                             </option>
                         ))}
-                </select>
+                </Select>
             </label>
             {field.showWhen && source ? (
                 <>
@@ -554,7 +558,7 @@ function FieldsTable({
                                     ) : null}
                                 </td>
                                 <td>
-                                    <select
+                                    <Select
                                         aria-label="Type"
                                         value={settingType(field)}
                                         onChange={(e) =>
@@ -568,11 +572,11 @@ function FieldsTable({
                                                 {TYPE_LABELS[type]}
                                             </option>
                                         ))}
-                                    </select>
+                                    </Select>
                                 </td>
                                 <td>
                                     <button
-                                        className="i-remove-field"
+                                        className="uikit-action is-icon i-remove-field"
                                         aria-label={`remove ${field.label || field.key || 'field'}`}
                                         onClick={() => onChange(fields.filter((_, j) => j !== i))}
                                     >
@@ -594,7 +598,8 @@ function FieldsTable({
                 </tbody>
             </table>
             <button
-                className="i-add-field"
+                type="button"
+                className="uikit-action i-add-field"
                 onClick={() => {
                     let n = fields.length + 1;
                     while (keys.includes(`field${n}`)) n++;
@@ -724,7 +729,12 @@ function FieldsCode({ data, onChange }: ModulePluginProps<SettingsData>) {
                 extensions={extensions}
             />
             <div className="i-fields-code-actions">
-                <button type="button" onClick={apply} disabled={status.running}>
+                <button
+                    type="button"
+                    className="uikit-action is-primary"
+                    onClick={apply}
+                    disabled={status.running}
+                >
                     {status.running ? 'Running…' : 'Apply'}
                 </button>
                 {status.applied ? <span role="status">Fields updated.</span> : null}

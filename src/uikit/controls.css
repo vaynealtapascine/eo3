@@ -1,0 +1,163 @@
+/*
+ * Shared looks for native controls, so eo3's own UI never shows browser defaults:
+ * `.uikit-select` (via `Select`), `.uikit-action` buttons, `.uikit-text-area`, and
+ * `FileButton`. They follow `TextField` and the outlined buttons of the parts list.
+ */
+
+/* Drop-downs: the field look of TextField, with a chevron. */
+.uikit-select {
+    display: inline-flex;
+    position: relative;
+    max-width: 100%;
+    min-width: 0;
+    vertical-align: middle;
+
+    > select {
+        appearance: none;
+        width: 100%;
+        min-width: 0;
+        margin: 0;
+        padding: 0.35em 2em 0.35em 0.75em;
+        font: inherit;
+        color: inherit;
+        background: rgb(var(--P-color-shade) / var(--P-color-shade-opacity));
+        border: 1px solid rgb(var(--P-color-soft-outline) / var(--P-color-soft-outline-opacity));
+        border-radius: 0.5em;
+        text-overflow: ellipsis;
+        cursor: pointer;
+
+        &:focus {
+            outline: none;
+        }
+        &:focus-visible {
+            box-shadow: 0 0 0 0.2em rgb(var(--P-color-accent) / 0.5);
+        }
+        &:disabled {
+            cursor: default;
+        }
+
+        /* The open list is drawn by the browser; keep it readable in dark mode. */
+        option {
+            color: rgb(var(--P-color-fg));
+            background: var(--P-dialog-bg);
+        }
+    }
+
+    &::after {
+        content: '';
+        position: absolute;
+        right: 0.8em;
+        top: 50%;
+        width: 0.4em;
+        height: 0.4em;
+        border-right: 1.5px solid currentColor;
+        border-bottom: 1.5px solid currentColor;
+        transform: translateY(-70%) rotate(45deg);
+        opacity: 0.65;
+        pointer-events: none;
+    }
+
+    &.is-narrow > select {
+        padding: 0.1em 1.8em 0.1em 0.5em;
+    }
+    &.is-narrow::after {
+        right: 0.7em;
+    }
+    &.is-disabled {
+        opacity: 0.5;
+    }
+}
+
+/* Buttons: outlined by default, filled with the accent for the main action. */
+.uikit-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35em;
+    margin: 0;
+    padding: 0.2em 0.75em;
+    font: inherit;
+    color: inherit;
+    background: none;
+    border: 1px solid var(--P-separator);
+    border-radius: 0.5em;
+    cursor: pointer;
+    white-space: nowrap;
+    -webkit-tap-highlight-color: transparent;
+
+    &:hover:not(:disabled, .is-disabled),
+    &:focus-visible,
+    &:focus-within:has(:focus-visible) {
+        background: var(--P-separator);
+    }
+    &:focus {
+        outline: none;
+    }
+    &:focus-visible,
+    &:focus-within:has(:focus-visible) {
+        box-shadow: 0 0 0 0.2em rgb(var(--P-color-accent) / 0.5);
+    }
+    &:disabled,
+    &.is-disabled {
+        opacity: 0.4;
+        cursor: default;
+    }
+
+    &.is-primary {
+        background: rgb(var(--P-color-accent));
+        border-color: transparent;
+        color: rgb(var(--P-color-accent-fg));
+
+        &:hover:not(:disabled, .is-disabled) {
+            background: rgb(var(--P-color-accent) / 0.85);
+        }
+    }
+
+    &.is-danger {
+        color: var(--P-error);
+    }
+
+    &.is-icon {
+        min-width: 2em;
+        padding: 0.2em 0.45em;
+    }
+}
+
+/* Multi-line text, matching TextField. */
+.uikit-text-area {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0.45em 0.75em;
+    font: inherit;
+    color: inherit;
+    background: rgb(var(--P-color-shade) / var(--P-color-shade-opacity));
+    border: 1px solid rgb(var(--P-color-soft-outline) / var(--P-color-soft-outline-opacity));
+    border-radius: 0.5em;
+    resize: vertical;
+
+    &:focus {
+        outline: none;
+        box-shadow: 0 0 0 0.2em rgb(var(--P-color-accent) / 0.5);
+    }
+    &[readonly] {
+        opacity: 0.85;
+    }
+}
+
+.uikit-visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.uikit-file-button {
+    position: relative;
+}

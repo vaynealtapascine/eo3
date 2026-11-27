@@ -7,6 +7,7 @@ import { showConfirm } from '../dialogs';
 import { downloadFile, safeFileName } from '../../util/download';
 import { workWordCount } from '../../util/word-count';
 import './save-recovery.css';
+import Checkbox from '../../uikit/checkbox';
 
 const STATUS_LABELS: Record<SaveState['status'], [short: string, long: string]> = {
     unsaved: ['Not saved yet', 'Edit this work to keep it in this browser.'],
@@ -288,12 +289,11 @@ export function VersionHistory({
                 </p>
             )}
             <label className="i-toggle">
-                <input
-                    type="checkbox"
+                <Checkbox
                     checked={enabled}
                     disabled={busy}
-                    onChange={(event) => {
-                        const on = event.target.checked;
+                    onChange={(checked) => {
+                        const on = checked;
                         void run(async () => {
                             await controller.setEnabled(on);
                             await controller.flush();
