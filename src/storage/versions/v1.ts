@@ -32,19 +32,37 @@ type TomlValue =
           [k: string]: TomlValue;
       };
 
-function markTomlMultiline(data: JsonValue): TomlValue {
+/** A value module data can't hold in a file, with where it is (`fields[2].default`). */
+export class UnsavableValueError extends Error {
+    constructor(readonly path: string, readonly valueType: string) {
+        super(`${path || 'its data'} is a ${valueType}, which can’t be saved`);
+    }
+}
+
+/**
+ * Module data as TOML values, with multi-line strings marked. Like JSON, an `undefined`
+ * property is left out and an `undefined` list item is written as null (TOML has no
+ * `undefined`, so these used to fail the whole save).
+ */
+function markTomlMultiline(data: JsonValue | undefined, path = ''): TomlValue {
     if (Array.isArray(data)) {
-        return data.map(markTomlMultiline);
+        return data.map((item, i) =>
+            item === undefined ? null : markTomlMultiline(item, `${path}[${i}]`)
+        );
     } else if (data && typeof data === 'object') {
         const newData: Record<string, TomlValue> = {};
         for (const k in data) {
-            newData[k] = markTomlMultiline(data[k]);
+            const value = (data as Record<string, JsonValue | undefined>)[k];
+            if (value === undefined) continue;
+            newData[k] = markTomlMultiline(value, path ? `${path}.${k}` : k);
         }
         return newData;
     } else if (typeof data === 'string' && data.includes('\n')) {
         return tomlMultiline(data);
+    } else if (data !== null && !['string', 'number', 'boolean'].includes(typeof data)) {
+        throw new UnsavableValueError(path, typeof data);
     }
-    return data;
+    return data as TomlValue;
 }
 
 export function serializeV1(doc: Document, format?: string): string {
@@ -75,9 +93,21 @@ export function serializeV1(doc: Document, format?: string): string {
         }
 
         if (format === 'toml') {
+            let data: TomlValue;
+            try {
+                data = markTomlMultiline(module.data);
+            } catch (err) {
+                if (!(err instanceof UnsavableValueError)) throw err;
+                const name = module.title || module.plugin.description(module.data);
+                throw new Error(
+                    `The “${name}” module (${module.plugin.id}, module ${
+                        moduleIndices.get(module.id)! + 1
+                    }) can’t be saved: ${err.message}.`
+                );
+            }
             const modData: Record<string, TomlValue> = {
                 plugin: module.plugin.id,
-                data: markTomlMultiline(module.data),
+                data,
             };
             if (sends.length) modData.sends = tomlInline(sends);
             if (Object.keys(namedSends).length) {
@@ -204,6 +234,8 @@ export function deserializeV1(input: string): Document {
         data = parseToml(input, {
             joiner: '\n',
             bigint: false,
+            // `serializeV1` writes null (TOML has none; `xNull`), so read it back too.
+            x: { null: true },
         });
     }
 
