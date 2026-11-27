@@ -1,0 +1,186 @@
+/* The closed field: looks like a narrow uikit text field holding a swatch and its hex code. */
+.uikit-color-field {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5em;
+    max-width: 100%;
+    margin: 0;
+    padding: 0.2em 0.7em 0.2em 0.25em;
+    font: inherit;
+    color: inherit;
+    background: rgb(var(--P-color-shade) / var(--P-color-shade-opacity));
+    border: 1px solid rgb(var(--P-color-soft-outline) / var(--P-color-soft-outline-opacity));
+    border-radius: 0.5em;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+
+    &:focus {
+        outline: none;
+    }
+    &:focus-visible,
+    &[aria-expanded='true'] {
+        box-shadow: 0 0 0 0.2em rgb(var(--P-color-accent) / 0.5);
+    }
+
+    .i-chip {
+        flex-shrink: 0;
+        width: 1.6em;
+        height: 1.6em;
+        border-radius: 0.35em;
+        box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.15);
+    }
+
+    .i-hex {
+        font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+        font-size: 0.9em;
+        letter-spacing: 0.02em;
+    }
+}
+
+/* The popover. */
+.uikit-color-popover {
+    display: flex;
+    flex-direction: column;
+    gap: 0.7em;
+    padding: 0.8em;
+    width: min(16em, calc(100vw - 32px));
+
+    .react-colorful {
+        width: 100%;
+        height: auto;
+        gap: 0.6em;
+    }
+    .react-colorful__saturation {
+        aspect-ratio: 4 / 3;
+        flex: none;
+        border-radius: 0.5em;
+        border-bottom: none;
+        box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.12);
+    }
+    .react-colorful__hue {
+        flex: none;
+        height: 0.9em;
+        border-radius: 100em;
+    }
+    .react-colorful__pointer {
+        width: 1.3em;
+        height: 1.3em;
+        border-width: 3px;
+        box-shadow: 0 1px 4px rgb(0 0 0 / 0.35);
+    }
+    .react-colorful__interactive:focus .react-colorful__pointer {
+        transform: translate(-50%, -50%) scale(1.15);
+        box-shadow: 0 0 0 0.2em rgb(var(--P-color-accent) / 0.6), 0 1px 4px rgb(0 0 0 / 0.35);
+    }
+
+    .i-row {
+        display: flex;
+        align-items: center;
+        gap: 0.5em;
+    }
+
+    .i-preview {
+        flex-shrink: 0;
+        width: 2.1em;
+        height: 2.1em;
+        border-radius: 0.5em;
+        box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.15);
+    }
+
+    .i-hex-field {
+        display: flex;
+        align-items: center;
+        flex: 1;
+        min-width: 0;
+        background: rgb(var(--P-color-shade) / var(--P-color-shade-opacity));
+        border: 1px solid rgb(var(--P-color-soft-outline) / var(--P-color-soft-outline-opacity));
+        border-radius: 0.5em;
+
+        &:focus-within {
+            box-shadow: 0 0 0 0.2em rgb(var(--P-color-accent) / 0.5);
+        }
+
+        .i-label {
+            padding-left: 0.6em;
+            opacity: 0.6;
+            font-size: 0.85em;
+        }
+
+        input {
+            flex: 1;
+            width: 0;
+            margin: 0;
+            padding: 0.35em 0.5em;
+            font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+            font-size: 0.9em;
+            color: inherit;
+            background: none;
+            border: none;
+
+            &:focus {
+                outline: none;
+            }
+            &[aria-invalid='true'] {
+                color: var(--P-error);
+            }
+        }
+    }
+
+    .i-dropper {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        width: 2.1em;
+        height: 2.1em;
+        padding: 0;
+        color: inherit;
+        background: none;
+        border: 1px solid rgb(var(--P-color-soft-outline) / var(--P-color-soft-outline-opacity));
+        border-radius: 0.5em;
+        cursor: pointer;
+
+        svg {
+            width: 1.1em;
+            height: 1.1em;
+            fill: currentColor;
+        }
+        &:focus-visible {
+            outline: none;
+            box-shadow: 0 0 0 0.2em rgb(var(--P-color-accent) / 0.5);
+        }
+    }
+
+    .i-presets {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(1.4em, 1fr));
+        gap: 0.35em;
+    }
+
+    .i-preset {
+        aspect-ratio: 1;
+        padding: 0;
+        border: none;
+        border-radius: 0.35em;
+        box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.15);
+        cursor: pointer;
+
+        &.is-active,
+        &:focus-visible {
+            outline: none;
+            box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.15), 0 0 0 2px var(--P-dialog-bg),
+                0 0 0 4px rgb(var(--P-color-accent));
+        }
+    }
+}
+
+@media (pointer: coarse) {
+    .uikit-color-popover {
+        .react-colorful__hue {
+            height: 1.4em;
+        }
+        .i-presets {
+            grid-template-columns: repeat(auto-fill, minmax(2.2em, 1fr));
+        }
+    }
+}

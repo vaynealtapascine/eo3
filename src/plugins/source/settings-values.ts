@@ -22,7 +22,7 @@ export interface SettingsField {
     /** What the form shows; the key when empty. */
     label?: string;
     type?: SettingType;
-    /** The choices of a `choice` field. */
+    /** The choices of a `choice` field; a `color` field's suggested colors (hex codes). */
     options?: string[];
     /** A short explanation under the field. */
     hint?: string;

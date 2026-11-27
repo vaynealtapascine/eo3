@@ -3,6 +3,7 @@ import { javascript } from '@codemirror/lang-javascript';
 import { JsonValue, ModulePlugin, ModulePluginProps } from '../../document';
 import { TextField } from '../../uikit/text-field';
 import Checkbox from '../../uikit/checkbox';
+import { ColorPicker } from '../../uikit/color-picker';
 import { CodeEditor } from '../../ui/components/code-editor';
 import {
     SETTING_TYPES,
@@ -65,12 +66,13 @@ function SettingInput({
             );
         case 'color':
             return (
-                <input
+                <ColorPicker
                     id={id}
                     aria-describedby={describedBy}
-                    type="color"
+                    label={field.label || field.key}
+                    presets={field.options}
                     value={value as string}
-                    onChange={(e) => onChange(e.target.value)}
+                    onChange={onChange}
                 />
             );
         case 'number': {
@@ -542,10 +544,12 @@ function FieldsTable({
                                         placeholder={field.key}
                                         onChange={(label) => setField(i, { label })}
                                     />
-                                    {settingType(field) === 'choice' ? (
+                                    {settingType(field) === 'choice' ||
+                                    settingType(field) === 'color' ? (
                                         <ChoicesField
                                             options={field.options ?? []}
                                             onChange={(options) => setField(i, { options })}
+                                            kind={settingType(field) === 'color' ? 'colors' : 'choices'}
                                         />
                                     ) : null}
                                 </td>
@@ -615,16 +619,24 @@ export function parseChoices(text: string): string[] {
 export function ChoicesField({
     options,
     onChange,
+    kind = 'choices',
 }: {
     options: string[];
     onChange: (options: string[]) => void;
+    /** A choice field's choices, or a color field's suggested colors (hex codes). */
+    kind?: 'choices' | 'colors';
 }) {
     const [draft, setDraft] = useState<string | null>(null);
+    const colors = kind === 'colors';
     return (
         <TextField
-            aria-label="Choices, separated by commas"
+            aria-label={
+                colors ? 'Suggested colors, separated by commas' : 'Choices, separated by commas'
+            }
             narrow
-            placeholder="choices, comma separated"
+            placeholder={
+                colors ? 'suggested colors: #aa3355, #2277aa' : 'choices, comma separated'
+            }
             value={draft ?? options.join(', ')}
             onChange={(text) => {
                 setDraft(text);

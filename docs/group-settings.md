@@ -43,7 +43,8 @@ Group developers can also generate the same JSON directly. The Settings node's `
 ```
 
 Use `text`, `paragraph`, `color`, `number`, `toggle`, `choice`, or `list`. Choice fields use
-`options: ["First", "Second"]`; colors use six-digit hex strings. Keys should be unique
+`options: ["First", "Second"]`; colors use six-digit hex strings, and a color field's
+`options` are offered as suggested swatches in its picker. Keys should be unique
 and stable. Defaults apply when no saved value exists; explicit empty strings, zero,
 and false override defaults. Changing a default does not replace a writer's saved value.
 
