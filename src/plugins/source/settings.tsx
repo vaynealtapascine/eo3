@@ -1,18 +1,28 @@
-import { Fragment, useId } from 'react';
-import { JavascriptData, JsonValue, ModulePlugin, ModulePluginProps } from '../../document';
+import { Fragment, useId, useState } from 'react';
+import { javascript } from '@codemirror/lang-javascript';
+import { JsonValue, ModulePlugin, ModulePluginProps } from '../../document';
 import { TextField } from '../../uikit/text-field';
 import Checkbox from '../../uikit/checkbox';
+import { CodeEditor } from '../../ui/components/code-editor';
 import {
     SETTING_TYPES,
+    ListItem,
+    SettingDefault,
     SettingsData,
     SettingsField,
-    settingsModule,
+    SettingsModuleData,
     settingsValues,
     settingVisible,
     constrainNumber,
     settingType,
     settingValue,
+    itemFields,
+    listBounds,
+    listItemValue,
+    parseSettingsFields,
 } from './settings-values';
+import { buildScriptProgram } from './script-runtime';
+import { runScript } from './script-sandbox';
 import './settings.css';
 
 const TYPE_LABELS: Record<typeof SETTING_TYPES[number], string> = {
@@ -22,11 +32,13 @@ const TYPE_LABELS: Record<typeof SETTING_TYPES[number], string> = {
     number: 'Number',
     toggle: 'On/off',
     choice: 'Choice',
+    list: 'List (writers add entries)',
 };
 
 function SettingInput({
     field,
     value,
+    raw,
     id,
     onChange,
     describedBy,
@@ -34,6 +46,8 @@ function SettingInput({
     describedBy?: string;
     field: SettingsField;
     value: JsonValue;
+    /** The saved value before it was normalized (numbers being typed, list entries). */
+    raw?: JsonValue;
     id: string;
     onChange: (value: JsonValue) => void;
 }) {
@@ -59,7 +73,8 @@ function SettingInput({
                     onChange={(e) => onChange(e.target.value)}
                 />
             );
-        case 'number':
+        case 'number': {
+            const shown = typeof raw === 'number' && Number.isFinite(raw) ? raw : value;
             return (
                 <TextField
                     id={id}
@@ -69,14 +84,15 @@ function SettingInput({
                     max={field.max}
                     step={field.step ?? 'any'}
                     narrow
-                    value={String(value)}
+                    value={String(shown)}
                     onChange={(v) => {
                         const number = v === '' ? 0 : Number(v);
                         if (Number.isFinite(number)) onChange(number);
                     }}
-                    onBlur={() => onChange(constrainNumber(field, value as number))}
+                    onBlur={() => onChange(constrainNumber(field, shown as number))}
                 />
             );
+        }
         case 'toggle':
             return (
                 <Checkbox
@@ -101,6 +117,17 @@ function SettingInput({
                     ))}
                 </select>
             );
+        case 'list':
+            return (
+                <ListInput
+                    id={id}
+                    describedBy={describedBy}
+                    field={field}
+                    items={value as ListItem[]}
+                    raw={raw}
+                    onChange={onChange}
+                />
+            );
         default:
             return (
                 <TextField
@@ -111,6 +138,118 @@ function SettingInput({
                 />
             );
     }
+}
+
+/** A list the writer grows: one group of the item fields per entry, with add/move/remove. */
+function ListInput({
+    field,
+    items,
+    raw,
+    id,
+    describedBy,
+    onChange,
+}: {
+    field: SettingsField;
+    items: ListItem[];
+    raw?: JsonValue;
+    id: string;
+    describedBy?: string;
+    onChange: (items: ListItem[]) => void;
+}) {
+    const fields = itemFields(field);
+    const { min, max } = listBounds(field);
+    const label = field.itemLabel?.trim() || 'Item';
+    const rawItems = Array.isArray(raw) ? raw : [];
+    const move = (from: number, to: number) => {
+        const next = items.slice();
+        const [item] = next.splice(from, 1);
+        next.splice(to, 0, item);
+        onChange(next);
+    };
+    return (
+        <div className="i-list" id={id} role="group" aria-describedby={describedBy}>
+            {items.map((item, i) => {
+                const rawItem = rawItems[i];
+                const visible = fields.filter((f) => settingVisible(f, item));
+                return (
+                    <fieldset className="i-list-item" key={i}>
+                        <legend>
+                            {label} {i + 1}
+                        </legend>
+                        {visible.length ? (
+                            visible.map((f) => {
+                                const fieldId = `${id}-${i}-${fields.indexOf(f)}`;
+                                return (
+                                    <div className="i-setting" key={f.key}>
+                                        <label htmlFor={fieldId}>{f.label || f.key}</label>
+                                        <SettingInput
+                                            id={fieldId}
+                                            describedBy={f.hint ? `${fieldId}-hint` : undefined}
+                                            field={f}
+                                            value={item[f.key]}
+                                            raw={
+                                                rawItem &&
+                                                typeof rawItem === 'object' &&
+                                                !Array.isArray(rawItem) &&
+                                                Object.hasOwn(rawItem, f.key)
+                                                    ? rawItem[f.key]
+                                                    : undefined
+                                            }
+                                            onChange={(value) => {
+                                                const next = items.slice();
+                                                next[i] = { ...item, [f.key]: value };
+                                                onChange(next);
+                                            }}
+                                        />
+                                        {f.hint ? (
+                                            <div id={`${fieldId}-hint`} className="i-hint">
+                                                {f.hint}
+                                            </div>
+                                        ) : null}
+                                    </div>
+                                );
+                            })
+                        ) : (
+                            <div className="i-hint">This list has no fields yet.</div>
+                        )}
+                        <div className="i-list-item-actions">
+                            <button
+                                type="button"
+                                disabled={i === 0}
+                                aria-label={`Move ${label} ${i + 1} up`}
+                                onClick={() => move(i, i - 1)}
+                            >
+                                ↑
+                            </button>
+                            <button
+                                type="button"
+                                disabled={i === items.length - 1}
+                                aria-label={`Move ${label} ${i + 1} down`}
+                                onClick={() => move(i, i + 1)}
+                            >
+                                ↓
+                            </button>
+                            <button
+                                type="button"
+                                disabled={items.length <= min}
+                                onClick={() => onChange(items.filter((_, j) => j !== i))}
+                            >
+                                Remove
+                            </button>
+                        </div>
+                    </fieldset>
+                );
+            })}
+            <button
+                type="button"
+                className="i-list-add"
+                disabled={items.length >= max}
+                onClick={() => onChange([...items, listItemValue(fields, {})])}
+            >
+                + Add {label.toLowerCase()}
+            </button>
+        </div>
+    );
 }
 
 /** The form a writer fills in. */
@@ -138,19 +277,19 @@ export function SettingsForm({
         return [...sections].map(([section, members]) => {
             const controls = members.map((field) => {
                 const fieldId = `${id}-${data.fields.indexOf(field)}`;
+                const isList = settingType(field) === 'list';
                 return (
-                    <div className="i-setting" key={field.key}>
+                    <div className={isList ? 'i-setting i-setting-list' : 'i-setting'} key={field.key}>
                         <label htmlFor={fieldId}>{field.label || field.key}</label>
                         <SettingInput
                             id={fieldId}
                             describedBy={field.hint ? `${fieldId}-hint` : undefined}
                             field={field}
-                            value={
-                                settingType(field) === 'number' &&
-                                typeof data.values[field.key] === 'number' &&
-                                Number.isFinite(data.values[field.key])
+                            value={values[field.key]}
+                            raw={
+                                Object.hasOwn(data.values, field.key)
                                     ? data.values[field.key]
-                                    : values[field.key]
+                                    : undefined
                             }
                             onChange={(value) =>
                                 onChange({
@@ -203,6 +342,7 @@ function FieldOptions({
 }) {
     const id = useId();
     const source = fields.find((f) => f.key === field.showWhen?.key);
+    const isList = settingType(field) === 'list';
     return (
         <details className="i-field-options">
             <summary>Options for {field.label || field.key || 'field'}</summary>
@@ -225,12 +365,46 @@ function FieldOptions({
                 />
                 Show under Advanced settings
             </label>
-            <label htmlFor={`${id}-default`}>Default value</label>
+            {isList ? (
+                <>
+                    <label>
+                        One entry is called
+                        <TextField
+                            value={field.itemLabel ?? ''}
+                            placeholder="Item"
+                            onChange={(itemLabel) => onChange({ itemLabel })}
+                        />
+                    </label>
+                    {(['minItems', 'maxItems'] as const).map((key) => (
+                        <label key={key}>
+                            {{ minItems: 'At least (entries)', maxItems: 'At most (entries)' }[key]}
+                            <TextField
+                                type="number"
+                                min={0}
+                                step={1}
+                                value={field[key] === undefined ? '' : String(field[key])}
+                                onChange={(v) => {
+                                    if (!v || Number.isFinite(Number(v)))
+                                        onChange({ [key]: v ? Number(v) : undefined });
+                                }}
+                            />
+                        </label>
+                    ))}
+                    <div className="i-list-fields">
+                        <div className="i-list-fields-title">Each entry has</div>
+                        <FieldsTable
+                            fields={field.fields ?? []}
+                            onChange={(itemFields) => onChange({ fields: itemFields })}
+                        />
+                    </div>
+                </>
+            ) : null}
+            <label htmlFor={`${id}-default`}>{isList ? 'Starting entries' : 'Default value'}</label>
             <SettingInput
                 id={`${id}-default`}
                 field={field}
                 value={settingValue(field, {})}
-                onChange={(value) => onChange({ default: value as string | number | boolean })}
+                onChange={(value) => onChange({ default: value as SettingDefault })}
             />
             {settingType(field) === 'number'
                 ? (['min', 'max', 'step'] as const).map((key) => (
@@ -268,7 +442,9 @@ function FieldOptions({
                 >
                     <option value="">Always</option>
                     {fields
-                        .filter((f) => f.key && f.key !== field.key)
+                        .filter(
+                            (f) => f.key && f.key !== field.key && settingType(f) !== 'list'
+                        )
                         .map((f, i) => (
                             <option key={i} value={f.key}>
                                 {f.label || f.key}
@@ -300,16 +476,25 @@ function FieldOptions({
     );
 }
 
-function FieldsEditor({ data, onChange }: ModulePluginProps<SettingsData>) {
+/**
+ * The fields of a form (or of one entry of a list field): key, label, type, options. A rename
+ * is reported so the caller can move saved values to the new key.
+ */
+function FieldsTable({
+    fields,
+    onChange,
+}: {
+    fields: SettingsField[];
+    onChange: (fields: SettingsField[], rename?: { from: string; to: string }) => void;
+}) {
     const setField = (i: number, changes: Partial<SettingsField>) => {
-        const fields = data.fields.slice();
-        fields[i] = { ...fields[i], ...changes };
-        onChange({ ...data, fields });
+        const next = fields.slice();
+        next[i] = { ...next[i], ...changes };
+        onChange(next);
     };
-    const keys = data.fields.map((field) => field.key);
+    const keys = fields.map((field) => field.key);
     return (
-        <details className="i-fields-editor">
-            <summary>Fields ({data.fields.length})</summary>
+        <>
             <table>
                 <thead>
                     <tr>
@@ -322,7 +507,7 @@ function FieldsEditor({ data, onChange }: ModulePluginProps<SettingsData>) {
                     </tr>
                 </thead>
                 <tbody>
-                    {data.fields.map((field, i) => (
+                    {fields.map((field, i) => (
                         <Fragment key={i}>
                             <tr>
                                 <td>
@@ -336,27 +521,16 @@ function FieldsEditor({ data, onChange }: ModulePluginProps<SettingsData>) {
                                                 setField(i, { key });
                                                 return;
                                             }
-                                            const values = { ...data.values };
-                                            if (Object.hasOwn(values, field.key)) {
-                                                Object.defineProperty(values, key, {
-                                                    value: values[field.key],
-                                                    enumerable: true,
-                                                    configurable: true,
-                                                    writable: true,
-                                                });
-                                                delete values[field.key];
-                                            }
-                                            onChange({
-                                                ...data,
-                                                values,
-                                                fields: data.fields.map((f, j) => ({
+                                            onChange(
+                                                fields.map((f, j) => ({
                                                     ...f,
                                                     ...(j === i ? { key } : {}),
                                                     ...(f.showWhen?.key === field.key
                                                         ? { showWhen: { ...f.showWhen, key } }
                                                         : {}),
                                                 })),
-                                            });
+                                                { from: field.key, to: key }
+                                            );
                                         }}
                                     />
                                 </td>
@@ -406,12 +580,7 @@ function FieldsEditor({ data, onChange }: ModulePluginProps<SettingsData>) {
                                     <button
                                         className="i-remove-field"
                                         aria-label={`remove ${field.label || field.key || 'field'}`}
-                                        onClick={() =>
-                                            onChange({
-                                                ...data,
-                                                fields: data.fields.filter((_, j) => j !== i),
-                                            })
-                                        }
+                                        onClick={() => onChange(fields.filter((_, j) => j !== i))}
                                     >
                                         ×
                                     </button>
@@ -421,7 +590,7 @@ function FieldsEditor({ data, onChange }: ModulePluginProps<SettingsData>) {
                                 <td colSpan={4}>
                                     <FieldOptions
                                         field={field}
-                                        fields={data.fields}
+                                        fields={fields}
                                         onChange={(changes) => setField(i, changes)}
                                     />
                                 </td>
@@ -433,16 +602,128 @@ function FieldsEditor({ data, onChange }: ModulePluginProps<SettingsData>) {
             <button
                 className="i-add-field"
                 onClick={() => {
-                    let n = data.fields.length + 1;
+                    let n = fields.length + 1;
                     while (keys.includes(`field${n}`)) n++;
-                    onChange({ ...data, fields: [...data.fields, { key: `field${n}` }] });
+                    onChange([...fields, { key: `field${n}` }]);
                 }}
             >
                 add field
             </button>
+        </>
+    );
+}
+
+/** Moves a saved value to a renamed key. */
+function renameValue(values: SettingsData['values'], from: string, to: string) {
+    const next = { ...values };
+    if (Object.hasOwn(next, from)) {
+        Object.defineProperty(next, to, {
+            value: next[from],
+            enumerable: true,
+            configurable: true,
+            writable: true,
+        });
+        delete next[from];
+    }
+    return next;
+}
+
+function fieldsCodeTemplate(fields: SettingsField[]): string {
+    return `// The form's fields. "Apply" runs this and replaces the fields above.
+// Types: text, paragraph, color, number, toggle, choice, list.
+// A list field has its own \`fields\`, which each entry a writer adds gets.
+type Field = {
+    key: string;
+    label?: string;
+    type?: 'text' | 'paragraph' | 'color' | 'number' | 'toggle' | 'choice' | 'list';
+    [option: string]: unknown;
+};
+
+const fields: Field[] = ${JSON.stringify(fields, null, 4)};
+
+export default fields;
+`;
+}
+
+/** Fields written as TypeScript or JavaScript, run in the script sandbox on Apply. */
+function FieldsCode({ data, onChange }: ModulePluginProps<SettingsData>) {
+    const [code, setCode] = useState(() => data.fieldsCode ?? fieldsCodeTemplate(data.fields));
+    const [status, setStatus] = useState<{ error?: string; applied?: boolean; running?: boolean }>(
+        {}
+    );
+    const [extensions] = useState(() => [javascript({ typescript: true })]);
+    const apply = async () => {
+        setStatus({ running: true });
+        try {
+            const program = await buildScriptProgram(
+                { code, language: 'typescript' },
+                new Map()
+            );
+            const result = await runScript(program);
+            if (!result.ok) throw new Error(result.error);
+            if (result.kind !== 'json') {
+                throw new Error(
+                    'The default export should be a list of fields (or a function returning one).'
+                );
+            }
+            const fields = parseSettingsFields(JSON.parse(result.value));
+            onChange({ ...data, fields, fieldsCode: code });
+            setStatus({ applied: true });
+        } catch (err) {
+            setStatus({ error: err instanceof Error ? err.message : String(err) });
+        }
+    };
+    return (
+        <details className="i-fields-code">
+            <summary>Write the fields as code</summary>
             <p className="i-hint">
-                Send this module to a Svelte module as a named input (say, <code>settings</code>
-                ), then read the values with <code>import settings from './settings'</code>.
+                TypeScript or JavaScript whose default export is the list of fields, or a function
+                that returns it, so you can build fields with loops. <b>Apply</b> runs it in a
+                sandbox and replaces the fields above; what writers entered is kept.
+            </p>
+            <CodeEditor
+                value={code}
+                onChange={(next) => {
+                    setCode(next);
+                    if (status.applied || status.error) setStatus({});
+                }}
+                extensions={extensions}
+            />
+            <div className="i-fields-code-actions">
+                <button type="button" onClick={apply} disabled={status.running}>
+                    {status.running ? 'Running…' : 'Apply'}
+                </button>
+                {status.applied ? <span role="status">Fields updated.</span> : null}
+            </div>
+            {status.error ? (
+                <pre className="i-fields-code-error" role="alert">
+                    {status.error}
+                </pre>
+            ) : null}
+        </details>
+    );
+}
+
+function FieldsEditor(props: ModulePluginProps<SettingsData>) {
+    const { data, onChange } = props;
+    return (
+        <details className="i-fields-editor">
+            <summary>Fields ({data.fields.length})</summary>
+            <FieldsTable
+                fields={data.fields}
+                onChange={(fields, rename) =>
+                    onChange({
+                        ...data,
+                        fields,
+                        values: rename ? renameValue(data.values, rename.from, rename.to) : data.values,
+                    })
+                }
+            />
+            <FieldsCode {...props} />
+            <p className="i-hint">
+                Send this module to a Svelte or Script module as a named input (say,{' '}
+                <code>settings</code>), then read the values with{' '}
+                <code>import settings from './settings'</code>.
             </p>
         </details>
     );
@@ -458,7 +739,7 @@ function SettingsEditor(props: ModulePluginProps<SettingsData>) {
 }
 
 /**
- * A form of named values (text, colors, choices…), passed on as a JavaScript module whose
+ * A form of named values (text, colors, choices, lists…), passed on as a JavaScript module whose
  * default export holds them. Blocks in the simple editor show it as their settings.
  */
 export default {
@@ -473,6 +754,6 @@ export default {
         return 'Settings';
     },
     async eval(data) {
-        return new JavascriptData(settingsModule(data));
+        return new SettingsModuleData(data);
     },
 } as ModulePlugin<SettingsData>;

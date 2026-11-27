@@ -120,3 +120,74 @@
         }
     }
 }
+
+/* List fields: entries a writer adds, each with the list's item fields. */
+.i-settings-form .i-setting.i-setting-list {
+    grid-template-columns: 1fr;
+}
+.i-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5em;
+    min-width: 0;
+}
+.i-list-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5em;
+    min-width: 0;
+    margin: 0;
+    padding: 0.5em 0.75em 0.6em;
+    border: 1px solid var(--P-separator);
+    border-radius: 0.4em;
+}
+.i-list-item > legend {
+    padding: 0 0.3em;
+    font-weight: 600;
+}
+.i-list-item-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4em;
+    justify-content: flex-end;
+}
+.i-list-item-actions button,
+.i-list-add,
+.i-fields-code-actions button {
+    min-height: 2em;
+    padding: 0.2em 0.7em;
+}
+.i-list-add {
+    align-self: flex-start;
+}
+.i-field-options .i-list-fields {
+    margin: 0.65em 0;
+    padding-left: 0.75em;
+    border-left: 2px solid var(--P-separator);
+}
+.i-list-fields-title {
+    font-weight: 600;
+}
+
+/* Fields written as code. */
+.i-fields-code {
+    margin: 0.75em 0;
+}
+.i-fields-code > summary {
+    cursor: pointer;
+    padding: 0.4em 0;
+}
+.i-fields-code-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75em;
+    margin: 0.5em 0;
+}
+.i-fields-code-error {
+    margin: 0.5em 0;
+    padding: 0.5em;
+    white-space: pre-wrap;
+    color: var(--P-error);
+    border: 1px solid var(--P-error);
+    border-radius: 0.3em;
+}

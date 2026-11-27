@@ -1,5 +1,11 @@
 import { createRef, PureComponent } from 'react';
-import { ModulePlugin, ModulePluginProps, PlainTextData, BlobData } from '../../document';
+import {
+    ModulePlugin,
+    ModulePluginProps,
+    BlobData,
+    canonicalMime,
+    textData,
+} from '../../document';
 import base64js from 'base64-js';
 import './file-data.less';
 
@@ -68,12 +74,20 @@ class FileDataEditor extends PureComponent<ModulePluginProps<FileDataPluginData>
                         }}
                     >
                         <option value="blob">data blob</option>
-                        <option value="text">text (UTF-8)</option>
+                        <option value="text">text (UTF-8), as its file type</option>
                     </select>
                 </div>
             </div>
         );
     }
+}
+
+/** The file's own type when it is a kind of text; otherwise plain text. */
+function textMime(mime: string): string {
+    const type = canonicalMime(mime) ?? '';
+    return type.startsWith('text/') || type === 'application/javascript' || type === 'application/json'
+        ? type
+        : 'text/plain';
 }
 
 export default {
@@ -89,9 +103,9 @@ export default {
     },
     async eval(data: FileDataPluginData) {
         if (data.outputMode === 'text') {
-            return new PlainTextData(
-                new TextDecoder().decode(base64js.toByteArray(data.dataBase64))
-            );
+            const text = new TextDecoder().decode(base64js.toByteArray(data.dataBase64));
+            // A .css, .html or .js file is that type of text, so CSS can style a chapter, etc.
+            return textData(textMime(data.mime), text);
         }
         return new BlobData(base64js.toByteArray(data.dataBase64), data.mime);
     },

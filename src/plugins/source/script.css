@@ -1,0 +1,40 @@
+.i-script-footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4em 1em;
+}
+.i-script-control {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3em;
+    min-width: 0;
+}
+.i-script-control input {
+    min-width: 0;
+    max-width: 12em;
+}
+.i-script-inputs {
+    margin-top: 0.5em;
+    font-size: 0.95em;
+}
+.i-script-inputs > summary {
+    cursor: pointer;
+    padding: 0.4em 0;
+}
+.i-script-inputs p {
+    margin: 0.5em 0;
+}
+.i-script-inputs ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+.i-script-inputs pre {
+    margin: 0.4em 0;
+    padding: 0.5em;
+    overflow-x: auto;
+    border-radius: 0.3em;
+    background: rgb(var(--P-card-bg));
+    border: 1px solid var(--P-separator);
+}

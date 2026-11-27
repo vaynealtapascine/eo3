@@ -68,9 +68,12 @@ new files, update the matching section here in the same commit.
 | `index.ts`                                  | `MODULES` registry: id → title, description, picker `category`, lazy `load()`, `managed` (hidden from "add node").                                                            |
 | `source/text.tsx`                           | Text module: HTML / rich text (TipTap) / CSS / JS / plain text. Also "insert chapter break".                                                                                  |
 | `source/shared-styles.tsx`                  | "All chapters" CSS module (managed; wired to every part).                                                                                                                     |
-| `source/settings.tsx`, `settings-values.ts` | Settings module: a form of named values (fields + values), evaluated to a JS module `export default {…}` for Svelte. `SettingsForm` is reused by blocks in the simple editor. |
+| `source/settings.tsx`, `settings-values.ts` | Settings module: a form of named values (fields + values, growable `list` fields), evaluated to a JS module `export default {…}` (`SettingsModuleData`, which keeps the fields for type hints). Fields can be written as code (`fieldsCode`, run on Apply). `SettingsForm` is reused by blocks in the simple editor. |
+| `source/script.tsx`                         | Script module: TypeScript/JavaScript whose default export is text of a chosen MIME type (`outputType`); named inputs import as `./<name>`.                                                     |
+| `source/script-runtime.ts`                  | `stripTypes` (TypeScript → JavaScript via sucrase, lazy) and `buildScriptProgram` (a script and its inputs → one program with its own `require`). Runs no code.                                 |
+| `source/script-sandbox.ts`                  | `runScript`: runs a program in a hidden opaque-origin iframe, in a worker it makes, with a timeout.                                                                                          |
 | `source/sass.tsx`, `lesscss.tsx`            | Sass and Less compilers (run on the main thread; only Svelte uses a worker).                                                                                                  |
-| `source/svelte*.ts(x)`                      | Svelte 3/4/5 component and context modules; `svelte-bundler.ts` + `svelte-worker.js` compile in a worker.                                                                     |
+| `source/svelte*.ts(x)`                      | Svelte 3/4/5 component and context modules; `svelte-bundler.ts` + `svelte-worker.js` compile in a worker (and strip `<script lang="ts">` types for Svelte 3/4).                   |
 | `source/file-data*.tsx`                     | File upload as data / data URL.                                                                                                                                               |
 | `source/external-url.tsx`                   | Fetches a script or stylesheet by URL.                                                                                                                                        |
 | `transform/style-inliner.tsx`               | HTML + CSS → inline styles; the algorithm is `inline-styles-core.ts` (also used by `delivery/inline.ts`).                                                                     |
@@ -221,6 +224,17 @@ Each entry: the files that implement it (most important first), its tests, and w
     `applyLinearLayout` orders modules by merging the parts' lists and throws
     `LinearOrderError` when mirrors are in opposite orders. `Document.removePartAndContent`
     removes a part with the items only it lists.
+
+### TypeScript, scripts and typed data
+
+-   **Files:** `src/plugins/source/script.tsx`, `script-runtime.ts`, `script-sandbox.ts`,
+    `text.tsx` (TypeScript mode), `svelte-worker.js` (`stripScriptTypes`), `src/document.ts`
+    (`canonicalMime`, `textData`, `PlainTextData.into` MIME fallback, `isCssModule`),
+    `file-data.tsx` (text mode typed by MIME), `settings*.ts(x)` (lists, fields as code).
+-   **Tests:** `test/plugins/script.test.ts`, `test/ui/settings.test.ts`.
+-   **Rules:** user code never runs in eo3's own origin: use `runScript`. Data's `typeId` is
+    its MIME type; make text with `textData(mime, contents)` so it gets the right class.
+-   **Guide:** `docs/group-settings.md`.
 
 ### Groups and My groups
 
@@ -413,6 +427,6 @@ defaults, bounds, and group-file round trips.
 | `test/targets/`      | Custom site profiles.                                                                                                                         |
 | `test/storage/`      | Checkpoints, save controller, recovery store, backups, browser libraries.                                                                     |
 | `test/ui/`           | Save UI and lifecycle, library errors, group cards and drag, copy buttons, module picker, action menu keys, preview freshness, startup error. |
-| `test/plugins/`      | Svelte bundler worker handling.                                                                                                               |
+| `test/plugins/`      | Svelte bundler worker handling; script compiling, output types and MIME-typed data.                                                           |
 | `test/util/`         | Split HTML, changelog, word count.                                                                                                            |
 | `test/examples/`     | Workskin examples: content, layout, writing parser.                                                                                           |

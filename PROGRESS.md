@@ -10,6 +10,34 @@ update it whenever a step lands (what changed, what's next, anything surprising)
 
 ## Status
 
+2026-11-27 — **TypeScript, Script module, typed data, growable Settings lists.** So a
+template author can define Settings (in code, with lists writers grow) and generate CSS,
+HTML, JavaScript, Svelte or any MIME type from them.
+
+-   **TypeScript** (types removed by sucrase, lazy 200 KB chunk; not type-checked): Text
+    module mode "TypeScript" (passed on as JavaScript); `<script lang="ts">` in Svelte 3/4
+    (stripped in `svelte-worker.js`, keeping markup-only imports) and 5 (native).
+-   **Script module** (`source.script`): default export is text, or a function returning it;
+    "Output as" picks the MIME type (CSS, HTML, JS module, Svelte component, plain, other).
+    Named inputs import as `./<name>` (`buildScriptProgram` rewrites modules to CommonJS with
+    its own `require`) and are passed to the function. Runs in a hidden `sandbox="allow-scripts"`
+    iframe, inside a worker it starts, stopped after 5 s. The editor lists each input with a
+    TypeScript type generated from Settings fields (`SettingsModuleData` keeps the fields).
+-   **Typed data:** `textData(mime, text)` makes the right class; `PlainTextData` can carry a
+    MIME `typeId`, and `into()` accepts text labelled with the target's MIME. File Data in
+    text mode now passes `.css`/`.html`/`.js` on as that type (it was always plain text).
+-   **Settings:** `list` fields (item fields, `itemLabel`, `minItems`/`maxItems`, add/move/
+    remove); "Write the fields as code" runs TS/JS on Apply and stores `fieldsCode` next to
+    the resulting `fields`, so the form never runs code. All new data is optional.
+-   Validation: typecheck, 700 passing tests (3 skipped), production build. Checked in
+    headless Chrome: the sandbox runs in an opaque-origin worker (IndexedDB refused), a
+    `while (true)` is stopped and the sandbox keeps working, parallel runs, Svelte TS in all
+    three versions, list form add/edit/reorder, fields-as-code Apply.
+-   Not checked: Firefox/Safari (the runner falls back to running in the iframe if a worker
+    can't start there, which can't stop runaway loops). Renaming an item field of a list
+    doesn't move saved entry values. The authoring fields table overflows narrow cards (it
+    already did).
+
 2026-11-15 — **UI review: fixes, and plainer words for writers.** From a source review of
 the whole UI, then of the save/history/backup and AO3 preview features.
 

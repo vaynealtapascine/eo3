@@ -14,6 +14,7 @@ import { EditorView } from '@codemirror/view';
 import { html } from '@codemirror/lang-html';
 import { css } from '@codemirror/lang-css';
 import { javascript } from '@codemirror/lang-javascript';
+import { stripTypes } from './script-runtime';
 import './text.css';
 
 const HTML_CONTENTEDITABLE = 'html-contenteditable';
@@ -23,6 +24,7 @@ const LANGUAGES: { [k: string]: () => unknown[] } = {
     html: () => [html(), EditorView.lineWrapping],
     css: () => [css()],
     javascript: () => [javascript()],
+    typescript: () => [javascript({ typescript: true })],
     [HTML_CONTENTEDITABLE]: () => [html(), EditorView.lineWrapping],
 };
 
@@ -31,6 +33,7 @@ const LANGUAGE_LABELS: { [k: string]: string } = {
     html: 'HTML',
     css: 'CSS',
     javascript: 'Javascript',
+    typescript: 'TypeScript',
     [HTML_CONTENTEDITABLE]: 'Rich Text (HTML)',
 };
 
@@ -202,6 +205,7 @@ export default {
         if (data.language === 'html') return 'HTML';
         else if (data.language === 'css') return 'CSS';
         else if (data.language === 'javascript') return 'Javascript';
+        else if (data.language === 'typescript') return 'TypeScript';
         else if (data.language === HTML_CONTENTEDITABLE) return 'HTML (Rich Text)';
         return 'Plain Text Data';
     },
@@ -210,6 +214,9 @@ export default {
             return new HtmlData(data.contents);
         else if (data.language === 'css') return new CssData(data.contents);
         else if (data.language === 'javascript') return new JavascriptData(data.contents);
+        else if (data.language === 'typescript')
+            // Types are removed (not checked), so Svelte and scripts can import it as JavaScript.
+            return new JavascriptData(await stripTypes(data.contents, { filePath: 'module.ts' }));
         return new PlainTextData(data.contents);
     },
 } as ModulePlugin<TextPluginData>;

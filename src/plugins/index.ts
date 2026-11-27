@@ -29,8 +29,16 @@ export const MODULES: { [k: string]: ModuleDef } = {
     },
     'source.settings': {
         title: 'Settings',
-        description: 'A form of named values (text, colors, choices), for Svelte to read.',
+        description:
+            'A form of named values (text, colors, choices, lists writers can add to), for Svelte or a Script to read.',
         load: lazy(() => import('./source/settings')),
+    },
+    'source.script': {
+        title: 'Script',
+        description:
+            'TypeScript or JavaScript that generates CSS, HTML, JavaScript, a Svelte component or any other type of text, for example from a Settings form sent to it. Runs in a sandbox.',
+        category: 'advanced',
+        load: lazy(() => import('./source/script')),
     },
     'source.lesscss': {
         title: 'LessCSS',

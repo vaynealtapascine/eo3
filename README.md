@@ -105,7 +105,8 @@ Every eo3 work is a directed graph of modules. Simple view reads and rewrites th
 
 Use **Nodes view** whenever you want to:
 
-- Wire **HTML / TipTap rich text**, **CSS**, **Sass**, **Less**, **JavaScript**, **Svelte 3 / 4 / 5** components, **Settings** forms, uploaded files, and external URLs together with ordered sends and named side-inputs.
+- Wire **HTML / TipTap rich text**, **CSS**, **Sass**, **Less**, **JavaScript / TypeScript**, **Svelte 3 / 4 / 5** components (with `<script lang="ts">`), **Settings** forms, uploaded files, and external URLs together with ordered sends and named side-inputs.
+- Generate CSS, HTML, JavaScript, Svelte or any other type of text from a Settings form with a sandboxed **Script** (TypeScript or JavaScript); its output goes wherever that type is accepted.
 - Run transforms like **Style Inliner**, **SVG to backgrounds**, **SVGO**, and data/blob URL converters.
 - Package any sub-graph into a reusable **block** (`.eo3group.json`) with a declarative Settings form—see [Authoring group settings](docs/group-settings.md)—and save it to **My groups** so writers can drop it into Simple view with one click.
 

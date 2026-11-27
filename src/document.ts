@@ -175,10 +175,22 @@ export function moduleDescription(doc: Document, module: AnyModule, partLabel: s
 export function isCssModule(mod: AnyModule): boolean {
     if (['source.sass', 'source.lesscss', 'source.shared-styles'].includes(mod.plugin.id))
         return true;
-    return (
-        mod.plugin.id === 'source.text' &&
-        (mod.data as { language?: unknown } | null)?.language === 'css'
-    );
+    const data = mod.data as {
+        language?: unknown;
+        outputType?: unknown;
+        outputMode?: unknown;
+        mime?: unknown;
+    } | null;
+    switch (mod.plugin.id) {
+        case 'source.text':
+            return data?.language === 'css';
+        case 'source.script':
+            return canonicalMime(data?.outputType) === 'text/css';
+        case 'source.file-data':
+            return data?.outputMode === 'text' && canonicalMime(data?.mime) === 'text/css';
+        default:
+            return false;
+    }
 }
 
 /**
@@ -1543,9 +1555,11 @@ export class PlainTextData extends Data {
     typeId = 'text/plain';
     contents: string;
 
-    constructor(contents: string) {
+    /** `type` labels text of a type without a class of its own (`text/markdown`, …). */
+    constructor(contents: string, type?: string) {
         super();
         this.contents = contents;
+        if (type) this.typeId = canonicalMime(type) ?? type;
     }
 
     into<T extends Data>(type: Class<T>): T | null {
@@ -1554,6 +1568,13 @@ export class PlainTextData extends Data {
         }
         if (type === (ByteSliceData as Class<unknown> as Class<T>)) {
             return new ByteSliceData(new TextEncoder().encode(this.contents)) as unknown as T;
+        }
+        // Plain text labelled with a type's MIME (say `text/css`) is accepted as that type.
+        const mime = TEXT_TYPE_MIMES.get(type as Class<unknown> as Class<PlainTextData>);
+        if (mime && mime === this.typeId) {
+            return new (type as Class<unknown> as Class<PlainTextData>)(
+                this.contents
+            ) as unknown as T;
         }
         return null;
     }
@@ -1621,4 +1642,40 @@ export class BlobData extends ByteSliceData {
         }
         return null;
     }
+}
+
+/** MIME aliases browsers and servers use for the same kind of text. */
+const MIME_ALIASES: Record<string, string> = {
+    'text/javascript': 'application/javascript',
+    'application/x-javascript': 'application/javascript',
+    'text/ecmascript': 'application/javascript',
+    'application/ecmascript': 'application/javascript',
+    'text/x-svelte': 'svelte-component',
+};
+
+/** A MIME type in the form eo3's `Data.typeId`s use: lower case, no parameters, no alias. */
+export function canonicalMime(type: unknown): string | null {
+    if (typeof type !== 'string') return null;
+    const bare = type.split(';')[0].trim().toLowerCase();
+    if (!bare) return null;
+    return Object.hasOwn(MIME_ALIASES, bare) ? MIME_ALIASES[bare] : bare;
+}
+
+/** The text classes that have a MIME type of their own. */
+const TEXT_TYPE_MIMES = new Map<Class<PlainTextData>, string>([
+    [CssData, 'text/css'],
+    [HtmlData, 'text/html'],
+    [JavascriptData, 'application/javascript'],
+]);
+
+/**
+ * Text as the `Data` of its MIME type: CSS as `CssData`, HTML as `HtmlData`, JavaScript as
+ * `JavascriptData`; anything else is plain text labelled with its type.
+ */
+export function textData(type: string | null | undefined, contents: string): PlainTextData {
+    const mime = canonicalMime(type) ?? 'text/plain';
+    for (const [cls, clsMime] of TEXT_TYPE_MIMES) {
+        if (clsMime === mime) return new cls(contents);
+    }
+    return new PlainTextData(contents, mime);
 }

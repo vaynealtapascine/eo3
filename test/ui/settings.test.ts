@@ -5,7 +5,10 @@ import { describe, expect, it, vi } from 'vitest';
 import { SettingsForm } from '../../src/plugins/source/settings';
 import {
     SettingsData,
+    SettingsField,
+    parseSettingsFields,
     settingsModule,
+    settingsTypeScript,
     settingsValues,
     settingValue,
     settingVisible,
@@ -101,6 +104,128 @@ describe('programmable settings', () => {
                 container.querySelector<HTMLInputElement>('input[type=text], input:not([type])')!
                     .value
             ).toBe('Saved signature');
+        } finally {
+            act(() => root.unmount());
+            container.remove();
+            vi.unstubAllGlobals();
+        }
+    });
+});
+
+const people: SettingsField = {
+    key: 'people',
+    label: 'People',
+    type: 'list',
+    itemLabel: 'Person',
+    minItems: 1,
+    maxItems: 3,
+    fields: [
+        { key: 'name', label: 'Name', default: 'Someone' },
+        { key: 'color', type: 'color', default: '#336699' },
+        { key: 'size', type: 'number', min: 1, max: 5 },
+    ],
+};
+
+describe('list settings', () => {
+    it('fills each entry from its item fields and keeps the entry limits', () => {
+        expect(settingValue(people, {})).toEqual([{ name: 'Someone', color: '#336699', size: 1 }]);
+        expect(
+            settingValue(people, {
+                people: [{ name: 'Ann', size: 9 }, 'junk', {}, { name: 'Dropped' }],
+            })
+        ).toEqual([
+            { name: 'Ann', color: '#336699', size: 5 },
+            { name: 'Someone', color: '#336699', size: 1 },
+            { name: 'Someone', color: '#336699', size: 1 },
+        ]);
+        expect(
+            settingValue({ ...people, default: [{ name: 'Bo' }, { name: 'Cy' }] }, {})
+        ).toHaveLength(2);
+        // Contradictory limits are ignored.
+        expect(settingValue({ ...people, minItems: 4, maxItems: 2 }, {})).toEqual([]);
+        expect(settingsModule({ fields: [people], values: {} })).toContain('"people": [');
+    });
+
+    it('describes the values as a TypeScript type', () => {
+        expect(
+            settingsTypeScript([
+                { key: 'title' },
+                { key: 'mood', type: 'choice', options: ['calm', 'loud'] },
+                { key: 'on', type: 'toggle' },
+                { key: 'odd key', type: 'number' },
+                people,
+            ])
+        ).toBe(
+            [
+                '{',
+                '    title: string;',
+                '    mood: "calm" | "loud";',
+                '    on: boolean;',
+                '    "odd key": number;',
+                '    people: Array<{',
+                '        name: string;',
+                '        color: string;',
+                '        size: number;',
+                '    }>;',
+                '}',
+            ].join('\n')
+        );
+    });
+
+    it('checks fields written as code', () => {
+        expect(
+            parseSettingsFields([
+                { key: 'a', type: 'list', fields: [{ key: 'b' }], extra: 1, minItems: 2 },
+            ])
+        ).toEqual([{ key: 'a', type: 'list', fields: [{ key: 'b' }], minItems: 2 }]);
+        expect(() => parseSettingsFields({})).toThrow('fields should be a list of fields');
+        expect(() => parseSettingsFields([{ key: 'a', type: 'date' }])).toThrow(
+            /fields\[0\]\.type should be one of/
+        );
+        expect(() => parseSettingsFields([{ key: 'a', fields: [{ label: 'x' }] }])).toThrow(
+            'fields[0].fields[0].key should be text'
+        );
+        expect(() => parseSettingsFields([{ key: 'a', default: { x: 1 } }])).toThrow(
+            /default should be/
+        );
+    });
+
+    it('lets writers add, edit, reorder and remove entries within the limits', () => {
+        vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+        const container = document.createElement('div');
+        document.body.append(container);
+        const root = createRoot(container);
+        let latest: SettingsData = { fields: [people], values: {} };
+        function Form() {
+            const [value, setValue] = useState(latest);
+            latest = value;
+            return createElement(SettingsForm, { data: value, onChange: setValue });
+        }
+        const button = (text: string) =>
+            [...container.querySelectorAll('button')].filter((b) => b.textContent === text);
+        const names = () => (settingsValues(latest).people as { name: string }[]).map((p) => p.name);
+        try {
+            act(() => root.render(createElement(Form)));
+            expect(container.querySelectorAll('.i-list-item')).toHaveLength(1);
+            expect(button('Remove')[0].disabled).toBe(true);
+
+            act(() => Simulate.click(button('+ Add person')[0]));
+            act(() => Simulate.click(button('+ Add person')[0]));
+            expect(button('+ Add person')[0].disabled).toBe(true);
+
+            const nameInputs = () =>
+                [...container.querySelectorAll<HTMLInputElement>('.i-list-item input')].filter(
+                    (input) => input.type !== 'color' && input.type !== 'number'
+                );
+            act(() => Simulate.change(nameInputs()[0], { target: { value: 'Ann' } } as any));
+            act(() => Simulate.change(nameInputs()[2], { target: { value: 'Cy' } } as any));
+            expect(names()).toEqual(['Ann', 'Someone', 'Cy']);
+
+            act(() => Simulate.click(container.querySelector('[aria-label="Move Person 3 up"]')!));
+            expect(names()).toEqual(['Ann', 'Cy', 'Someone']);
+            act(() => Simulate.click(button('Remove')[0]));
+            expect(names()).toEqual(['Cy', 'Someone']);
+            expect(container.querySelector('.i-list-item legend')?.textContent).toBe('Person 1');
         } finally {
             act(() => root.unmount());
             container.remove();

@@ -444,7 +444,10 @@ class ModuleItem extends PureComponent<ModuleItem.Props> {
                 group.moduleIds.includes(this.props.module.id)
             ) &&
             (this.props.module.plugin.id.startsWith('source.svelte') ||
-                (this.props.module.data as { language?: string }).language === 'javascript'),
+                this.props.module.plugin.id === 'source.script' ||
+                ['javascript', 'typescript'].includes(
+                    (this.props.module.data as { language?: string }).language ?? ''
+                )),
     };
     node = createRef<HTMLDivElement>();
     header = createRef<HTMLDivElement>();
