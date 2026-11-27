@@ -2,7 +2,7 @@ import { createElement, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { act, Simulate } from 'react-dom/test-utils';
 import { describe, expect, it, vi } from 'vitest';
-import { SettingsForm } from '../../src/plugins/source/settings';
+import { ChoicesField, SettingsForm, parseChoices } from '../../src/plugins/source/settings';
 import {
     SettingsData,
     SettingsField,
@@ -231,5 +231,38 @@ describe('list settings', () => {
             container.remove();
             vi.unstubAllGlobals();
         }
+    });
+});
+
+describe('choice options', () => {
+    it('keeps a typed comma while typing and tidies the list on blur', () => {
+        vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+        const container = document.createElement('div');
+        document.body.append(container);
+        const root = createRoot(container);
+        let options: string[] = ['calm'];
+        function Field() {
+            const [value, setValue] = useState(options);
+            options = value;
+            return createElement(ChoicesField, { options: value, onChange: setValue });
+        }
+        try {
+            act(() => root.render(createElement(Field)));
+            const input = container.querySelector('input')!;
+            expect(input.value).toBe('calm');
+            act(() => Simulate.change(input, { target: { value: 'calm,' } } as any));
+            expect(input.value).toBe('calm,');
+            expect(options).toEqual(['calm']);
+            act(() => Simulate.change(input, { target: { value: 'calm, loud , ' } } as any));
+            expect(input.value).toBe('calm, loud , ');
+            expect(options).toEqual(['calm', 'loud']);
+            act(() => Simulate.blur(input));
+            expect(input.value).toBe('calm, loud');
+        } finally {
+            act(() => root.unmount());
+            container.remove();
+            vi.unstubAllGlobals();
+        }
+        expect(parseChoices('a, b,, a , c')).toEqual(['a', 'b', 'c']);
     });
 });

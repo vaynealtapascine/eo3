@@ -543,19 +543,9 @@ function FieldsTable({
                                         onChange={(label) => setField(i, { label })}
                                     />
                                     {settingType(field) === 'choice' ? (
-                                        <TextField
-                                            aria-label="Choices, separated by commas"
-                                            narrow
-                                            placeholder="choices, comma separated"
-                                            value={(field.options ?? []).join(', ')}
-                                            onChange={(v) =>
-                                                setField(i, {
-                                                    options: v
-                                                        .split(',')
-                                                        .map((s) => s.trim())
-                                                        .filter(Boolean),
-                                                })
-                                            }
+                                        <ChoicesField
+                                            options={field.options ?? []}
+                                            onChange={(options) => setField(i, { options })}
                                         />
                                     ) : null}
                                 </td>
@@ -610,6 +600,38 @@ function FieldsTable({
                 add field
             </button>
         </>
+    );
+}
+
+/** A choice field's options as one comma-separated line. */
+export function parseChoices(text: string): string[] {
+    return [...new Set(text.split(',').map((s) => s.trim()).filter(Boolean))];
+}
+
+/**
+ * Choices typed as "a, b, c". What's typed is kept as typed while the field has focus, so a
+ * trailing comma or space survives until the next choice is typed; on blur it is tidied.
+ */
+export function ChoicesField({
+    options,
+    onChange,
+}: {
+    options: string[];
+    onChange: (options: string[]) => void;
+}) {
+    const [draft, setDraft] = useState<string | null>(null);
+    return (
+        <TextField
+            aria-label="Choices, separated by commas"
+            narrow
+            placeholder="choices, comma separated"
+            value={draft ?? options.join(', ')}
+            onChange={(text) => {
+                setDraft(text);
+                onChange(parseChoices(text));
+            }}
+            onBlur={() => setDraft(null)}
+        />
     );
 }
 
