@@ -144,10 +144,11 @@ export function findNamedInputModule(
         for (const id of group.moduleIds) {
             const mod = doc.findModule(id);
             if (!isNonCssTextModule(mod)) continue;
-            for (const [targetId, names] of Object.entries(mod.namedSends ?? {})) {
-                if (!memberSet.has(targetId) || !Array.isArray(names)) continue;
-                if (names.some((n) => typeof n === 'string' && n.toLowerCase() === needle)) {
-                    return mod;
+            // `namedSends` is a Map of receiving module id → the names it is sent under.
+            for (const [targetId, names] of mod.namedSends) {
+                if (!memberSet.has(targetId)) continue;
+                for (const name of names) {
+                    if (name.toLowerCase() === needle) return mod;
                 }
             }
         }
