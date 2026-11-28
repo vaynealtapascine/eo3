@@ -12,7 +12,7 @@ import React, {
 import { EditorContent, useEditor, useEditorState } from '@tiptap/react';
 import { BubbleMenu } from '@tiptap/react/menus';
 import { PluginKey } from '@tiptap/pm/state';
-import type { Editor } from '@tiptap/core';
+import { getHTMLFromFragment, type Editor } from '@tiptap/core';
 import { createEo3Extensions } from '../../editor/extensions';
 import { editorContentToHtml, htmlToEditorContent } from '../../editor/html-sync';
 import {
@@ -107,7 +107,13 @@ export interface RichTextEditorProps {
     canvasCss?: string;
     /** Ensures a CSS Piece's AO3-safe stylesheet is added to the work. */
     onEnsurePieceCss?: (piece: CssPiece) => void | Promise<unknown>;
+    /** Runs before the editor's own key handling; return true to take the key. */
+    onKeyDown?: (event: KeyboardEvent) => boolean;
+    /** Focuses the editor once it exists: at the start, the end, or the point clicked. */
+    autoFocus?: RichTextAutoFocus;
 }
+
+export type RichTextAutoFocus = 'start' | 'end' | { x: number; y: number };
 
 export interface RichTextEditorHandle {
     getEditor: () => Editor | null;
@@ -121,6 +127,9 @@ export interface RichTextEditorHandle {
     openFormat: (anchor: PopoverAnchor) => void;
     openLink: (anchor: PopoverAnchor) => void;
     openRuby: (anchor: PopoverAnchor) => void;
+    /** The content before and after the selection, as HTML (the selection itself is dropped). */
+    splitAtSelection: () => { before: string; after: string } | null;
+    isEmpty: () => boolean;
 }
 
 function getSelectedRuby(editor: Editor): RubyAttrs | null {
@@ -202,6 +211,8 @@ const TipTapRichEditor = forwardRef<RichTextEditorHandle, RichTextEditorProps>(
             variant = 'card',
             canvasCss = '',
             onEnsurePieceCss,
+            onKeyDown,
+            autoFocus,
         },
         ref
     ) => {
@@ -215,6 +226,9 @@ const TipTapRichEditor = forwardRef<RichTextEditorHandle, RichTextEditorProps>(
         onBlurRef.current = onBlur;
         const onEnsurePieceCssRef = useRef(onEnsurePieceCss);
         onEnsurePieceCssRef.current = onEnsurePieceCss;
+        const onKeyDownRef = useRef(onKeyDown);
+        onKeyDownRef.current = onKeyDown;
+        const autoFocusRef = useRef(autoFocus);
 
         // Tracks the last HTML synchronized with the parent so debounced self-edits never
         // bounce back through `setContent` and disturb selection or undo history.
@@ -297,6 +311,9 @@ const TipTapRichEditor = forwardRef<RichTextEditorHandle, RichTextEditorProps>(
                 // Keep keystrokes out of React's render loop; only `EditorToolbar` /
                 // `SelectionBubble` subscribe via `useEditorState`.
                 shouldRerenderOnTransaction: false,
+                editorProps: {
+                    handleKeyDown: (_view, event) => onKeyDownRef.current?.(event) ?? false,
+                },
                 onUpdate: ({ editor: instance }) => {
                     scheduleEmit(instance);
                 },
@@ -310,6 +327,29 @@ const TipTapRichEditor = forwardRef<RichTextEditorHandle, RichTextEditorProps>(
             },
             [extensions]
         );
+
+        // Focus once, where asked, after the editor's DOM is laid out.
+        useEffect(() => {
+            const target = autoFocusRef.current;
+            if (!editor || !target) return;
+            autoFocusRef.current = undefined;
+            const frame = requestAnimationFrame(() => {
+                if (editor.isDestroyed) return;
+                if (typeof target === 'object') {
+                    let pos: number | undefined;
+                    try {
+                        pos = editor.view.posAtCoords({ left: target.x, top: target.y })?.pos;
+                    } catch {
+                        pos = undefined; // no layout (tests) or a point outside the text
+                    }
+                    if (pos !== undefined) editor.chain().focus().setTextSelection(pos).run();
+                    else editor.commands.focus('end');
+                } else {
+                    editor.commands.focus(target);
+                }
+            });
+            return () => cancelAnimationFrame(frame);
+        }, [editor]);
 
         // Keep editable state in sync.
         useEffect(() => {
@@ -414,6 +454,19 @@ const TipTapRichEditor = forwardRef<RichTextEditorHandle, RichTextEditorProps>(
                 },
                 openLink: (anchor: PopoverAnchor) => setLinkAnchor(anchor),
                 openRuby: (anchor: PopoverAnchor) => setRubyAnchor(anchor),
+                splitAtSelection: () => {
+                    if (!editor || editor.isDestroyed) return null;
+                    const { doc, selection } = editor.state;
+                    const html = (from: number, to: number) =>
+                        editorContentToHtml(
+                            getHTMLFromFragment(doc.cut(from, to).content, editor.schema)
+                        );
+                    return {
+                        before: html(0, selection.from),
+                        after: html(selection.to, doc.content.size),
+                    };
+                },
+                isEmpty: () => !editor || editor.isDestroyed || editor.isEmpty,
             }),
             [editor, emitNow, insertChapterBreakNow]
         );
@@ -882,7 +935,11 @@ function ActiveStyleChips({
     editor: Editor;
     state: Pick<
         ToolbarEditorState,
-        'styledBlockClass' | 'styledSpanClass' | 'inlineTemplate' | 'inlineTemplateLabel' | 'inDetails'
+        | 'styledBlockClass'
+        | 'styledSpanClass'
+        | 'inlineTemplate'
+        | 'inlineTemplateLabel'
+        | 'inDetails'
     >;
     customPieces: readonly CssPiece[];
     onEditTranslate: (anchor: HTMLElement) => void;
@@ -2065,10 +2122,7 @@ function RubyPopover({
                     />
                 </label>
                 <label className="i-checkbox">
-                    <Checkbox
-                        checked={useRp}
-                        onChange={(checked) => setUseRp(checked)}
-                    />
+                    <Checkbox checked={useRp} onChange={(checked) => setUseRp(checked)} />
                     <span>Include &lt;rp&gt; fallback parentheses</span>
                 </label>
                 {error ? <p className="i-error">{error}</p> : null}
@@ -2147,7 +2201,11 @@ function StyleFieldsPopover({
     useFocusWhenShown(open, () => firstRef.current);
 
     if (!piece) {
-        return <DirPopover portal anchor={request?.anchor ?? null} open={false} onClose={onClose}>{null}</DirPopover>;
+        return (
+            <DirPopover portal anchor={request?.anchor ?? null} open={false} onClose={onClose}>
+                {null}
+            </DirPopover>
+        );
     }
 
     const inline = isInlineTemplatePiece(piece);
@@ -2564,12 +2622,9 @@ function StylesPopover({
                             <h4>Inline styles</h4>
                             <div className="i-piece-grid">
                                 {inlineItems.map((piece) => {
-                                    const active =
-                                        isInlineTemplatePiece(piece)
-                                            ? selectedTemplateId === piece.id
-                                            : activeSpanClass
-                                                  .split(/\s+/)
-                                                  .includes(piece.className);
+                                    const active = isInlineTemplatePiece(piece)
+                                        ? selectedTemplateId === piece.id
+                                        : activeSpanClass.split(/\s+/).includes(piece.className);
                                     return renderPieceButton(piece, active);
                                 })}
                             </div>

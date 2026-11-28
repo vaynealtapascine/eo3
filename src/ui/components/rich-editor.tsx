@@ -1,5 +1,5 @@
 import React, { createRef, lazy, PureComponent, Suspense } from 'react';
-import type { PopoverAnchor, RichTextEditorHandle } from './tiptap-rich-editor';
+import type { PopoverAnchor, RichTextAutoFocus, RichTextEditorHandle } from './tiptap-rich-editor';
 import type { CssPiece } from '../../editor/css-pieces';
 import { EditorCanvasContext } from '../editor-canvas-context';
 import './rich-editor.css';
@@ -37,6 +37,14 @@ export class RichEditor extends PureComponent<RichEditor.Props> {
         this.editor.current?.openFormat(anchor);
     }
 
+    splitAtSelection(): { before: string; after: string } | null {
+        return this.editor.current?.splitAtSelection() ?? null;
+    }
+
+    isEmpty(): boolean {
+        return this.editor.current?.isEmpty() ?? true;
+    }
+
     takeContent(): string | undefined {
         if (!this.editor.current?.getEditor()) return undefined;
         const html = this.editor.current.getContent();
@@ -55,6 +63,8 @@ export class RichEditor extends PureComponent<RichEditor.Props> {
             onFocus,
             canvasCss,
             onEnsurePieceCss,
+            onKeyDown,
+            autoFocus,
         } = this.props;
         const effectiveCss = canvasCss ?? this.context?.canvasCss ?? '';
         const effectiveEnsurePieceCss = onEnsurePieceCss ?? this.context?.ensurePieceCss;
@@ -88,6 +98,8 @@ export class RichEditor extends PureComponent<RichEditor.Props> {
                     footer={footer}
                     canvasCss={effectiveCss}
                     onEnsurePieceCss={effectiveEnsurePieceCss}
+                    onKeyDown={onKeyDown}
+                    autoFocus={autoFocus}
                 />
             </Suspense>
         );
@@ -106,5 +118,9 @@ export namespace RichEditor {
         variant?: 'card' | 'inline';
         canvasCss?: string;
         onEnsurePieceCss?: (piece: CssPiece) => void | Promise<unknown>;
+        /** Runs before the editor's own key handling; return true to take the key. */
+        onKeyDown?: (event: KeyboardEvent) => boolean;
+        /** Focuses the editor once it exists: at the start, the end, or the point clicked. */
+        autoFocus?: RichTextAutoFocus;
     }
 }
