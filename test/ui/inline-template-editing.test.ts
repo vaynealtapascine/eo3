@@ -14,6 +14,7 @@ import { InlineChapterEditor } from '../../src/ui/components/inline-chapter-edit
 import { RenderContext } from '../../src/ui/render-context';
 import { DirPopover } from '../../src/uikit/dir-popover';
 import {
+    cleanEditableRichHtml,
     stampEditableSlots,
     writeEditableSlot,
 } from '../../src/ui/components/inline-template-helpers';
@@ -720,7 +721,11 @@ describe('InlineChapterEditor inline CSS template editing', () => {
                         createElement(DirPopover, {
                             open: isOpen,
                             onClose: () => {},
-                            children: createElement('div', { className: 'test-pop-child' }, 'Hello'),
+                            children: createElement(
+                                'div',
+                                { className: 'test-pop-child' },
+                                'Hello'
+                            ),
                         })
                     );
                 });
@@ -735,5 +740,112 @@ describe('InlineChapterEditor inline CSS template editing', () => {
             act(() => popRoot.unmount());
             popContainer.remove();
         }
+    });
+});
+
+describe('rich data-edit slots keep inline styles', () => {
+    const STYLED =
+        '<div class="fx-note"><p data-edit="rich"><span style="color: red">red</span> text</p></div>';
+
+    async function mountStyled() {
+        const { container, root } = mount();
+        const doc = new Document();
+        await doc.ensureSharedStyles();
+        const inst = await instantiateGroupFile({
+            eo3: 'group',
+            version: 1,
+            title: 'Styled note',
+            modules: [{ plugin: 'source.text', data: { contents: STYLED, language: 'html' } }],
+        });
+        const lin = doc.linear;
+        if (!('layout' in lin)) throw new Error('no layout');
+        doc.applyLinearLayout(
+            {
+                parts: {
+                    ...lin.layout.parts,
+                    [doc.parts[0].id]: [{ kind: 'block', groupId: inst.group.id }],
+                },
+            },
+            { modules: inst.modules, groups: [inst.group] }
+        );
+        const draw = () =>
+            act(() => {
+                root.render(
+                    createElement(InlineChapterEditor, {
+                        document: doc,
+                        partId: doc.parts[0].id,
+                        renderOutput: null,
+                        fallbackHtml: '',
+                        panelOpen: false,
+                        onTogglePanel: () => {},
+                    })
+                );
+            });
+        doc.addEventListener('change', draw);
+        draw();
+        const slot = () =>
+            container.querySelector<HTMLElement>(
+                '.eo3-island-preview [data-edit-interactive="editable"]'
+            )!;
+        const source = () =>
+            String((doc.findModule(inst.modules[0].id)!.data as { contents: string }).contents);
+        return { slot, source };
+    }
+
+    function press(el: HTMLElement, key: string) {
+        act(() => {
+            el.dispatchEvent(
+                new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true })
+            );
+        });
+    }
+
+    it('cleans like AO3 but keeps style attributes', () => {
+        expect(
+            cleanEditableRichHtml(
+                '<span style="color: red" onclick="x()" data-edit-x="1">a</span><script>x()</script><p>b</p>',
+                'span'
+            )
+        ).toBe('<span style="color: red">a</span><br>b');
+        expect(cleanEditableRichHtml('<p style="margin: 0">a</p><p>b</p>', 'div')).toBe(
+            '<p style="margin: 0">a</p><p>b</p>'
+        );
+    });
+
+    it('does not turn styles into generated classes when a slot is opened and left', async () => {
+        const { slot: findSlot, source } = await mountStyled();
+        let slot = findSlot();
+        // The preview itself shows the style as a generated class.
+        expect(slot.innerHTML).toContain('eo3-');
+        act(() => slot.click());
+        expect(slot.innerHTML).toContain('style="color: red"');
+        act(() => {
+            slot.dispatchEvent(new FocusEvent('blur'));
+        });
+        expect(source()).toBe(STYLED);
+    });
+
+    it('keeps styles through an edit, and Escape restores the source exactly', async () => {
+        const { slot: findSlot, source } = await mountStyled();
+        let slot = findSlot();
+        act(() => slot.click());
+        act(() => {
+            slot.lastChild!.textContent = ' words';
+            slot.dispatchEvent(new Event('input', { bubbles: true }));
+            slot.dispatchEvent(new FocusEvent('blur'));
+        });
+        expect(source()).toBe(
+            '<div class="fx-note"><p data-edit="rich"><span style="color: red">red</span> words</p></div>'
+        );
+
+        slot = findSlot(); // the island re-rendered with the saved edit
+        act(() => slot.click());
+        act(() => {
+            slot.lastChild!.textContent = ' changed';
+            slot.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+        press(slot, 'Escape');
+        expect(source()).toContain('<span style="color: red">red</span> words');
+        expect(source()).not.toContain('eo3-');
     });
 });

@@ -156,7 +156,8 @@
 
 /* Subtle hover/focus control pill for multi-segment chapters and block islands */
 :is(#workskin, :root) .eo3-segment-controls,
-:is(#workskin, :root) .eo3-island-bar {
+:is(#workskin, :root) .eo3-island-bar,
+:is(#workskin, :root) .eo3-line-bar {
     font-family: 'Atkinson Hyperlegible', system-ui, sans-serif;
     font-size: 12px;
     line-height: 1.2;
@@ -343,34 +344,103 @@
     }
 }
 
-/* Declarative inline-editable template regions (`data-edit`, `data-edit-field`, `data-edit-input`) */
-:is(#workskin, :root) .eo3-island-preview {
-    [data-edit-interactive] {
-        cursor: text;
-        border-radius: 3px;
-        outline: 1.5px dashed transparent;
-        outline-offset: 2px;
-        transition: outline-color 0.09s ease-out, background-color 0.09s ease-out,
-            opacity 0.12s ease-out;
+/* Toolbar for the hovered or edited `[data-edit-line]`: its choices, add, move, remove. */
+:is(#workskin, :root) .eo3-inline-island > .eo3-line-bar {
+    position: absolute;
+    z-index: 4;
+    padding: 0.18rem;
+    white-space: nowrap;
+    transform: translateY(calc(-100% - 3px));
+
+    .uikit-select {
+        font-size: 12px;
+        margin-right: 0.1rem;
     }
 
+    /* The AO3 mockup styles every <select> (full width, a light background on focus); keep
+       this one in eo3's own colours so it stays readable in dark mode. */
+    .uikit-select > select,
+    .uikit-select > select:focus {
+        width: auto;
+        min-width: 0;
+        margin: 0;
+        vertical-align: middle;
+        padding: 0.2em 1.8em 0.2em 0.6em;
+        color: rgb(var(--P-color-fg));
+        background: rgb(var(--P-color-shade) / var(--P-color-shade-opacity));
+        border: 1px solid rgb(var(--P-color-soft-outline) / var(--P-color-soft-outline-opacity));
+        box-shadow: none;
+    }
+
+    .uikit-select > select:focus-visible {
+        box-shadow: 0 0 0 0.2em rgb(var(--P-color-accent) / 0.5);
+    }
+}
+
+/* Declarative inline-editable template regions (`data-edit`, `data-edit-field`, `data-edit-input`) */
+:is(#workskin, :root) .eo3-island-preview {
+    /* Only the outline and cursor change: the element keeps the template's own shape. */
+    [data-edit-interactive] {
+        cursor: text;
+        outline: 1.5px dashed transparent;
+        outline-offset: 2px;
+        transition: outline-color 0.09s ease-out, opacity 0.12s ease-out;
+    }
+
+    /* Outlines in the text's own colour: it contrasts with whatever background the template
+       draws, where eo3's accent may not. No background tint either, since that would replace
+       the template's own background (a filled speaker line would lose it). */
     [data-edit-interactive]:hover:not(:has([data-edit-interactive]:hover)):not(.is-inline-editing):not(.is-inline-input-editing) {
-        outline-color: rgb(var(--P-color-accent, 135 0 0) / 0.55);
-        background-color: rgb(var(--P-color-accent, 135 0 0) / 0.045);
+        outline-color: color-mix(in srgb, currentColor 60%, transparent);
     }
 
     [data-edit-interactive].is-inline-editing {
-        outline: 1.5px solid rgb(var(--P-color-accent, 135 0 0) / 0.85);
+        outline: 1.5px solid currentColor;
         outline-offset: 2px;
-        background-color: rgb(var(--P-color-accent, 135 0 0) / 0.05);
     }
 
     [data-edit-interactive].is-inline-updating {
         opacity: 0.68;
     }
 
+    /* A rich line part being edited: eo3's rich text editor stands in for what the part
+       shows, laid out inline so the line keeps its shape and the template's styling. */
+    .is-inline-rich-editing > :not(.eo3-rich-part-host) {
+        display: none !important;
+    }
+
+    .eo3-rich-part-host,
+    .eo3-rich-part-host .tiptap-rich-editor,
+    .eo3-rich-part-host .i-loading-placeholder,
+    .eo3-rich-part-host div:has(> .ProseMirror),
+    .eo3-rich-part-host .ProseMirror,
+    .eo3-rich-part-host .ProseMirror > p {
+        display: inline;
+        margin: 0;
+        padding: 0;
+        min-height: 0;
+        border: 0;
+        background: none;
+        font: inherit;
+        color: inherit;
+    }
+
+    .eo3-rich-part-host .ProseMirror {
+        outline: none;
+        white-space: pre-wrap;
+    }
+
+    /* An emptied line part keeps a target to click and type into. */
+    [data-edit-interactive='part']:empty {
+        display: inline-block;
+        min-width: 3ch;
+        min-height: 1em;
+        vertical-align: baseline;
+    }
+
     [data-edit-interactive='editable']:empty::before,
-    [data-edit-interactive='field']:empty::before {
+    [data-edit-interactive='field']:empty::before,
+    [data-edit-interactive='part']:empty::before {
         content: attr(data-edit-placeholder);
         opacity: 0.45;
         font-style: italic;

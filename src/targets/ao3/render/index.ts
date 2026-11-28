@@ -23,7 +23,7 @@ export interface Ao3RenderResult {
 }
 
 // Sanitize's `preprocess`: control characters and Unicode non-characters are deleted before parsing.
-const UNSUITABLE_CHARS =
+export const UNSUITABLE_CHARS =
     /[\u0001-\u0008\u000b\u000e-\u001f\u007f-\u009f\ufdd0-\ufdef\ufffe\uffff\u{1fffe}\u{1ffff}\u{2fffe}\u{2ffff}\u{3fffe}\u{3ffff}\u{4fffe}\u{4ffff}\u{5fffe}\u{5ffff}\u{6fffe}\u{6ffff}\u{7fffe}\u{7ffff}\u{8fffe}\u{8ffff}\u{9fffe}\u{9ffff}\u{afffe}\u{affff}\u{bfffe}\u{bffff}\u{cfffe}\u{cffff}\u{dfffe}\u{dffff}\u{efffe}\u{effff}\u{ffffe}\u{fffff}\u{10fffe}\u{10ffff}]/gu;
 
 /**

@@ -140,6 +140,7 @@ new files, update the matching section here in the same commit.
 | `module-picker.tsx`                                                                                           | "add node" (and the simple view's "Other module types…"): search, module types by category (loading and failed-load states per row), and the "Groups and templates" level (import, My groups, templates).                                                                                  |
 | `simple-editor.tsx`                                                                                           | Simple view left panel: the selected part as a list (pinned managed styles, draggable items with in-place names and ⋯ menus, blocks showing their inputs with the rest under Customize), "+ add" menu (text, styles, blocks, all module types). Shows a notice for works it can't list.    |
 | `inline-chapter-editor.tsx`                                                                                   | Direct in-preview WYSIWYG chapter editor mounted inside AO3's `#workskin .userstuff` in Simple view: chrome-less inline TipTap editors, live preview islands with edit popovers for blocks/custom modules, and a floating side rail (Styles, Format, Insert, Work Skin CSS, Panel toggle). |
+| `inline-preview-island.tsx`, `inline-template-helpers.ts`                                                     | A block or custom module shown live in the chapter: control pill, Edit popover, and in-place editing through the `data-edit-*` hooks in template output, incl. the line toolbar. Guide: `docs/inline-editing.md`.                                                                          |
 | `module-graph/`                                                                                               | React Flow graph. `index.tsx` (`ModuleGraph`: nodes, edges, connect, drag, grouping), `auto-layout.ts`, `group-cards.ts` (collapsed group rows and edge routing), `module-node.tsx`, `output-node.tsx`, `part-styles-node.tsx`, `group-node.tsx`, `consts.ts`.                             |
 | `preview.tsx`                                                                                                 | Preview pane: left-panel toggle and quick "+ Chapter" button (Simple view), output/part/site selectors, live toggle and "out of date" notice, error display with "Open this module"; wires `PostPreview` (and `InlineChapterEditor` for AO3 Simple view) to document actions.              |
 | `post-preview/index.tsx`                                                                                      | `PostPreview`: runs the target's fallback render and `export()`, builds `posting`/`sizing`, injects CSS, renders header/footer (with optional `chapterBody` override). Also `RenderConfigEditor`.                                                                                          |
@@ -155,7 +156,7 @@ new files, update the matching section here in the same commit.
 
 | Path                              | What it is                                                                                                                                                                                                                                                                                                                 |
 | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/editor/`                     | Framework-agnostic TipTap / ProseMirror extensions (`extensions.ts`, `ruby.ts`, `chapter-break.ts`, `ao3-attributes.ts`), HTML boundary conversion (`html-sync.ts`), live canvas CSS scoping (`canvas-css.ts`), built-in styles (`css-pieces.ts`, all plain style data), the style template language and field forms (`style-template.ts`), inline templates as editor nodes (`inline-template.ts`, e.g. Translate on hover), and Document style wiring (`work-styles.ts`). |
+| `src/editor/`                     | Framework-agnostic TipTap / ProseMirror extensions (`extensions.ts`, `ruby.ts`, `chapter-break.ts`, `ao3-attributes.ts`), HTML boundary conversion (`html-sync.ts`), live canvas CSS scoping (`canvas-css.ts`), built-in styles (`css-pieces.ts`, all plain style data), the style template language and field forms (`style-template.ts`), inline templates as editor nodes (`inline-template.ts`, e.g. Translate on hover), Document style wiring (`work-styles.ts`), and line reads/writes on a text input's source for line-mapped blocks (`source-lines.ts`). |
 | `src/uikit/`                      | Upstream widget kit: `Button` (async `run`), `DirPopover` (anchored modal popover), text field, checkbox, springs; eo3's `Select`, `ColorPicker`/`ColorPickerPanel` (react-colorful), `FileButton`, and `controls.css` (`.uikit-action` buttons, `.uikit-text-area`).                                                                                                                                                                                                         |
 | `src/util/`                       | `hash.ts` (fnv1a36), `lazy.ts`, `split-html.ts` (chapter splitting), `download.ts`, `changelog.ts`, `word-count.ts` (`countWords`, `workWordCount`: version labels and the AO3 mockup's word count).                                                                                                                       |
 | `src/groups/examples.ts`          | Built-in example groups (letters, chat, all 14 workskins) offered as Blocks in the simple view and Templates in "add node"; `exampleGroupDescription`.                                                                                                                                                                     |
@@ -224,6 +225,18 @@ Each entry: the files that implement it (most important first), its tests, and w
     `applyLinearLayout` orders modules by merging the parts' lists and throws
     `LinearOrderError` when mirrors are in opposite orders. `Document.removePartAndContent`
     removes a part with the items only it lists.
+
+### Editing blocks in the chapter (`data-edit-*` hooks)
+
+-   **Files:** `src/ui/components/inline-preview-island.tsx` (clicks, in-place editors, line
+    toolbar), `inline-template-helpers.ts` (which elements resolve to what; writing values
+    back), `src/editor/source-lines.ts` (line model of a text input), `inline-chapter-editor.css`,
+    `src/targets/ao3/render/sanitize.ts` (`preserveEditorMarkers`: kept in the preview,
+    stripped on export).
+-   **Tests:** `test/ui/inline-template-editing.test.ts`, `test/ui/inline-line-editing.test.ts`,
+    `test/editor/source-lines.test.ts`.
+-   **Rule:** this is a public format for template authors (`docs/inline-editing.md`). Add
+    attributes rather than changing what existing ones mean.
 
 ### TypeScript, scripts and typed data
 
@@ -442,6 +455,7 @@ defaults, bounds, and group-file round trips.
 
 | Folder               | Covers                                                                                                                                        |
 | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `test/editor/`       | Style templates, source line reads and writes.                                                                                                |
 | `test/document/`     | Parts, groups, splitting, shared styles, evaluation, simple view layout.                                                                      |
 | `test/ao3/`          | AO3 export, lift-styles naming.                                                                                                               |
 | `test/ao3-parity/`   | The AO3 port against otwarchive's Ruby (`expected.json` is generated).                                                                        |

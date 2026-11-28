@@ -1,18 +1,44 @@
 import React, { memo, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AnyModule, Document, JsonValue, ModuleGroup } from '../../document';
+import {
+    insertSourceLine,
+    moveSourceLine,
+    readSourceLines,
+    removeSourceLine,
+    replaceSourceLine,
+    SourceLineKind,
+    sourceLineKind,
+} from '../../editor/source-lines';
 import { constrainNumber, settingType } from '../../plugins/source/settings-values';
 import { renderAo3Preview } from '../../targets/ao3/render';
 import { DirPopover } from '../../uikit/dir-popover';
+import { Select } from '../../uikit/select';
 import { RenderContext } from '../render-context';
 import { EditIcon } from './icons';
+import { RichEditor } from './rich-editor';
+import type { RichTextAutoFocus } from './tiptap-rich-editor';
 import {
     annotateInteractivePreview,
     cleanEditableRichHtml,
+    cleanRichPartHtml,
     editableModeOf,
+    editSourceLines,
     findHtmlSourceModule,
+    findLineElement,
     findNamedInputModule,
     findSettingsField,
+    lineParts,
+    isRichPart,
+    lineContent,
+    richPartHtml,
+    stampRichParts,
+    parsePartOptions,
+    PartOption,
+    partLabel,
+    partName,
+    partValue,
+    resolveLine,
     stampEditableSlots,
     TextHelpMetadata,
     updateSettingsFieldValue,
@@ -42,9 +68,92 @@ interface CleanupOptions {
 }
 
 interface ActiveDomEdit {
-    kind: 'editable' | 'field' | 'input';
+    kind: 'editable' | 'field' | 'input' | 'part';
     el: HTMLElement;
     cleanup: (options?: CleanupOptions) => void;
+}
+
+interface ActivateOptions {
+    fromMouseDown?: boolean;
+    selectAll?: boolean;
+    /** Where to put the caret in a line part. */
+    caret?: 'start' | 'end';
+    /** The point clicked, to put the caret there once a rich part's editor opens. */
+    point?: { x: number; y: number };
+}
+
+/** A rich line part being edited with eo3's rich text editor, mounted inside the part. */
+interface ActiveRichPart {
+    host: HTMLElement;
+    html: string;
+    autoFocus: RichTextAutoFocus;
+    onChange: (html: string) => void;
+    onKeyDown: (event: KeyboardEvent) => boolean;
+}
+
+/** A source line of a text input, shown by a `[data-edit-line]` element. */
+interface LineRef {
+    moduleId: string;
+    index: number;
+}
+
+/** A line part to focus once the next render shows it (after Enter or Backspace). */
+interface PendingFocus extends LineRef {
+    part: string;
+    caret: 'start' | 'end';
+    /** Text the part should show, so an older render isn't mistaken for the new one. */
+    expect?: string;
+    until: number;
+}
+
+interface LineChoice {
+    name: string;
+    label: string;
+    value: string;
+    options: PartOption[];
+}
+
+/**
+ * Splits a plain part's text at the caret (the end when the caret is elsewhere). Splitting
+ * between words leaves no stray space on either side.
+ */
+function splitTextAtCaret(el: HTMLElement): { before: string; after: string } {
+    const selection = typeof window !== 'undefined' ? window.getSelection() : null;
+    const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
+    const before = document.createRange();
+    before.selectNodeContents(el);
+    const after = document.createRange();
+    after.selectNodeContents(el);
+    if (range && el.contains(range.startContainer)) {
+        before.setEnd(range.startContainer, range.startOffset);
+        after.setStart(range.startContainer, range.startOffset);
+    } else {
+        after.collapse(false);
+    }
+    const flat = (text: string) => text.replace(/\s*[\r\n]+\s*/g, ' ');
+    return { before: flat(before.toString()).trimEnd(), after: flat(after.toString()).trimStart() };
+}
+
+function htmlText(html: string): string {
+    const box = document.createElement('div');
+    box.innerHTML = html;
+    return (box.textContent ?? '').replace(/\s*[\r\n]+\s*/g, ' ').trim();
+}
+
+function placeCaret(el: HTMLElement, at: 'start' | 'end'): void {
+    const selection = typeof window !== 'undefined' ? window.getSelection() : null;
+    if (!selection) return;
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    range.collapse(at === 'start');
+    selection.removeAllRanges();
+    selection.addRange(range);
+}
+
+function sourceLineCount(doc: Document, moduleId: string): number {
+    const mod = doc.findModule(moduleId);
+    const data = mod?.data as { contents?: unknown; language?: string } | null | undefined;
+    return readSourceLines(String(data?.contents ?? ''), sourceLineKind(data?.language)).length;
 }
 
 interface ActiveInputPortal {
@@ -190,6 +299,16 @@ export const InlinePreviewIsland = memo(function InlinePreviewIsland({
     const [popoverOpen, setPopoverOpen] = useState(false);
     const [inlineEditing, setInlineEditing] = useState(false);
     const [activeInput, setActiveInput] = useState<ActiveInputPortal | null>(null);
+    const [activeRich, setActiveRich] = useState<ActiveRichPart | null>(null);
+    const richEditorRef = useRef<RichEditor>(null);
+
+    // Once a rich part's editor has unmounted, take away the container it mounted in, so the
+    // part is left as the template drew it (an emptied part must stay `:empty` to be clickable).
+    useEffect(() => {
+        if (!activeRich) return;
+        const { host } = activeRich;
+        return () => host.remove();
+    }, [activeRich]);
     const [syncTick, setSyncTick] = useState(0);
 
     const islandRef = useRef<HTMLDivElement>(null);
@@ -202,9 +321,19 @@ export const InlinePreviewIsland = memo(function InlinePreviewIsland({
     const lastSyncTickRef = useRef(-1);
     const updatingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const draftFlushRef = useRef<(() => boolean) | null>(null);
+    const pendingFocusRef = useRef<PendingFocus | null>(null);
+    const lineBarRef = useRef<HTMLDivElement>(null);
+    const choiceSelectRefs = useRef(new Map<string, HTMLSelectElement>());
+    const [barLine, setBarLine] = useState<LineRef | null>(null);
+    const [barPos, setBarPos] = useState<{ top: number; left: number } | null>(null);
+    const [barChoices, setBarChoices] = useState<LineChoice[]>([]);
+    const [choiceFocus, setChoiceFocus] = useState<{ name: string; tick: number } | null>(null);
 
     const previewHtml = useMemo(
-        () => (rawHtml.trim() ? renderAo3Preview(stampEditableSlots(rawHtml)).html : ''),
+        () =>
+            rawHtml.trim()
+                ? renderAo3Preview(stampRichParts(stampEditableSlots(rawHtml))).html
+                : '',
         [rawHtml]
     );
 
@@ -241,7 +370,85 @@ export const InlinePreviewIsland = memo(function InlinePreviewIsland({
         }
         lastSyncTickRef.current = syncTick;
         annotateInteractivePreview(container, docRef.current, groupRef.current, moduleRef.current);
+
+        // After Enter/Backspace in a line, continue typing in the line the new render shows.
+        const pending = pendingFocusRef.current;
+        if (pending && htmlChanged) {
+            const line = findLineElement(
+                container,
+                docRef.current,
+                groupRef.current,
+                pending.moduleId,
+                pending.index
+            );
+            const textParts = line
+                ? lineParts(line).filter((p) => p.getAttribute('data-edit-interactive') === 'part')
+                : [];
+            const part = textParts.find((p) => partName(p) === pending.part) ?? textParts[0];
+            const shows =
+                part &&
+                (pending.expect === undefined ||
+                    (part.textContent ?? '').trim() === pending.expect.trim());
+            if (part && shows) {
+                pendingFocusRef.current = null;
+                setBarLine({ moduleId: pending.moduleId, index: pending.index });
+                activateRef.current(part, { caret: pending.caret });
+            } else if (Date.now() > pending.until) {
+                pendingFocusRef.current = null;
+            }
+        }
     }, [previewHtml, syncTick, doc, group, module]);
+
+    // Keep the line toolbar beside its line and in step with the line's choices.
+    useEffect(() => {
+        const island = islandRef.current;
+        const container = previewRef.current;
+        const line =
+            barLine && container
+                ? findLineElement(
+                      container,
+                      docRef.current,
+                      groupRef.current,
+                      barLine.moduleId,
+                      barLine.index
+                  )
+                : null;
+        if (!line || !island) {
+            setBarPos(null);
+            setBarChoices([]);
+            return;
+        }
+        const lineRect = line.getBoundingClientRect();
+        const islandRect = island.getBoundingClientRect();
+        // Above the line's start: the block's own control pill sits at the top right.
+        setBarPos({
+            top: lineRect.top - islandRect.top,
+            left: Math.max(0, lineRect.left - islandRect.left),
+        });
+        setBarChoices(
+            lineParts(line).flatMap((part) => {
+                const options = parsePartOptions(part.getAttribute('data-edit-options'));
+                return options
+                    ? [
+                          {
+                              name: partName(part),
+                              label: partLabel(part),
+                              value: partValue(part),
+                              options,
+                          },
+                      ]
+                    : [];
+            })
+        );
+    }, [barLine, previewHtml, syncTick, inlineEditing]);
+
+    useEffect(() => {
+        if (!choiceFocus) return;
+        const select = choiceSelectRefs.current.get(choiceFocus.name);
+        if (!select) return; // not shown yet; try again once the toolbar has its choices
+        select.focus();
+        setChoiceFocus(null);
+    }, [choiceFocus, barChoices]);
 
     // Flush & tear down any active inline edit on unmount.
     useEffect(() => {
@@ -261,14 +468,17 @@ export const InlinePreviewIsland = memo(function InlinePreviewIsland({
         }
     }, []);
 
-    const activateRef = useRef<
-        (el: HTMLElement, opts?: { fromMouseDown?: boolean; selectAll?: boolean }) => void
-    >(() => {});
+    const activateRef = useRef<(el: HTMLElement, opts?: ActivateOptions) => void>(() => {});
 
     const navigateFrom = useCallback((currentEl: HTMLElement, direction: 1 | -1): boolean => {
         const container = previewRef.current;
         if (!container) return false;
-        const list = Array.from(container.querySelectorAll<HTMLElement>('[data-edit-interactive]'));
+        // Choices live in the line toolbar, so Tab moves between things typed in place.
+        const list = Array.from(
+            container.querySelectorAll<HTMLElement>(
+                '[data-edit-interactive]:not([data-edit-interactive="choice"])'
+            )
+        );
         const idx = list.indexOf(currentEl);
         if (idx === -1) return false;
         const nextIdx = idx + direction;
@@ -298,9 +508,23 @@ export const InlinePreviewIsland = memo(function InlinePreviewIsland({
             if (!Number.isInteger(slotIndex) || slotIndex < 0) return;
 
             const mode = editableModeOf(el);
-            const originalHtml = el.innerHTML;
+            const originalDom = el.innerHTML;
+            // The preview shows inline styles as generated classes; edit the template's own HTML
+            // so saving (even without changes) keeps the styles.
+            let swapped = false;
+            if (mode === 'rich') {
+                const source = cleanEditableRichHtml(richPartHtml(el), el.tagName);
+                if (source.includes(' style=') && source !== el.innerHTML) {
+                    el.innerHTML = source;
+                    swapped = true;
+                }
+            }
             const originalText = el.textContent ?? '';
             const moduleId = htmlMod.id;
+            // Escape restores this exactly, rather than re-deriving it from the preview DOM.
+            const originalSource = String(
+                (htmlMod.data as { contents?: unknown } | null)?.contents ?? ''
+            );
             let timer: ReturnType<typeof setTimeout> | null = null;
             let reverted = false;
             let finished = false;
@@ -340,13 +564,9 @@ export const InlinePreviewIsland = memo(function InlinePreviewIsland({
                         clearTimeout(timer);
                         timer = null;
                     }
-                    if (mode === 'rich') {
-                        el.innerHTML = originalHtml;
-                        commitValue(originalHtml);
-                    } else {
-                        el.textContent = originalText;
-                        commitValue(originalText);
-                    }
+                    if (mode === 'rich') el.innerHTML = originalDom;
+                    else el.textContent = originalText;
+                    updateTextModuleContents(docRef.current, moduleId, originalSource);
                     el.blur();
                     return;
                 }
@@ -429,7 +649,7 @@ export const InlinePreviewIsland = memo(function InlinePreviewIsland({
             el.addEventListener('paste', onPaste);
             el.addEventListener('blur', onBlur);
 
-            if (opts?.fromMouseDown) {
+            if (opts?.fromMouseDown && !swapped) {
                 // Letting native mousedown run places the caret at the exact clicked character;
                 // ensure focus on the next frame in case the click was on an empty/padding edge.
                 requestAnimationFrame(() => {
@@ -441,6 +661,9 @@ export const InlinePreviewIsland = memo(function InlinePreviewIsland({
                 el.focus();
                 if (opts?.selectAll) {
                     selectAllEditableContent(el);
+                } else if (swapped) {
+                    // The swap replaced the clicked nodes, so the caret goes to the end.
+                    placeCaret(el, 'end');
                 }
             }
         },
@@ -714,8 +937,394 @@ export const InlinePreviewIsland = memo(function InlinePreviewIsland({
         });
     }, []);
 
+    /**
+     * Edits a rich line part (`data-edit-mode="rich"`) with eo3's rich text editor, mounted in
+     * the part, so its selection toolbar (styles, bold, links, ruby, colours…) is there. Each
+     * change rewrites the source line as HTML; Enter splits the line at the caret, Backspace in
+     * an empty line removes it. Clicking outside the part (not its toolbars) finishes.
+     */
+    const startRichLinePart = useCallback(
+        (el: HTMLElement, opts?: ActivateOptions) => {
+            const line = el.closest<HTMLElement>('[data-edit-line]');
+            const resolved = line ? resolveLine(line, docRef.current, groupRef.current) : null;
+            if (!line || !resolved) return;
+            const moduleId = resolved.module.id;
+            const index = resolved.index;
+            const name = partName(el);
+            // The template's own HTML: the preview shows inline styles as generated classes.
+            const initialHtml = cleanRichPartHtml(richPartHtml(el));
+            const originalSource = String(
+                (resolved.module.data as { contents?: unknown } | null)?.contents ?? ''
+            );
+            let finished = false;
+            /** Set once the edit is ending, so late editor updates don't write. */
+            let closed = false;
+            /** The source changed, so a render follows. */
+            let touched = false;
+            /** What the part shows after closing, until that render lands (null: as before). */
+            let display: string | null = null;
+
+            const writeLine = (edit: (source: string, kind: SourceLineKind) => string) => {
+                if (editSourceLines(docRef.current, moduleId, edit)) touched = true;
+            };
+
+            const onChange = (html: string) => {
+                if (closed) return;
+                const value = cleanRichPartHtml(html);
+                display = value;
+                // Later edits to other parts of this line rebuild it from the edited HTML.
+                el.setAttribute('data-edit-source', value);
+                const content = lineContent(line, { [name]: value });
+                writeLine((source, kind) => replaceSourceLine(source, kind, index, content));
+            };
+
+            const host = document.createElement('span');
+            host.className = 'eo3-rich-part-host';
+            // What the part showed, kept aside while the editor stands in for it. Moved into a
+            // hidden wrapper: CSS can hide elements but not the bare text between them.
+            const original = document.createElement('span');
+            original.className = 'eo3-rich-part-original';
+            original.hidden = true;
+
+            const finish = (cleanupOpts?: CleanupOptions) => {
+                if (finished) return;
+                finished = true;
+                richEditorRef.current?.flush();
+                closed = true;
+                document.removeEventListener('mousedown', onDocMouseDown, true);
+                setActiveRich(null);
+                // Show what was typed until the next render lands, or what was there before.
+                original.remove();
+                if (display !== null) host.insertAdjacentHTML('beforebegin', display);
+                else host.before(...Array.from(original.childNodes));
+                el.classList.remove('is-inline-editing', 'is-inline-rich-editing');
+                if (activeEditRef.current?.cleanup === finish) {
+                    activeEditRef.current = null;
+                }
+                if (touched) renderNowRef.current();
+                if (!cleanupOpts?.handoff) {
+                    setInlineEditing(false);
+                    if (!touched) setSyncTick((v) => v + 1);
+                }
+            };
+
+            const othersEmpty = () =>
+                lineParts(line).every(
+                    (part) =>
+                        part === el ||
+                        part.getAttribute('data-edit-interactive') !== 'part' ||
+                        partValue(part) === ''
+                );
+
+            const onKeyDown = (event: KeyboardEvent): boolean => {
+                if (event.isComposing) return false;
+                if (event.key === 'Escape') {
+                    closed = true;
+                    display = null;
+                    if (touched) updateTextModuleContents(docRef.current, moduleId, originalSource);
+                    finish();
+                    return true;
+                }
+                if (event.key === 'Tab') {
+                    return navigateFrom(el, event.shiftKey ? -1 : 1);
+                }
+                if (event.key === 'Enter' && !event.shiftKey) {
+                    const split = richEditorRef.current?.splitAtSelection();
+                    if (!split) return true;
+                    const before = cleanRichPartHtml(split.before).replace(/(?:\s|&nbsp;)+$/, '');
+                    const after = cleanRichPartHtml(split.after).replace(/^(?:\s|&nbsp;)+/, '');
+                    const current = lineContent(line, { [name]: before });
+                    const next = lineContent(line, { [name]: after });
+                    const rewriteCurrent = touched || htmlText(after) !== '';
+                    closed = true;
+                    display = before;
+                    writeLine((source, kind) =>
+                        insertSourceLine(
+                            rewriteCurrent
+                                ? replaceSourceLine(source, kind, index, current)
+                                : source,
+                            kind,
+                            index,
+                            next
+                        )
+                    );
+                    pendingFocusRef.current = {
+                        moduleId,
+                        index: index + 1,
+                        part: name,
+                        caret: 'start',
+                        expect: htmlText(after),
+                        until: Date.now() + 5000,
+                    };
+                    finish();
+                    return true;
+                }
+                if (
+                    event.key === 'Backspace' &&
+                    (richEditorRef.current?.isEmpty() ?? false) &&
+                    othersEmpty()
+                ) {
+                    closed = true;
+                    display = null;
+                    writeLine((source, kind) => removeSourceLine(source, kind, index));
+                    pendingFocusRef.current =
+                        index > 0
+                            ? {
+                                  moduleId,
+                                  index: index - 1,
+                                  part: name,
+                                  caret: 'end',
+                                  until: Date.now() + 5000,
+                              }
+                            : null;
+                    finish();
+                    return true;
+                }
+                return false;
+            };
+
+            // Focus moving into the editor's popovers (Link, Style…) must not end the edit, so
+            // it ends on a click outside instead of on blur.
+            const onDocMouseDown = (event: MouseEvent) => {
+                const target = event.target as Element | null;
+                if (!target || host.contains(target)) return;
+                if (target.closest('.tiptap-bubble-menu, dialog')) return;
+                const island = islandRef.current;
+                // The island hands off to another editable piece, or runs a toolbar button.
+                if (
+                    island?.contains(target) &&
+                    target.closest('[data-edit-interactive], .eo3-island-bar, .eo3-line-bar')
+                ) {
+                    return;
+                }
+                finish();
+            };
+
+            activeEditRef.current = { kind: 'part', el, cleanup: finish };
+            setInlineEditing(true);
+            setBarLine({ moduleId, index });
+            el.classList.add('is-inline-editing', 'is-inline-rich-editing');
+            original.append(...Array.from(el.childNodes));
+            el.append(original, host);
+            document.addEventListener('mousedown', onDocMouseDown, true);
+            setActiveRich({
+                host,
+                html: initialHtml,
+                autoFocus: opts?.point ?? opts?.caret ?? 'end',
+                onChange,
+                onKeyDown,
+            });
+        },
+        [navigateFrom]
+    );
+
+    /**
+     * Edits one plain part of a `[data-edit-line]` in place. Each change rewrites that source line
+     * from the line's format; Enter splits the line in two, Backspace in an empty line removes it.
+     */
+    const startLinePart = useCallback(
+        (el: HTMLElement, opts?: ActivateOptions) => {
+            if (isRichPart(el)) {
+                startRichLinePart(el, opts);
+                return;
+            }
+            const line = el.closest<HTMLElement>('[data-edit-line]');
+            const resolved = line ? resolveLine(line, docRef.current, groupRef.current) : null;
+            if (!line || !resolved) return;
+            const moduleId = resolved.module.id;
+            const index = resolved.index;
+            const name = partName(el);
+            const originalDom = el.innerHTML;
+            const originalSource = String(
+                (resolved.module.data as { contents?: unknown } | null)?.contents ?? ''
+            );
+            let timer: ReturnType<typeof setTimeout> | null = null;
+            let dirty = false;
+            let reverted = false;
+            let structural = false;
+            let finished = false;
+
+            const currentText = () => (el.textContent ?? '').replace(/\s*[\r\n]+\s*/g, ' ');
+            const commit = () => {
+                if (timer) {
+                    clearTimeout(timer);
+                    timer = null;
+                }
+                if (!dirty || reverted) return;
+                const content = lineContent(line, { [name]: currentText() });
+                editSourceLines(docRef.current, moduleId, (source, kind) =>
+                    replaceSourceLine(source, kind, index, content)
+                );
+            };
+
+            const onInput = () => {
+                dirty = true;
+                if (timer) clearTimeout(timer);
+                timer = setTimeout(commit, INLINE_DEBOUNCE_MS);
+            };
+
+            const finish = (cleanupOpts?: CleanupOptions) => {
+                if (finished) return;
+                finished = true;
+                commit();
+                el.removeEventListener('input', onInput);
+                el.removeEventListener('keydown', onKeyDown);
+                el.removeEventListener('paste', onPaste);
+                el.removeEventListener('blur', onBlur);
+                el.contentEditable = 'false';
+                el.classList.remove('is-inline-editing');
+                if (activeEditRef.current?.cleanup === finish) {
+                    activeEditRef.current = null;
+                }
+                const changed = dirty || structural;
+                if (changed) renderNowRef.current();
+                if (!cleanupOpts?.handoff) {
+                    setInlineEditing(false);
+                    // A change brings a new render; without one, restore the rendered DOM now.
+                    if (!changed) setSyncTick((v) => v + 1);
+                }
+            };
+
+            const restructure = (
+                edit: (source: string, kind: ReturnType<typeof sourceLineKind>) => string,
+                focus: PendingFocus | null
+            ) => {
+                if (timer) {
+                    clearTimeout(timer);
+                    timer = null;
+                }
+                editSourceLines(docRef.current, moduleId, edit);
+                pendingFocusRef.current = focus;
+                dirty = false;
+                structural = true;
+                finish();
+            };
+
+            const onKeyDown = (e: KeyboardEvent) => {
+                if (e.key === 'Escape') {
+                    e.preventDefault();
+                    reverted = true;
+                    el.innerHTML = originalDom;
+                    if (dirty) updateTextModuleContents(docRef.current, moduleId, originalSource);
+                    finish();
+                    el.blur();
+                    return;
+                }
+                if (e.key === 'Tab') {
+                    if (navigateFrom(el, e.shiftKey ? -1 : 1)) e.preventDefault();
+                    return;
+                }
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (e.isComposing) return;
+                    const { before, after } = splitTextAtCaret(el);
+                    const current = lineContent(line, { [name]: before });
+                    const next = lineContent(line, { [name]: after });
+                    const rewriteCurrent = dirty || after !== '';
+                    el.textContent = before;
+                    restructure(
+                        (source, kind) =>
+                            insertSourceLine(
+                                rewriteCurrent
+                                    ? replaceSourceLine(source, kind, index, current)
+                                    : source,
+                                kind,
+                                index,
+                                next
+                            ),
+                        {
+                            moduleId,
+                            index: index + 1,
+                            part: name,
+                            caret: 'start',
+                            expect: after,
+                            until: Date.now() + 5000,
+                        }
+                    );
+                    return;
+                }
+                if (e.key === 'Backspace' && currentText() === '') {
+                    const othersEmpty = lineParts(line).every(
+                        (part) =>
+                            part === el ||
+                            part.getAttribute('data-edit-interactive') !== 'part' ||
+                            partValue(part) === ''
+                    );
+                    if (!othersEmpty) return;
+                    e.preventDefault();
+                    restructure(
+                        (source, kind) => removeSourceLine(source, kind, index),
+                        index > 0
+                            ? {
+                                  moduleId,
+                                  index: index - 1,
+                                  part: name,
+                                  caret: 'end',
+                                  until: Date.now() + 5000,
+                              }
+                            : null
+                    );
+                }
+            };
+
+            const onPaste = (e: ClipboardEvent) => {
+                const clip = e.clipboardData;
+                if (!clip) return;
+                e.preventDefault();
+                const selection = window.getSelection();
+                if (!selection || !selection.rangeCount) return;
+                const range = selection.getRangeAt(0);
+                range.deleteContents();
+                const textNode = document.createTextNode(
+                    clip.getData('text/plain').replace(/\s*[\r\n]+\s*/g, ' ')
+                );
+                range.insertNode(textNode);
+                range.setStartAfter(textNode);
+                range.collapse(true);
+                selection.removeAllRanges();
+                selection.addRange(range);
+                onInput();
+            };
+
+            const onBlur = () => {
+                if (handoffInProgressRef.current) return;
+                finish();
+            };
+
+            activeEditRef.current = { kind: 'part', el, cleanup: finish };
+            setInlineEditing(true);
+            setBarLine({ moduleId, index });
+            el.contentEditable = 'true';
+            el.classList.add('is-inline-editing');
+            el.addEventListener('input', onInput);
+            el.addEventListener('keydown', onKeyDown);
+            el.addEventListener('paste', onPaste);
+            el.addEventListener('blur', onBlur);
+
+            if (opts?.fromMouseDown) {
+                requestAnimationFrame(() => {
+                    if (!finished && document.activeElement !== el) el.focus();
+                });
+            } else {
+                el.focus();
+                if (opts?.selectAll) selectAllEditableContent(el);
+                else placeCaret(el, opts?.caret ?? 'end');
+            }
+        },
+        [navigateFrom, startRichLinePart]
+    );
+
+    /** A choice part (`data-edit-options`) is picked in the line toolbar. */
+    const openLineChoice = useCallback((el: HTMLElement) => {
+        const line = el.closest<HTMLElement>('[data-edit-line]');
+        const resolved = line ? resolveLine(line, docRef.current, groupRef.current) : null;
+        if (!resolved) return;
+        setBarLine({ moduleId: resolved.module.id, index: resolved.index });
+        setChoiceFocus({ name: partName(el), tick: Date.now() });
+    }, []);
+
     const activateInteractive = useCallback(
-        (el: HTMLElement, opts?: { fromMouseDown?: boolean; selectAll?: boolean }) => {
+        (el: HTMLElement, opts?: ActivateOptions) => {
             const kind = el.getAttribute('data-edit-interactive');
             if (!kind) return;
             if (kind === 'editable') {
@@ -724,9 +1333,13 @@ export const InlinePreviewIsland = memo(function InlinePreviewIsland({
                 startSettingsField(el, opts);
             } else if (kind === 'input') {
                 startInputRegion(el);
+            } else if (kind === 'part') {
+                startLinePart(el, opts);
+            } else if (kind === 'choice') {
+                openLineChoice(el);
             }
         },
-        [startEditableSlot, startSettingsField, startInputRegion]
+        [startEditableSlot, startSettingsField, startInputRegion, startLinePart, openLineChoice]
     );
     activateRef.current = activateInteractive;
 
@@ -765,7 +1378,10 @@ export const InlinePreviewIsland = memo(function InlinePreviewIsland({
 
             // For non-contentEditable targets (`field` / `input`), prevent default mousedown focus/blur
             // churn so the new input/textarea gets clean focus on the very first click.
-            if (kind !== 'editable') {
+            // Rich parts open an editor in place of the preview, so the click only says where.
+            const richPart = kind === 'part' && isRichPart(interactive);
+            const typedInPlace = kind === 'editable' || (kind === 'part' && !richPart);
+            if (!typedInPlace) {
                 e.preventDefault();
             }
 
@@ -775,7 +1391,10 @@ export const InlinePreviewIsland = memo(function InlinePreviewIsland({
                 if (activeEditRef.current) {
                     activeEditRef.current.cleanup({ handoff: true });
                 }
-                activateInteractive(interactive, { fromMouseDown: kind === 'editable' });
+                activateInteractive(interactive, {
+                    fromMouseDown: typedInPlace,
+                    point: richPart ? { x: e.clientX, y: e.clientY } : undefined,
+                });
             } finally {
                 handoffInProgressRef.current = false;
             }
@@ -843,10 +1462,177 @@ export const InlinePreviewIsland = memo(function InlinePreviewIsland({
         onRemove();
     };
 
+    // ── Line toolbar: choices (speaker…), add, move and remove for `[data-edit-line]`s ──
+
+    const barLineElement = (): HTMLElement | null =>
+        barLine && previewRef.current
+            ? findLineElement(previewRef.current, doc, group, barLine.moduleId, barLine.index)
+            : null;
+
+    const handlePreviewMouseOver = (e: React.MouseEvent<HTMLDivElement>) => {
+        if (activeEditRef.current) return; // keep the toolbar on the line being edited
+        const line = (e.target as HTMLElement | null)?.closest?.('[data-edit-line-ready]');
+        if (!line) return;
+        const resolved = resolveLine(line, doc, group);
+        if (!resolved) return;
+        if (barLine?.moduleId === resolved.module.id && barLine.index === resolved.index) return;
+        setBarLine({ moduleId: resolved.module.id, index: resolved.index });
+    };
+
+    const handleIslandMouseLeave = () => {
+        if (activeEditRef.current) return;
+        if (lineBarRef.current?.contains(window.document.activeElement)) return;
+        setBarLine(null);
+    };
+
+    const chooseLineOption = (choiceName: string, value: string) => {
+        if (!barLine) return;
+        activeEditRef.current?.cleanup();
+        const line = barLineElement();
+        if (!line) return;
+        const content = lineContent(line, { [choiceName]: value });
+        // Show the choice at once, so a quick second edit builds on it before the render lands.
+        const part = lineParts(line).find((p) => partName(p) === choiceName);
+        if (part?.hasAttribute('data-edit-value')) part.setAttribute('data-edit-value', value);
+        const changed = editSourceLines(doc, barLine.moduleId, (source, kind) =>
+            replaceSourceLine(source, kind, barLine.index, content)
+        );
+        if (changed) renderNow();
+    };
+
+    const addLineBelow = () => {
+        if (!barLine) return;
+        activeEditRef.current?.cleanup();
+        const line = barLineElement();
+        if (!line) return;
+        // Same choices as this line, empty text.
+        const cleared: Record<string, string> = {};
+        for (const part of lineParts(line)) {
+            if (part.getAttribute('data-edit-interactive') === 'part') cleared[partName(part)] = '';
+        }
+        const content = lineContent(line, cleared);
+        const firstTextPart = lineParts(line).find(
+            (p) => p.getAttribute('data-edit-interactive') === 'part'
+        );
+        editSourceLines(doc, barLine.moduleId, (source, kind) =>
+            insertSourceLine(source, kind, barLine.index, content)
+        );
+        pendingFocusRef.current = {
+            moduleId: barLine.moduleId,
+            index: barLine.index + 1,
+            part: firstTextPart ? partName(firstTextPart) : 'text',
+            caret: 'start',
+            expect: '',
+            until: Date.now() + 5000,
+        };
+        renderNow();
+    };
+
+    const moveLine = (delta: -1 | 1) => {
+        if (!barLine) return;
+        activeEditRef.current?.cleanup();
+        const changed = editSourceLines(doc, barLine.moduleId, (source, kind) =>
+            moveSourceLine(source, kind, barLine.index, delta)
+        );
+        if (!changed) return;
+        setBarLine({ moduleId: barLine.moduleId, index: barLine.index + delta });
+        renderNow();
+    };
+
+    const removeLine = () => {
+        if (!barLine) return;
+        activeEditRef.current?.cleanup();
+        editSourceLines(doc, barLine.moduleId, (source, kind) =>
+            removeSourceLine(source, kind, barLine.index)
+        );
+        setBarLine(null);
+        renderNow();
+    };
+
+    const lineCount = barLine ? sourceLineCount(doc, barLine.moduleId) : 0;
+    const lineBar =
+        barLine && barPos ? (
+            <div
+                ref={lineBarRef}
+                className="eo3-line-bar"
+                role="toolbar"
+                aria-label={`Line ${barLine.index + 1}`}
+                style={{ top: barPos.top, left: barPos.left }}
+                onMouseDown={(e) => {
+                    // Buttons keep the caret where it is; drop-downs need focus to open.
+                    if (!(e.target as HTMLElement).closest('select')) e.preventDefault();
+                }}
+            >
+                {barChoices.map((choice) => {
+                    const known = choice.options.some((o) => o.value === choice.value);
+                    return (
+                        <Select
+                            key={choice.name}
+                            narrow
+                            ref={(el) => {
+                                if (el) choiceSelectRefs.current.set(choice.name, el);
+                                else choiceSelectRefs.current.delete(choice.name);
+                            }}
+                            aria-label={choice.label}
+                            title={choice.label}
+                            value={choice.value}
+                            onChange={(e) => chooseLineOption(choice.name, e.target.value)}
+                        >
+                            {known ? null : (
+                                <option value={choice.value}>
+                                    {choice.value || '—'} (not in the list)
+                                </option>
+                            )}
+                            {choice.options.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                    {option.label}
+                                </option>
+                            ))}
+                        </Select>
+                    );
+                })}
+                <button
+                    type="button"
+                    title="Add a line below"
+                    aria-label="Add a line below"
+                    onClick={addLineBelow}
+                >
+                    +
+                </button>
+                <button
+                    type="button"
+                    title="Move line up"
+                    aria-label="Move line up"
+                    disabled={barLine.index <= 0}
+                    onClick={() => moveLine(-1)}
+                >
+                    ↑
+                </button>
+                <button
+                    type="button"
+                    title="Move line down"
+                    aria-label="Move line down"
+                    disabled={barLine.index >= lineCount - 1}
+                    onClick={() => moveLine(1)}
+                >
+                    ↓
+                </button>
+                <button
+                    type="button"
+                    title="Remove line"
+                    aria-label="Remove line"
+                    onClick={removeLine}
+                >
+                    ×
+                </button>
+            </div>
+        ) : null;
+
     return (
         <div
             ref={islandRef}
             className={'eo3-inline-island' + (popoverOpen || inlineEditing ? ' is-editing' : '')}
+            onMouseLeave={handleIslandMouseLeave}
         >
             <div
                 className="eo3-island-bar"
@@ -900,6 +1686,7 @@ export const InlinePreviewIsland = memo(function InlinePreviewIsland({
                     ref={previewRef}
                     className="eo3-island-preview"
                     onMouseDown={handlePreviewMouseDown}
+                    onMouseOver={handlePreviewMouseOver}
                     onClick={handlePreviewClick}
                     onDoubleClick={(e) => {
                         const target = e.target as HTMLElement | null;
@@ -918,6 +1705,21 @@ export const InlinePreviewIsland = memo(function InlinePreviewIsland({
                     <span>{name}</span> — click Edit to fill in
                 </div>
             )}
+            {lineBar}
+            {activeRich
+                ? createPortal(
+                      <RichEditor
+                          ref={richEditorRef}
+                          variant="inline"
+                          className="eo3-rich-part-editor"
+                          value={activeRich.html}
+                          onChange={activeRich.onChange}
+                          onKeyDown={activeRich.onKeyDown}
+                          autoFocus={activeRich.autoFocus}
+                      />,
+                      activeRich.host
+                  )
+                : null}
             {activeInput
                 ? createPortal(
                       <InlineDraftEditor
