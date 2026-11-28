@@ -52,6 +52,11 @@ export default defineConfig({
         },
         sourcemap: true,
     },
+    worker: {
+        // The Svelte worker is started as a module worker and loads Sass only when a component
+        // uses <style lang="scss">; the default (iife) would inline Sass into the worker.
+        format: 'es',
+    },
 });
 
 function readFileAsModule(id) {

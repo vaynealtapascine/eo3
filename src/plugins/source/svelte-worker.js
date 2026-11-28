@@ -1,9 +1,9 @@
 import { compile as compileLegacy, preprocess as preprocessLegacy } from 'svelte-legacy/compiler';
 import { compile as compileV4, preprocess as preprocessV4 } from 'svelte-v4/compiler';
-import { compile as compileV5 } from 'svelte-v5/compiler';
+import { compile as compileV5, preprocess as preprocessV5 } from 'svelte-v5/compiler';
 import { rollup } from 'rollup/dist/es/rollup.browser.js';
 import { URL } from 'whatwg-url'; // chrome’s built-in URL seems to not be spec-compliant
-import { transform as sucrase } from 'sucrase';
+import { preprocessComponent } from './svelte-preprocess';
 
 import sSvelteLegacy from 'string-node-modules:svelte-legacy/index.mjs';
 import sSvelteLegacyInternal from 'string-node-modules:svelte-legacy/internal/index.mjs';
@@ -29,39 +29,12 @@ function detectSvelte5Syntax(code) {
     return code.match(RUNE_PATTERN)?.[0] ?? code.match(SNIPPET_PATTERN)?.[0] ?? null;
 }
 
-const TS_SCRIPT_PATTERN = /<script\b[^>]*\blang\s*=\s*["']?(ts|typescript)\b/i;
-
-/**
- * Svelte 3 and 4 don't read TypeScript: remove the types from `<script lang="ts">` blocks
- * first. Imports only the markup uses are kept. (Svelte 5 reads TypeScript itself.)
- */
-async function stripScriptTypes(preprocess, code, filename) {
-    if (!TS_SCRIPT_PATTERN.test(code)) return code;
-    const result = await preprocess(
-        code,
-        {
-            script({ content, attributes }) {
-                if (attributes.lang !== 'ts' && attributes.lang !== 'typescript') return;
-                return {
-                    code: sucrase(content, {
-                        transforms: ['typescript'],
-                        disableESTransforms: true,
-                        keepUnusedImports: true,
-                        filePath: filename,
-                    }).code,
-                };
-            },
-        },
-        { filename }
-    );
-    return result.code;
-}
-
 const VERSIONS = {
     legacy: {
         label: 'Svelte 3.55.1 (legacy)',
         compile: (code, opts) => compileLegacy(code, opts),
         preprocess: preprocessLegacy,
+        stripTypes: true,
         checkForRunes: true,
         exportsMount: false,
         libraryModules: {
@@ -73,6 +46,7 @@ const VERSIONS = {
         label: 'Svelte 4',
         compile: (code, opts) => compileV4(code, opts),
         preprocess: preprocessV4,
+        stripTypes: true,
         checkForRunes: true,
         exportsMount: false,
         libraryModules: {
@@ -86,6 +60,8 @@ const VERSIONS = {
         // Svelte 5 returns component CSS separately unless told to inject it; eo3 collects the
         // injected <style> elements after rendering, as with Svelte 3 and 4.
         compile: (code, opts) => compileV5(code, { ...opts, generate: 'client', css: 'injected' }),
+        preprocess: preprocessV5,
+        stripTypes: false,
         checkForRunes: false,
         exportsMount: true,
         libraryTree: svelteV5Runtime,
@@ -164,9 +140,9 @@ async function bundleModules(modules, main, mainId, version) {
                             }
                         }
 
-                        if (versionConfig.preprocess) {
-                            code = await stripScriptTypes(versionConfig.preprocess, code, filename);
-                        }
+                        code = await preprocessComponent(versionConfig.preprocess, code, filename, {
+                            stripTypes: versionConfig.stripTypes,
+                        });
                         const compiled = versionConfig.compile(code, { dev: true, filename });
                         return compiled.js;
                     }
