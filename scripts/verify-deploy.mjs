@@ -13,10 +13,20 @@ const expectedHash = sha1(expected);
 
 for (let attempt = 0; attempt < 6; attempt++) {
     if (attempt) await delay(15_000);
-    const response = await fetch(`${origin}/`, {
-        headers: { 'Cache-Control': 'no-cache' },
-        signal: AbortSignal.timeout(30_000),
-    });
+    let response;
+    try {
+        response = await fetch(`${origin}/`, {
+            headers: { 'Cache-Control': 'no-cache' },
+            signal: AbortSignal.timeout(30_000),
+        });
+    } catch (error) {
+        console.log(
+            `Live EO3 entry attempt ${attempt + 1}: network error (${
+                error?.cause?.code || error?.message || error
+            })`
+        );
+        continue;
+    }
     const actualHash = sha1(Buffer.from(await response.arrayBuffer()));
     if (response.ok && actualHash === expectedHash) {
         const aboutRes = await fetch(`${origin}/about/`, {
