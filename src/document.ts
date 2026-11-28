@@ -1228,6 +1228,11 @@ export class Document extends EventTarget {
                     cssSources.add(source);
                     return;
                 }
+                const companionCss = data.into(HtmlData)?.css ?? '';
+                if (companionCss.trim()) {
+                    cssBySource.set(source, companionCss);
+                    cssSources.add(source);
+                }
                 const output = data.asMdOutput();
                 if (output === null) {
                     const where = parts.length > 1 ? `, part ${partIndex + 1}` : '';
@@ -1586,6 +1591,16 @@ export class PlainTextData extends Data {
 
 export class HtmlData extends PlainTextData {
     typeId = 'text/html';
+    /**
+     * CSS that belongs with this HTML (a Svelte component's `<style>`). Sent to a part, it is
+     * delivered like a CSS module's output; transforms pass it along.
+     */
+    css: string;
+
+    constructor(contents: string, css = '') {
+        super(contents);
+        this.css = css;
+    }
 
     asMdOutput() {
         return this.contents;

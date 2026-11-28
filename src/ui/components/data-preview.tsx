@@ -4,7 +4,8 @@ import './data-preview.css';
 
 export function DataPreview({ data }: { data: Data }) {
     if (data instanceof HtmlData) {
-        return <HtmlPreview html={data.contents} />;
+        const html = data.css ? `${data.contents}<style>${data.css}</style>` : data.contents;
+        return <HtmlPreview html={html} />;
     } else if (data instanceof PlainTextData) {
         return <TextPreview text={data.contents} />;
     }

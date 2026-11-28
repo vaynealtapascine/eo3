@@ -62,10 +62,12 @@ export default {
         { userData }: EvalOptions
     ) {
         let htmlInput = '';
+        const cssInput: string[] = [];
         for (const input of inputs) {
             let data;
             if ((data = input.into(HtmlData))) {
                 htmlInput += data.contents;
+                if (data.css) cssInput.push(data.css);
             } else {
                 throw new Error('svg to background received input that is not html');
             }
@@ -113,6 +115,6 @@ export default {
 
         userData.svgCount = svgCount;
 
-        return new HtmlData(body.innerHTML);
+        return new HtmlData(body.innerHTML, cssInput.join('\n'));
     },
 } as ModulePlugin<SvgToBackgroundData>;

@@ -424,6 +424,10 @@ schema, append it to `MIGRATIONS` in `versions/index.ts`, and implement the stor
     localStorage, not in documents.
 -   `evalWork` snapshots the state before awaiting; keep it that way so edits during a render
     can't mislabel output.
+-   `HtmlData` can carry a companion stylesheet (`css`, from Svelte components). `evalWork`
+    delivers it like a CSS module's output, from the same source module. A transform that takes
+    `HtmlData` must pass `css` on (or inline it, like the style inliner), or the styles are lost.
+    Never put a `<style>` tag into HTML output: AO3 deletes it.
 -   Don't modify `src/ui/examples*`. Upstream (cpsdqs) code elsewhere may be fixed when there's
     a real bug; keep such changes small.
 -   On Windows, run Vitest directly (`node node_modules/vitest/vitest.mjs run --pool=threads --maxWorkers=2`) if `npm test` times out.

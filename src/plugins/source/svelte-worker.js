@@ -83,7 +83,9 @@ const VERSIONS = {
     },
     v5: {
         label: 'Svelte 5',
-        compile: (code, opts) => compileV5(code, { ...opts, generate: 'client' }),
+        // Svelte 5 returns component CSS separately unless told to inject it; eo3 collects the
+        // injected <style> elements after rendering, as with Svelte 3 and 4.
+        compile: (code, opts) => compileV5(code, { ...opts, generate: 'client', css: 'injected' }),
         checkForRunes: false,
         exportsMount: true,
         libraryTree: svelteV5Runtime,

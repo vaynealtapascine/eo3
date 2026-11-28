@@ -309,12 +309,16 @@ window.process = { env: { NODE_ENV: "production" } };
                 }, 5000);
             });
 
-            let html = result.html;
-            if (result.styles.length) {
-                html += `<style>${result.styles.join('\n')}</style>`;
-            }
             iframe.srcdoc = '';
-            return new HtmlData(html);
+            // The component's styles travel beside the HTML rather than as a <style> tag in it:
+            // sites like AO3 delete <style> from posts, so they have to reach the site the way
+            // CSS modules do (the Work Skin, inline styles, …).
+            // Components compile in dev mode, which appends a base64 source map to their CSS.
+            const css = (result.styles as string[])
+                .map((style) => style.replace(/\/\*# sourceMappingURL=[^*]*\*\//g, '').trim())
+                .filter(Boolean)
+                .join('\n');
+            return new HtmlData(result.html, css);
         } catch (err) {
             iframe.srcdoc = '';
             throw err;

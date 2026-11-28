@@ -104,6 +104,7 @@ export default {
             let data;
             if ((data = input.into(HtmlData))) {
                 htmlInput += data.contents;
+                cssInput += data.css;
             } else if ((data = input.into(CssData))) {
                 cssInput += data.contents;
             } else {
