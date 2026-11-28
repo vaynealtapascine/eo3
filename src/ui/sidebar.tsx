@@ -12,6 +12,7 @@ import { Button } from '../uikit/button';
 import { DirPopover } from '../uikit/dir-popover';
 import { TextField } from '../uikit/text-field';
 import { LibraryBackupControls } from './components/library-backup';
+import { openHelp } from './help-content';
 import { downloadFile, safeFileName } from '../util/download';
 
 export function ApplicationSidebar({
@@ -469,6 +470,9 @@ function Extras() {
         <div className="i-section i-extras" role="group" aria-label="Extras">
             <h2 className="i-title">Extras</h2>
             <ul className="i-items">
+                <li>
+                    <Button run={() => openHelp()}>help & guides</Button>
+                </li>
                 <li>
                     <CreateShareUrl />
                 </li>

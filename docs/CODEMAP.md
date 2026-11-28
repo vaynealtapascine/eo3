@@ -122,6 +122,7 @@ new files, update the matching section here in the same commit.
 | `editor-view.tsx`, `editor-canvas-context.tsx`     | Simple / nodes preference (`EditorViewSwitch`, `EditorViewWelcome`); `EditorCanvasContext` supplying live Work Skin CSS and CSS-piece injection to the WYSIWYG editor.                                                                                                                 |
 | `sidebar.tsx`                                      | Sidebar: local documents, examples menu, extras (share URL), Backups.                                                                                                                                                                                                                  |
 | `dialogs.tsx`                                      | `showAlert` / `showConfirm` + `DialogHost`. **Never use native `alert/confirm/prompt`.**                                                                                                                                                                                               |
+| `help.tsx`, `help-content.ts`, `help.css`          | Help dialog (`HelpHost`, opened by `openHelp(topic?)` from the toolbar and sidebar): the author guides in `docs/`, loaded as text and rendered from Markdown on demand.                                                                                                                |
 | `startup-error.tsx`                                | Shown when eo3 can't open its storage: reload, download a backup, and only then delete everything.                                                                                                                                                                                     |
 | `update-notice.tsx`                                | "eo3 has been updated" toast and changelog (via `util/changelog.ts`).                                                                                                                                                                                                                  |
 | `group-files.ts`                                   | Pick / download group files.                                                                                                                                                                                                                                                           |
@@ -166,7 +167,7 @@ new files, update the matching section here in the same commit.
 | `scripts/`                        | Build & deploy: regenerate workskin TOML documents, render previews, package the gallery and writing lab, assemble `dist/about/` (`build-about-page.mjs`), and verify live deploys (`verify-deploy.mjs`).                                                                                                                  |
 | `wrangler.jsonc`                  | Cloudflare Workers Static Assets deploy config for `eo3.dev` (run by `.github/workflows/deploy.yml`).                                                                                                                                                                                                                      |
 | `vite.config.js`                  | Build: node-module string/bundle plugins, Svelte runtime trees, `eo3:config` virtual module.                                                                                                                                                                                                                               |
-| `docs/design/publishing-model.md` | Design of works/parts/targets/delivery. `docs/screenshots/`: README screenshots. `PROGRESS.md`: hand-off log.                                                                                                                                                                                                              |
+| `docs/design/publishing-model.md` | Design of works/parts/targets/delivery. `docs/screenshots/`: README screenshots. `PROGRESS.md`: hand-off log. `docs/style-packs.md`, `group-settings.md`, `inline-editing.md` are also shown in the app's Help.                                                                                                                                                                                                              |
 
 ## 3. Feature index
 
@@ -348,6 +349,16 @@ Each entry: the files that implement it (most important first), its tests, and w
 -   **Workflow:** edit `assets/workskins`, run `node scripts/build-workskin-documents.mjs`,
     then the export script (part of `npm run build`).
 
+### Help (in-app guides)
+
+-   **Files:** `src/ui/help-content.ts` (`HELP_TOPICS`, Markdown rendering, link handling,
+    `openHelp`), `src/ui/help.tsx` (`HelpHost`, mounted in `src/index.tsx`), `help.css`; entry
+    points in `src/ui/index.tsx` (toolbar "help") and `src/ui/sidebar.tsx` (Extras).
+-   **Tests:** `test/ui/help.test.ts` (every guide loads and renders).
+-   **Rule:** the guides are the files in `docs/`, written for authors. Links between them
+    open in Help; other relative links open the file on GitHub. To add a guide, add the file
+    and an entry to `HELP_TOPICS`.
+
 ### Update notice
 
 -   **Files:** `src/ui/update-notice.tsx`, `src/util/changelog.ts`.
@@ -462,7 +473,7 @@ defaults, bounds, and group-file round trips.
 | `test/wafrn-parity/` | wafrn target against the real sanitize-html with wafrn's config.                                                                              |
 | `test/targets/`      | Custom site profiles.                                                                                                                         |
 | `test/storage/`      | Checkpoints, save controller, recovery store, backups, browser libraries.                                                                     |
-| `test/ui/`           | Save UI and lifecycle, library errors, group cards and drag, copy buttons, module picker, action menu keys, preview freshness, startup error. |
+| `test/ui/`           | Save UI and lifecycle, library errors, group cards and drag, copy buttons, module picker, action menu keys, preview freshness, startup error, Help. |
 | `test/plugins/`      | Svelte bundler worker handling; script compiling, output types and MIME-typed data.                                                           |
 | `test/util/`         | Split HTML, changelog, word count.                                                                                                            |
 | `test/examples/`     | Workskin examples: content, layout, writing parser.                                                                                           |

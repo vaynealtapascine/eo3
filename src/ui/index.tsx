@@ -27,6 +27,7 @@ import { downloadFile, safeFileName } from '../util/download';
 import { SaveErrorBanner, SaveStatus, VersionHistory } from './components/save-recovery';
 import { EditorView, EditorViewSwitch, EditorViewWelcome, useEditorView } from './editor-view';
 import { StartupError } from './startup-error';
+import { openHelp } from './help-content';
 
 let lastEo3Init = 0;
 try {
@@ -323,6 +324,12 @@ export default function ApplicationFrame({
 
                         <span className="i-spacer"></span>
 
+                        <ToolbarButton
+                            onClick={() => openHelp()}
+                            title="Guides: styles and style packs, block settings, edit blocks in the chapter"
+                        >
+                            help
+                        </ToolbarButton>
                         <ToolbarButton
                             aria-label="undo"
                             title="undo"
