@@ -1,15 +1,46 @@
-# Authoring styles and style packs
+# Styles and style packs
 
-A style is what writers apply from **✦ Styles** in the rich editor. Every built-in style is
-ordinary style data in the same format you write. Nothing a built-in does is reserved for
-eo3. To see how one is made, open **✦ Styles → + Create / Export → Library**, then
-**Built-in styles → Copy & edit**.
+## What is this?
 
-You can make styles in the **Create & export** tab (with live previews and AO3 checks) or write
-a `.eo3styles.json` file by hand. Writers import packs from **Import pack**, and you can
-export your own from **Library & export**.
+A style is a look that a writer can put on their text. For example, a style can make text
+look like a note card, a whisper or a text message.
+
+The writer selects some text. Then the writer clicks **✦ Styles** and picks a style. eo3 adds
+the HTML and the CSS that make the look.
+
+A style pack is a file that holds one or more styles. You can make a pack and give it to other
+writers. They import it, and then they can use your styles.
+
+All the styles that come with eo3 use the same format as your styles. eo3 has no secret
+features for its own styles. Anything that a built-in style does, your style can also do.
+
+## How to make a style
+
+You can make a style in two ways.
+
+To make a style in eo3:
+
+1. In the rich text editor, click **✦ Styles**.
+2. Click **+ Create / Export**.
+3. Click the **Create & export** tab.
+4. Type the parts of your style. A live preview shows the result.
+5. Read the AO3 checks. They tell you what AO3 will remove.
+
+To learn from a built-in style:
+
+1. Click **✦ Styles**, then **+ Create / Export**.
+2. Click the **Library & export** tab.
+3. Open **Built-in styles**.
+4. Find a style and click **Copy & edit**. You get a copy that you can change.
+
+You can also write a `.eo3styles.json` file by hand. The next section shows the format.
+
+To share your styles, use the **Library & export** tab. Writers use the **Import pack** tab to
+add your pack.
 
 ## The pack file
+
+A pack file is JSON. This example has one style:
 
 ```json
 {
@@ -29,50 +60,56 @@ export your own from **Library & export**.
 }
 ```
 
-| Property                    | Meaning                                                                                |
-| --------------------------- | -------------------------------------------------------------------------------------- |
-| `label`, `description`      | What ✦ Styles shows.                                                                   |
-| `kind`                      | `inline` (a `<span>`), `block` (a `<div>` around paragraphs) or `template` (HTML).     |
-| `className`                 | The main class. Don't start it with `eo3-` (eo3's own) or `fx-` (built-ins).           |
-| `css`                       | Work Skin CSS, without `#workskin`; eo3 adds it when exporting.                        |
-| `templateHtml`              | For `template`, the HTML to insert. For `inline`, it makes an inline template (below). |
-| `fields`                    | What applying the style asks the writer for.                                           |
-| `previewSample`             | The sample text in the swatch (for templates, the selection the preview uses).         |
-| `previewHtml`, `previewCss` | Optional swatch-only HTML and CSS.                                                     |
-| `extraClasses`              | Helper classes in `css`; found automatically if left out.                              |
+Each style can have these properties:
+
+| Property                    | What it does                                                                                                 |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `label`, `description`      | The name and the short text that **✦ Styles** shows.                                                         |
+| `kind`                      | `inline` puts a `<span>` around the text. `block` puts a `<div>` around paragraphs. `template` inserts HTML. |
+| `className`                 | The main class of the style. Do not start it with `eo3-` or `fx-`. eo3 uses these names.                     |
+| `css`                       | The Work Skin CSS. Do not write `#workskin`. eo3 adds it when it exports.                                    |
+| `templateHtml`              | For `template`: the HTML to insert. For `inline`: it makes an inline template (see below).                   |
+| `fields`                    | The questions that the writer answers when they apply the style.                                             |
+| `previewSample`             | The sample text in the small preview. For a template, the preview uses it as the selection.                  |
+| `previewHtml`, `previewCss` | HTML and CSS for the small preview only. You do not have to use them.                                        |
+| `extraClasses`              | Other classes that your `css` uses. If you do not give them, eo3 finds them.                                 |
 
 ## Template syntax
 
-Templates are HTML with tags. Tags may sit anywhere, even inside attributes
-(`class="{{alt:in|out}}"`). Values are escaped. The result is cleaned with AO3's HTML rules,
-so the preview shows what AO3 will keep.
+A template is HTML with tags in it. eo3 changes each tag into a value. A tag can be anywhere,
+also in an attribute, for example `class="{{alt:in|out}}"`.
 
-| Tag                                        | Becomes                                                        |
-| ------------------------------------------ | -------------------------------------------------------------- |
-| `{{selection}}`                            | The selected text; several lines are joined with `<br>`.       |
-| `{{selection\|Starter text}}`              | The same, or the starter text when nothing is selected.        |
-| `<p class="x">{{selection}}</p>`           | One such paragraph per selected line.                          |
-| `{{key}}`, `{{key\|Default}}`              | A field's value.                                               |
-| `{{#if key}}…{{else}}…{{/if}}`             | A part shown when a text field is filled in or a toggle is on. |
-| `{{#if !key}}…{{/if}}`                     | The opposite.                                                  |
-| `{{#lines\|Line one⏎Line two}}…{{/lines}}` | Repeated once per selected line, or per starter line.          |
+eo3 makes values safe before it puts them in the HTML. Then eo3 cleans the result with the
+AO3 rules. Thus the preview shows only what AO3 will keep.
 
-Inside `{{#lines}}`:
+| Tag                                        | eo3 changes it into                                                                 |
+| ------------------------------------------ | ----------------------------------------------------------------------------------- |
+| `{{selection}}`                            | The selected text. If the text has many lines, eo3 joins them with `<br>`.          |
+| `{{selection\|Starter text}}`              | The selected text. If the writer selects nothing, the starter text.                 |
+| `<p class="x">{{selection}}</p>`           | One paragraph like this for each selected line.                                     |
+| `{{key}}`, `{{key\|Default}}`              | The value of a field.                                                               |
+| `{{#if key}}…{{else}}…{{/if}}`             | The first part if a text field has text or a toggle is on. If not, the second part. |
+| `{{#if !key}}…{{/if}}`                     | The opposite of `{{#if key}}`.                                                      |
+| `{{#lines\|Line one⏎Line two}}…{{/lines}}` | The part between the tags, one time for each selected line (or each starter line).  |
 
-| Tag                             | Becomes                                                                         |
-| ------------------------------- | ------------------------------------------------------------------------------- |
-| `{{line}}`                      | The whole line.                                                                 |
-| `{{text}}`, `{{speaker}}`       | For `Name: message` lines, the message and the name.                            |
-| `{{index}}`                     | 1, 2, 3, …                                                                      |
-| `{{alt:a\|b\|…}}`               | Cycles through the options: by speaker when every line names one of two or more |
-|                                 | speakers, otherwise line by line.                                               |
-| `{{#if speaker}}`               | The line names a speaker.                                                       |
-| `{{#if many-speakers}}`         | Every line names a speaker, and there are three or more.                        |
-| `{{#if first}}`, `{{#if last}}` | The first or last line.                                                         |
+You can use these tags between `{{#lines}}` and `{{/lines}}`:
 
-The creator lists template mistakes (unknown fields, unclosed blocks) next to the AO3 checks.
+| Tag                             | eo3 changes it into                                                                                                                                        |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `{{line}}`                      | All of the line.                                                                                                                                           |
+| `{{text}}`, `{{speaker}}`       | For a line like `Name: message`: the message, and the name.                                                                                                |
+| `{{index}}`                     | The number of the line: 1, 2, 3 and so on.                                                                                                                 |
+| `{{alt:a\|b\|…}}`               | The next option in the list, in turn. If each line names one of two or more speakers, each speaker gets an option. If not, each line gets the next option. |
+| `{{#if speaker}}`               | True if the line names a speaker.                                                                                                                          |
+| `{{#if many-speakers}}`         | True if each line names a speaker, and there are three speakers or more.                                                                                   |
+| `{{#if first}}`, `{{#if last}}` | True for the first line, or for the last line.                                                                                                             |
+
+If your template has a mistake, eo3 tells you. For example, it shows a field name that does
+not exist, or an `{{#if}}` that has no `{{/if}}`. You see these messages next to the AO3 checks.
 
 ## Fields
+
+A field is a question that the writer answers when they apply your style. Example:
 
 ```json
 "fields": [
@@ -82,19 +119,25 @@ The creator lists template mistakes (unknown fields, unclosed blocks) next to th
 ]
 ```
 
-A style with fields opens a small form when it's applied. Text fields can have a `default`,
-a `placeholder` and `required`. Toggles (`"type": "toggle"`) are on or off and drive
-`{{#if}}`. Keys are letters, numbers, `-` and `_`. `line`, `text`, `speaker` and `index` are
-taken by `{{#lines}}`, so fields can't use them. A field with the key `selection` doesn't add
-an input; it only sets the label and placeholder of the selected text in an inline template's
-form.
+When a style has fields, eo3 shows a small form before it applies the style.
+
+-   A text field can have a `default` value, a `placeholder` and `required`.
+-   A toggle (`"type": "toggle"`) is on or off. Use it with `{{#if}}`.
+-   A `key` can have letters, numbers, `-` and `_`.
+-   Do not use the keys `line`, `text`, `speaker` or `index`. `{{#lines}}` uses these names.
+-   A field with the key `selection` does not add a question. In an inline template, it sets
+    the label and the placeholder for the selected text.
 
 ## Inline templates
 
-An `inline` style with `templateHtml` is inserted as one piece. Writers can select it again to
-edit its fields, or remove it and keep its text. Its HTML must have a `<span>` root with the
-style's `className`; eo3 finds it again by that class when a work is reopened. This is how
-**Translate on hover** works:
+An inline template is an `inline` style that has `templateHtml`. eo3 inserts it as one item.
+The writer can select it again to change its fields. The writer can also remove it and keep
+its text.
+
+The HTML of an inline template must start with a `<span>` that has the `className` of the
+style. When a writer opens their work again, eo3 uses this class to find the template.
+
+The built-in style **Translate on hover** is an inline template:
 
 ```json
 {
@@ -115,19 +158,21 @@ style's `className`; eo3 finds it again by that class when a work is reopened. T
 }
 ```
 
-## How the built-ins are made
+## How eo3 makes its built-in styles
 
-| Built-in                         | Made with                                                                                   |
-| -------------------------------- | ------------------------------------------------------------------------------------------- |
-| Redacted, Small caps, Whisper, … | `inline` styles: a class and CSS.                                                           |
-| Callout, Letter, Terminal, …     | `block` styles: a class and CSS.                                                            |
-| Translate on hover               | An inline template with two text fields and a toggle (above).                               |
-| Text messages                    | A template using `{{#lines}}`, `{{alt:fx-msg-in\|fx-msg-out}}` and `{{#if many-speakers}}`. |
-| Collapsible spoiler              | A `<details>` template with a `summary` field.                                              |
+| Built-in style                   | How eo3 makes it                                                                           |
+| -------------------------------- | ------------------------------------------------------------------------------------------ |
+| Redacted, Small caps, Whisper, … | `inline` styles: a class and some CSS.                                                     |
+| Callout, Letter, Terminal, …     | `block` styles: a class and some CSS.                                                      |
+| Translate on hover               | An inline template with two text fields and one toggle (see above).                        |
+| Text messages                    | A template with `{{#lines}}`, `{{alt:fx-msg-in\|fx-msg-out}}` and `{{#if many-speakers}}`. |
+| Collapsible spoiler              | A `<details>` template with a `summary` field.                                             |
 
-## Accessibility
+## Make your styles easy for all readers
 
--   Give every field a clear `label`: it's what screen readers announce.
--   Keep content readable when Creator's Style is off on AO3. For example, Translate on hover
-    keeps "(translation)" in the text, and spoilers use `<details>`.
--   Check the colour contrast of your CSS in both light and dark site skins.
+-   Give each field a clear `label`. Screen readers read the label aloud.
+-   Make sure that readers can read the text when the creator's style is off on AO3. For
+    example, Translate on hover keeps "(translation)" in the text. The spoiler style uses
+    `<details>`, which works with no CSS.
+-   Make sure that the colours of your text and background have good contrast. Do a check in
+    the light site skin and in the dark site skin.
